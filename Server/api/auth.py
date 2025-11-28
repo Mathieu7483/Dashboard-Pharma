@@ -1,5 +1,7 @@
 from flask_restx import Namespace, Resource
-from models.user import UserModel
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from datetime import timedelta
+from services import facade
 
 auth_ns = Namespace('auth', description='Authentication operations')
 
