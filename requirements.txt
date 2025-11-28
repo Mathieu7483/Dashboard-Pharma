@@ -1,0 +1,7 @@
+flask
+flask-restx
+flask-SQLAlchemy
+SQLAlchemy
+flask-bcrypt
+flask-jwt-extended
+mysqlclient
