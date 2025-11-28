@@ -1,60 +1,57 @@
-Excellent. Préparer un **README.md** pour une application traitant de données sensibles dans le secteur pharmaceutique exige **rigueur** et **clarté**, surtout en respectant le **RGPD** et les lois informatiques de 1978.
 
-Voici une proposition de structure de **README.md**, rédigée avec le ton professoral et direct que vous avez sollicité.
 
-## 🚀 **README : Pharmacie-Dashboard - Gestion des Stocks**
+## 🚀 **README: Pharmacy-Dashboard - Inventory Management**
 
-> **Avertissement : Ce tableau de bord est exclusivement destiné à l'usage interne des pharmaciens pour la gestion des stocks. Il ne gère pas les interactions clients directes, mais manipule des données à caractère personnel et sensible.**
+> **Warning: This dashboard is strictly for internal use by pharmacists for inventory management purposes. It does not handle direct customer interactions but processes personal and sensitive data.**
 
 -----
 
-### 🖼️ **Aperçu de l'Application**
-
-[Image de la page d'accueil du Dashboard Pharmaceutique - Affichage des stocks et alertes]
+### 🖼️ **Application Overview**
 
 -----
 
-### 📝 **Description du Projet**
+### 📝 **Project Description**
 
-Le projet **Pharmacie-Dashboard** est une application web **responsive** visant à optimiser la gestion des stocks de médicaments et de produits pharmaceutiques. L'objectif est de fournir aux pharmaciens un outil efficace pour :
+The **Pharmacy-Dashboard** project is a **responsive** web application designed to optimize the management of pharmaceutical stocks and products. The objective is to provide pharmacists with an efficient tool for:
 
-1.  **Suivi en temps réel** des niveaux de stocks.
-2.  **Alertes automatiques** de bas de stock ou de produits périmés.
-3.  **Visualisation synthétique** des données via un tableau de bord ergonomique.
+1.  **Real-time tracking** of inventory levels.
+2.  **Automatic alerts** for low stock or expired products.
+3.  **Synthesized visualization** of data via an ergonomic dashboard.
 
-L'application est développée avec une attention particulière à la **sécurité des données** et à la **conformité légale**.
-
------
-
-### 🛡️ **Conformité Légale et Sécurité des Données**
-
-Le traitement des informations gérées dans cette application est soumis à une obligation de **confidentialité maximale**.
-
-#### 🇪🇺 **Règlement Général sur la Protection des Données (RGPD)**
-
-  * **Minimisation des Données :** Seules les informations strictement nécessaires à la traçabilité des commandes et à la communication (Nom, Prénom, Adresse, Téléphone, Email) sont collectées pour le suivi client *indirect* lié aux stocks (e.g., alerte de disponibilité).
-  * **Finalité Précise :** Les données ne sont utilisées que dans le cadre de la gestion pharmaceutique et du suivi des commandes.
-  * **Sécurité par Design :** Toutes les connexions se font via **HTTPS** (chiffrement TLS/SSL). Les mots de passe et données sensibles doivent être **hachés** (hashing unidirectionnel, e.g., Argon2 ou Bcrypt). L'accès à la base de données est strictement contrôlé.
-
-#### 🇫🇷 **Loi Informatique et Libertés de 1978 (CNIL)**
-
-  * **Droit d'Accès, de Rectification et d'Opposition :** Des procédures internes doivent être mises en place pour permettre aux individus d'exercer ces droits sur les données stockées (bien que les données soient limitées).
-  * **Déclaration/Registre :** L'utilisation de données personnelles (Nom, Prénom, etc.) pour la gestion des stocks et commandes doit être **formellement inscrite** dans le **Registre des activités de traitement** de la pharmacie, conformément aux exigences de la CNIL et du RGPD.
-  * **Durée de Conservation :** Les données à caractère personnel doivent avoir une **durée de conservation définie et limitée**.
-
-> **🛑 Point critique :** Étant donné la sensibilité des données, une **Analyse d'Impact relative à la Protection des Données (AIPD)** est **impérative** avant la mise en production.
+The application is developed with careful attention to **data security** and **legal compliance**.
 
 -----
 
-### 🧱 **Architecture Technique**
+### 🛡️ **Legal Compliance and Data Security**
 
-| Composant | Technologie | Rôle |
+The processing of information managed within this application is subject to an obligation of **maximum confidentiality**.
+
+#### 🇪🇺 **General Data Protection Regulation (GDPR)**
+
+  * **Data Minimisation:** Only information strictly necessary for order traceability and communication (Name, First Name, Address, Phone, Email) is collected for *indirect* customer tracking related to inventory (e.g., availability alerts).
+  * **Specific Purpose:** Data is used solely within the scope of pharmaceutical management and order tracking.
+  * **Security by Design:** All connections must be made via **HTTPS** (TLS/SSL encryption). Passwords and sensitive data must be **hashed** (one-way hashing, e.g., Argon2 or Bcrypt). Access to the database must be strictly controlled.
+
+#### 🇫🇷 **Loi Informatique et Libertés of 1978 (CNIL)**
+
+  * **Right of Access, Rectification, and Objection:** Internal procedures must be implemented to allow individuals to exercise these rights over stored data (although data is limited).
+  * **Declaration/Register:** The use of personal data (Name, First Name, etc.) for inventory and order management must be **formally recorded** in the pharmacy's **Record of Processing Activities**, in accordance with CNIL and GDPR requirements.
+  * **Retention Period:** Personal data must have a **defined and limited retention period**.
+
+> **🛑 Critical Point:** Given the sensitivity of the data, a **Data Protection Impact Assessment (DPIA)** is **mandatory** before deployment to production.
+
+-----
+
+### 🧱 **Technical Architecture**
+
+| Component | Technology | Role |
 | :--- | :--- | :--- |
-| **Backend (API)** | **Python (Flask)** | Logique métier, gestion des requêtes, communication avec la DB. |
-| **ORM / DB Access** | **SQLAlchemy** | Mappage Objet-Relationnel pour interagir avec la base de données SQL. |
-| **Frontend** | **HTML5, CSS3, JavaScript** | Interface Utilisateur (UI) responsive, gestion des interactions dynamiques. |
-| **Database** | **SQL (e.g., PostgreSQL, SQLite pour le dev)** | Stockage structuré et sécurisé des données de stock et d'utilisateurs. |
+| **Backend (API)** | **Python (Flask)** | Business logic, request handling, communication with the DB. |
+| **ORM / DB Access** | **SQLAlchemy** | Object-Relational Mapping to interact with the SQL database. |
+| **Frontend** | **HTML5, CSS3, JavaScript** | Responsive User Interface (UI), managing dynamic interactions. |
+| **Database** | **SQL (e.g., PostgreSQL, SQLite for dev)** | Structured and secure storage for inventory and user data. |
 
+```
 Dashboard-Pharma/
 ├── .gitignore
 ├── LICENSE
@@ -98,166 +95,166 @@ Dashboard-Pharma/
     │   ├── __init__.py
     │   └── facade.py
     └── /tests/
-
+```
 
 -----
 
-### 📐 **Logique Métier**
+### 📐 **Business Logic**
 
-La logique métier est centrée sur le cycle de vie du stock et la gestion des utilisateurs (pharmaciens).
+The business logic is centered on the inventory lifecycle and the management of users (pharmacists).
 
-#### 🔗 **Diagrammes UML (Classes/Séquence)**
+#### 🔗 **UML Diagrams (Classes/Sequence)**
 
-**1. Diagramme de Classes (Simplifié)**
+**1. Class Diagram (Simplified)**
 
-| **Stock** | **Produit** | **Pharmacien (User)** | **Client (Suivi)** |
+| **Stock** | **Product** | **Pharmacist (User)** | **Customer (Tracking)** |
 | :--- | :--- | :--- | :--- |
-| - *id\_stock : INT* | - *id\_produit : INT* | - *id\_pharmacien : INT* | - *id\_client : INT* |
-| - *date\_entrée : DATE* | - *nom\_commercial : VARCHAR* | - *email : VARCHAR* (**UNIQUE**) | - *nom : VARCHAR* |
-| - *date\_péremption : DATE* | - *DCI : VARCHAR* | - *mot\_de\_passe : HASH* | - *prénom : VARCHAR* |
-| - *quantite : INT* | - *dosage : VARCHAR* | - *rôle : VARCHAR (Admin/User)* | - *adresse : VARCHAR* |
-| - *fournisseur : VARCHAR* | - *prix\_vente : DECIMAL* | | - *téléphone : VARCHAR* |
-| - *id\_produit (FK)* | | | - *email : VARCHAR* |
-| + *alerte\_péremption()* | | + *authentification()* | |
-| + *alerte\_bas\_stock()* | | + *gestion\_comptes()* | |
+| - *stock\_id : INT* | - *product\_id : INT* | - *pharmacist\_id : INT* | - *customer\_id : INT* |
+| - *entry\_date : DATE* | - *trade\_name : VARCHAR* | - *email : VARCHAR* (**UNIQUE**) | - *last\_name : VARCHAR* |
+| - *expiry\_date : DATE* | - *INN : VARCHAR* | - *password : HASH* | - *first\_name : VARCHAR* |
+| - *quantity : INT* | - *dosage : VARCHAR* | - *role : VARCHAR (Admin/User)* | - *address : VARCHAR* |
+| - *supplier : VARCHAR* | - *selling\_price : DECIMAL* | | - *phone : VARCHAR* |
+| - *product\_id (FK)* | | | - *email : VARCHAR* |
+| + *expiry\_alert()* | | + *authentication()* | |
+| + *low\_stock\_alert()* | | + *account\_management()* | |
 
-**2. Diagramme de Séquence (Exemple : Ajout de Stock)**
+**2. Sequence Diagram (Example: Adding Stock)**
 
-1.  **Pharmacien** $\rightarrow$ **Frontend** : Requête *POST /stock/ajouter* (avec données produit/quantité).
-2.  **Frontend** $\rightarrow$ **API (Flask)** : Transmet la requête.
-3.  **API (Flask)** $\rightarrow$ **DB (SQLAlchemy)** : Exécute `SELECT` pour vérifier l'existence du Produit.
-4.  **DB** $\rightarrow$ **API** : Retourne le statut.
-5.  **API** $\rightarrow$ **DB** : Exécute `INSERT INTO Stock` (nouvelle entrée) ou `UPDATE Stock` (mise à jour quantité).
-6.  **DB** $\rightarrow$ **API** : Retourne statut *201 Created*.
-7.  **API** $\rightarrow$ **Frontend** : Retourne JSON de confirmation.
-8.  **Frontend** $\rightarrow$ **Pharmacien** : Affichage du succès / mise à jour du dashboard.
+1.  **Pharmacist** $\rightarrow$ **Frontend**: Request *POST /stock/add* (with product/quantity data).
+2.  **Frontend** $\rightarrow$ **API (Flask)**: Transmits the request.
+3.  **API (Flask)** $\rightarrow$ **DB (SQLAlchemy)**: Executes `SELECT` to check Product existence.
+4.  **DB** $\rightarrow$ **API**: Returns the status.
+5.  **API** $\rightarrow$ **DB**: Executes `INSERT INTO Stock` (new entry) or `UPDATE Stock` (quantity update).
+6.  **DB** $\rightarrow$ **API**: Returns status *201 Created*.
+7.  **API** $\rightarrow$ **Frontend**: Returns JSON confirmation.
+8.  **Frontend** $\rightarrow$ **Pharmacist**: Display success / dashboard update.
 
 -----
 
-### 💾 **Méthodologie SQL (Database)**
+### 💾 **SQL Methodology (Database)**
 
-#### 🎯 **Principes de Conception**
+#### 🎯 **Design Principles**
 
-La base de données doit être en **forme normale 3NF** (Troisième Forme Normale) pour garantir l'intégrité et minimiser la redondance des données.
+The database must be in **3NF** (Third Normal Form) to ensure data integrity and minimize redundancy.
 
-  * **Séparation des Entités :** Les informations sont réparties en tables distinctes (Produit, Stock, Pharmacien, Client) pour éviter la duplication.
-  * **Clés Primaires (PK) et Étrangères (FK) :** Utilisation de clés auto-incrémentées pour la PK et de FK pour lier les tables (`Stock.id_produit` vers `Produit.id_produit`).
-  * **Indexation :** Des index doivent être créés sur les colonnes fréquemment utilisées pour les recherches (e.g., `Produit.DCI`, `Pharmacien.email`, `Stock.date_péremption`).
+  * **Entity Separation:** Information is distributed into distinct tables (Product, Stock, Pharmacist, Customer) to prevent duplication.
+  * **Primary (PK) and Foreign (FK) Keys:** Use auto-incrementing keys for the PK and FKs to link tables (`Stock.product_id` to `Product.product_id`).
+  * **Indexing:** Indexes must be created on columns frequently used for searching (e.g., `Product.INN`, `Pharmacist.email`, `Stock.expiry_date`).
 
-#### 📜 **Exemple de Requêtes et Modélisation (DDL)**
+#### 📜 **Query and Modeling Example (DDL)**
 
-**1. Création de la table `Produit` (pour le catalogue général)**
+**1. Creating the `Product` table (for the general catalog)**
 
 ```sql
-CREATE TABLE Produit (
-    id_produit SERIAL PRIMARY KEY,
-    nom_commercial VARCHAR(100) NOT NULL,
-    DCI VARCHAR(150),
+CREATE TABLE Product (
+    id_product SERIAL PRIMARY KEY,
+    trade_name VARCHAR(100) NOT NULL,
+    INN VARCHAR(150),
     dosage VARCHAR(50),
-    forme VARCHAR(50),
-    prix_achat DECIMAL(10, 2),
-    prix_vente DECIMAL(10, 2),
-    stock_securite INT NOT NULL DEFAULT 10
+    form VARCHAR(50),
+    purchase_price DECIMAL(10, 2),
+    selling_price DECIMAL(10, 2),
+    safety_stock INT NOT NULL DEFAULT 10
 );
 ```
 
-**2. Création de la table `Client` (Données RGPD sensibles)**
+**2. Creating the `Customer` table (GDPR sensitive data)**
 
 ```sql
-CREATE TABLE Client (
-    id_client SERIAL PRIMARY KEY,
-    nom VARCHAR(50) NOT NULL,
-    prenom VARCHAR(50) NOTPAS NULL,
-    adresse VARCHAR(255),
-    telephone VARCHAR(20),
+CREATE TABLE Customer (
+    id_customer SERIAL PRIMARY KEY,
+    last_name VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    address VARCHAR(255),
+    phone VARCHAR(20),
     email VARCHAR(100),
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    -- Nécessité de crypter ces colonnes au niveau de l'application (ou de la DB si possible)
+    creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Necessity to encrypt these columns at the application level (or DB if possible)
 );
 ```
 
-> **Note :** Dans un environnement réel, les champs `adresse`, `telephone`, et `email` devraient idéalement être **chiffrés** (encryption bidirectionnelle) dans la base de données.
+> **Note:** In a real-world environment, the fields `address`, `phone`, and `email` should ideally be **encrypted** (bi-directional encryption) in the database.
 
 -----
 
-### ⚙️ **Installation et Mise en Route**
+### ⚙️ **Installation and Setup**
 
-Cette application est déployée via un serveur web (e.g., Nginx/Apache) en tant que **service sécurisé HTTPS**.
+This application is deployed via a web server (e.g., Nginx/Apache) as a **secure HTTPS service**.
 
-#### 1\. **Prérequis**
+#### 1\. **Prerequisites**
 
   * Python 3.x
-  * Un système de gestion de base de données SQL (PostgreSQL recommandé pour la production)
-  * **Certificat SSL/TLS** valide pour la connexion HTTPS.
+  * A SQL database management system (PostgreSQL recommended for production)
+  * Valid **SSL/TLS Certificate** for HTTPS connection.
 
-#### 2\. **Installation des Dépendances Backend (Python)**
+#### 2\. **Backend Dependencies Installation (Python)**
 
-Créez et activez un environnement virtuel (recommandé) :
+Create and activate a virtual environment (recommended):
 
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # Sous Linux/macOS
-# ou .\venv\Scripts\activate # Sous Windows PowerShell
+source venv/bin/activate  # On Linux/macOS
+# or .\venv\Scripts\activate # On Windows PowerShell
 ```
 
-Installez les bibliothèques **Flask** et **SQLAlchemy** (ainsi que le driver de DB, e.g., `psycopg2` pour PostgreSQL) :
+Install the **Flask** and **SQLAlchemy** libraries (along with the DB driver, e.g., `psycopg2` for PostgreSQL):
 
 ```bash
 pip install Flask Flask-SQLAlchemy python-dotenv
-# Pour la sécurité :
+# For security:
 pip install Flask-Bcrypt
-# Pour les API REST (si nécessaire) :
+# For REST APIs (if needed):
 pip install Flask-RESTful
 ```
 
-#### 3\. **Configuration de la Base de Données**
+#### 3\. **Database Configuration**
 
-1.  Créez une base de données sur votre serveur (e.g., `pharmadb`).
+1.  Create a database on your server (e.g., `pharmadb`).
 
-2.  Configurez l'URI de connexion dans un fichier `.env` ou équivalent :
+2.  Configure the connection URI in an `.env` file or equivalent:
 
     ```
     DATABASE_URL="postgresql://user:password@host/pharmadb"
-    SECRET_KEY="VOTRE_CLE_SECRETE_TRES_LONGUE_ET_COMPLEXE"
+    SECRET_KEY="YOUR_VERY_LONG_AND_COMPLEX_SECRET_KEY"
     ```
 
-3.  Lancez les migrations (si vous utilisez Flask-Migrate ou un outil similaire) ou exécutez le DDL SQL pour créer les tables.
+3.  Run migrations (if you are using Flask-Migrate or a similar tool) or execute the SQL DDL to create the tables.
 
-#### 4\. **Lancement de l'Application (Développement)**
+#### 4\. **Launching the Application (Development)**
 
-Pour lancer l'application en mode développement (NON SÉCURISÉ EN PROD) :
+To launch the application in development mode (NOT SECURE FOR PROD):
 
 ```bash
 export FLASK_APP=app.py
 flask run
 ```
 
-#### 5\. **Déploiement en Production (HTTPS OBLIGATOIRE)**
+#### 5\. **Production Deployment (HTTPS MANDATORY)**
 
-Le déploiement en production **doit** utiliser un serveur d'application Web (WSGI) comme **Gunicorn** ou **uWSGI**, couplé à un proxy inverse (Nginx/Apache) pour gérer la terminaison **HTTPS**.
+Production deployment **must** use a Web Server Gateway Interface (WSGI) application server like **Gunicorn** or **uWSGI**, coupled with a reverse proxy (Nginx/Apache) to handle **HTTPS** termination.
 
-1.  Installez Gunicorn : `pip install gunicorn`
+1.  Install Gunicorn: `pip install gunicorn`
 
-2.  Lancement sécurisé (exemple) :
+2.  Secure launch (example):
 
     ```bash
     gunicorn -w 4 -b 0.0.0.0:8000 app:app
     ```
 
-    *Le proxy inverse (Nginx) redirigera le trafic sécurisé (port 443) vers le port Gunicorn (e.g., 8000).*
+    *The reverse proxy (Nginx) will redirect secure traffic (port 443) to the Gunicorn port (e.g., 8000).*
 
 -----
 
 ### 🤝 **Contribution**
 
-  * **Fork** le dépôt.
-  * Créez une **branche** pour votre fonctionnalité (`git checkout -b feature/NomDeLaFonctionnalite`).
-  * **Committez** vos changements (`git commit -m 'Ajout d’une nouvelle fonctionnalité...'`).
-  * **Pushez** sur la branche (`git push origin feature/NomDeLaFonctionnalite`).
-  * Ouvrez une **Pull Request**.
+  * **Fork** the repository.
+  * Create a **branch** for your feature (`git checkout -b feature/NewFeatureName`).
+  * **Commit** your changes (`git commit -m 'Adding a new feature...'`).
+  * **Push** to the branch (`git push origin feature/NewFeatureName`).
+  * Open a **Pull Request**.
 
 -----
 
-### 📄 **Licence**
+### 📄 **License**
 
-Ce projet est sous licence [Spécifiez ici la licence, e.g., MIT].
+This project is licensed under [Specify the license here, e.g., MIT].
