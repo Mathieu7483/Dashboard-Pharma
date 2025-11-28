@@ -55,6 +55,51 @@ Le traitement des informations gérées dans cette application est soumis à une
 | **Frontend** | **HTML5, CSS3, JavaScript** | Interface Utilisateur (UI) responsive, gestion des interactions dynamiques. |
 | **Database** | **SQL (e.g., PostgreSQL, SQLite pour le dev)** | Stockage structuré et sécurisé des données de stock et d'utilisateurs. |
 
+Dashboard-Pharma/
+├── .gitignore
+├── LICENSE
+├── README.md
+└── requirements.txt
+    
+├── Client/
+│   ├── index.html
+│   ├── assets/
+│   │   └── img/
+│   ├── css/
+│   │   └── style.css
+│   └── javascript/
+│       └── dashboard.js
+    
+└── Server/
+    ├── run.py
+    ├── app.py
+    ├── config.py
+    ├── setup_db.py
+    ├── /api/
+    │   ├── __init__.py
+    │   ├── routes.py
+    │   ├── auth.py
+    │   ├── products.py
+    │   ├── sales.py
+    │   └── users.py
+    ├── /core/
+    │   ├── chatbot/
+    │   │   ├── ChatBot_engine.py
+    │   │   └── NLUProcessor.py
+    │   └── database/
+    │       └── data_manager.py
+    ├── /models/
+    │   ├── __init__.py
+    │   ├── basemodel.py
+    │   ├── product.py
+    │   ├── sale.py
+    │   └── user.py
+    ├── /services/
+    │   ├── __init__.py
+    │   └── facade.py
+    └── /tests/
+
+
 -----
 
 ### 📐 **Logique Métier**
