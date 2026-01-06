@@ -207,7 +207,8 @@ class DashboardManager {
                         <div class="info">
                             <strong>DR. ${item.last_name.toUpperCase()} ${item.first_name || ''}</strong><br>
                             <span class="tag-specialty">${item.specialty || 'Generalist'}</span><br>
-                            <small>📧 ${item.email || 'No email'}</small><br>
+                            <small>📧 ${item.email || 'No email'}</small>
+                            <small>📍 ${item.address || 'No address stored'}</small>
                             <small>📞 ${item.phone || 'No phone'}</small>
                         </div>
                     </div>`;
@@ -216,8 +217,8 @@ class DashboardManager {
                     <div class="item-entry">
                         <div class="info">
                             <strong>${item.last_name.toUpperCase()} ${item.first_name}</strong><br>
-                            <small>📧 ${item.email}</small><br>
-                            <small>📍 ${item.address || 'No address stored'}</small><br>
+                            <small>📧 ${item.email}</small>
+                            <small>📍 ${item.address || 'No address stored'}</small>
                             <small>📞 ${item.phone || 'No phone'}</small>
                         </div>
                     </div>`;
