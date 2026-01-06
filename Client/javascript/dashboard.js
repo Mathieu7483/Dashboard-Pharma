@@ -35,6 +35,8 @@ class PharmaCharts {
             const daily = await resD.json();
             const monthly = await resM.json();
 
+            console.log(daily, monthly)
+
             this.render(this.chartDay, daily.graph_data, 'line', '#1E90FF', 'Hourly Revenue (€)');
             this.render(this.chartMonth, monthly.graph_data, 'bar', '#00FF7F', 'Daily Revenue (€)');
         } catch (e) { console.error("Analytics Load Failed", e); }
@@ -54,7 +56,13 @@ class PharmaCharts {
                     tension: 0.4
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: {
+                y: { beginAtZero: true }
+                }
+            }
         });
     }
 }
