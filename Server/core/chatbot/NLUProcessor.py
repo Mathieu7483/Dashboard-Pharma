@@ -7,46 +7,59 @@ class NLUProcessor:
     """
 
     def __init__(self):
-        # Load the French model for better processing of French names/keywords
-        # Make sure to run: python -m spacy download fr_core_news_sm
+        # Using the medium French model for better accuracy in entity recognition
         try:
-            self.nlp = spacy.load("fr_core_news_sm")
+            self.nlp = spacy.load("fr_core_news_md")
         except OSError:
-            # Fallback to English if French is not installed
-            self.nlp = spacy.load("en_core_web_sm")
+            # Fallback to the small model if the medium one is missing
+            self.nlp = spacy.load("fr_core_news_sm")
 
     def analyze(self, text):
-        doc = self.nlp(text.lower())
+        """
+        Analyzes the input text to extract intent and the specific entity name.
+        """
+        # Process the text without lowercasing first to help spaCy identify Proper Nouns
+        doc = self.nlp(text)
         
-        # 1. Intent Detection (RESTE IDENTIQUE)
-        keywords = {
-            "get_client": ["client", "patient", "customer", "dupont"], # Optionnel: ajouter des noms communs si besoin
-            "get_doctor": ["docteur", "doctor", "dr", "medecin"],
-            "get_product": ["produit", "médicament", "stock", "prix"]
-        }
+        # 1. Intent Detection using Lemmatization (root form of words)
+        intent = "get_product"  # Default fallback intent
+        tokens_lemma = [token.lemma_.lower() for token in doc]
         
-        intent = "get_product" # Default
-        if any(word in doc.text for word in ["docteur", "dr", "medecin"]):
+        # Checking for doctor or client keywords in their base form
+        if any(w in tokens_lemma for w in ["docteur", "dr", "médecin", "doctor"]):
             intent = "get_doctor"
-        elif any(word in doc.text for word in ["client", "patient"]):
+        elif any(w in tokens_lemma for w in ["client", "patient", "customer"]):
             intent = "get_client"
 
         # 2. Advanced Entity Extraction
-        # List of "noise" words to remove from the search query
-        noise_words = [
-            "cherche", "trouve", "search", "find", "show", "montre", 
-            "le", "la", "les", "des", "du", "un", "une", 
-            "stock", "de", "prix", "combien", "infos", "informations",
-            "client", "docteur", "dr", "produit"
+        # Words strictly related to navigation/intents that should never be searched in DB
+        intent_keywords = [
+            "docteur", "dr", "médecin", "doctor", 
+            "client", "patient", "customer", 
+            "infos", "info", "information", "stock", "prix", "price"
         ]
         
-        # We only keep tokens that are NOT in noise_words and are not punctuation
-        entity_tokens = [
-            token.text for token in doc 
-            if token.text not in noise_words and not token.is_punct
-        ]
-        
-        entity = " ".join(entity_tokens).strip()
+        # Filter logic:
+        # - Not a spaCy stop word (le, la, sur, etc.)
+        # - Not a punctuation mark
+        # - Not in our intent keywords list
+        # - Must be a Noun, Proper Noun or Adjective
+        entity_parts = []
+        for token in doc:
+            clean_lemma = token.lemma_.lower()
+            if not token.is_stop and not token.is_punct:
+                if clean_lemma not in intent_keywords:
+                    if token.pos_ in ["PROPN", "NOUN", "ADJ"]:
+                        entity_parts.append(token.text)
+
+        entity = " ".join(entity_parts).strip()
+
+        # Debugging output for the terminal
+        print(f"--- NLU DEBUG ---")
+        print(f"Input: '{text}'")
+        print(f"Extracted Entity: '{entity}'")
+        print(f"Detected Intent: '{intent}'")
+        print(f"-----------------")
 
         return {
             "intent": intent,
