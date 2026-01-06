@@ -1,5 +1,4 @@
-import spacy
-from sqlalchemy import inspect
+from sqlalchemy import inspect, or_
 from database.data_manager import db
 from models.product import ProductModel
 from models.client import ClientModel
@@ -8,14 +7,13 @@ from core.chatbot.NLUProcessor import NLUProcessor
 
 class ChatBotEngine:
     """
-    Main Engine for the Chatbot handling the flow between Natural Language 
-    Understanding (NLU) and Database queries.
+    Core engine that coordinates the NLU analysis and database retrieval 
+    to provide professional formatted reports.
     """
 
     def __init__(self):
-        # Initialize the NLU processor (ensure spacy model is downloaded)
         self.nlu = NLUProcessor()
-        # Mapping intents to their respective SQLAlchemy models
+        # Mapping intents to SQLAlchemy models
         self.model_mapping = {
             "get_product": ProductModel,
             "get_client": ClientModel,
@@ -24,71 +22,87 @@ class ChatBotEngine:
 
     def process_query(self, user_text):
         """
-        Main entry point: analyzes the text, searches the DB, and formats the report.
+        Main entry point: analyzes text, and attempts cascaded search if needed.
         """
-        # 1. Extract intent and entities from the NLU
         analysis = self.nlu.analyze(user_text)
         intent = analysis.get("intent")
         entity = analysis.get("entity")
 
-        if intent == "unknown" or not entity:
-            return "I'm sorry, I couldn't understand your request. Please specify a product, client, or doctor name."
+        if not entity:
+            return "❓ **Please specify a name.** I can look for products, clients, or doctors."
 
-        # 2. Execute search based on the identified intent
+        # 1. Initial attempt with detected intent
         model = self.model_mapping.get(intent)
-        if not model:
-            return f"Intent '{intent}' is recognized but not yet implemented in the engine."
-
         results = self._search_database(model, entity)
 
-        # 3. Format and return the detailed report
+        # 2. SMART FALLBACK: If nothing found, try other tables automatically
+        if not results:
+            # If we looked for a product and found nothing, try Clients
+            if intent == "get_product":
+                results = self._search_database(ClientModel, entity)
+                if results:
+                    intent = "get_client"
+                else:
+                    # Still nothing? Try Doctors
+                    results = self._search_database(DoctorModel, entity)
+                    if results:
+                        intent = "get_doctor"
+
         return self._format_results(results, intent)
 
     def _search_database(self, model, search_term):
         """
-        Performs a fuzzy search using ILIKE on the 'name' or 'last_name' columns.
+        Performs a flexible search across relevant columns (Name, Last Name, First Name).
         """
-        # We determine which column to search based on the model type
         if model == ProductModel:
-            column = model.name
+            # Products only use the 'name' column
+            condition = model.name.ilike(f"%{search_term}%")
         else:
-            column = model.last_name
+            # Clients and Doctors search in BOTH first and last names
+            condition = or_(
+                model.last_name.ilike(f"%{search_term}%"),
+                model.first_name.ilike(f"%{search_term}%")
+            )
 
-        # Execute query using SQLAlchemy 2.0 syntax
-        query = db.select(model).where(column.ilike(f"%{search_term}%"))
+        query = db.select(model).where(condition)
         return db.session.execute(query).scalars().all()
 
     def _format_results(self, records, intent):
         """
-        Formats database records into a highly readable professional report.
+        Translates SQLAlchemy objects into professional Markdown cards.
         """
         if not records:
-            return "❌ **No records found.** Please check the spelling or try another name."
+            return f"❌ **No records found** for this {intent.split('_')[1]} search. Try a different spelling."
 
-        # Header with a professional touch
-        output = [f"## 📋 Search Results for '{intent.split('_')[1].upper()}'\n"]
-        output.append(f"Found **{len(records)}** matching entry(ies).\n")
+        # Professional Header
+        search_type = intent.split('_')[1].upper()
+        output = [f"## 📋 Search Results for '{search_type}'\n"]
+        output.append(f"Found **{len(records)}** entry(ies).\n")
         
         for record in records:
-            # Header for each card
-            output.append(f"### 🔹 {record.__class__.__name__}: {getattr(record, 'name', getattr(record, 'last_name', 'Unnamed'))}")
+            # Determine card title based on available attributes
+            title = getattr(record, 'name', 
+                    f"{getattr(record, 'first_name', '')} {getattr(record, 'last_name', '')}".strip())
+            
+            output.append(f"### 🔹 {record.__class__.__name__}: {title}")
             output.append("---")
             
+            # Inspect all columns of the model
             mapper = inspect(record).mapper
             for column in mapper.attrs:
                 key = column.key
                 value = getattr(record, key)
 
-                # 1. Skip technical and relationship fields
+                # Skip sensitive or irrelevant technical fields
                 if key in ['password_hash', 'id', 'user_id', 'created_at', 'user', 'sales_entries']:
                     continue
 
-                # 2. Pretty labels
+                # Clean label formatting
                 label = key.replace('_', ' ').capitalize()
                 
-                # 3. Intelligent Value Formatting
+                # Intelligent value styling
                 if value is None:
-                    val_str = "N/A"
+                    val_str = "*Not provided*"
                 elif isinstance(value, float):
                     val_str = f"{value:.2f} €" if "price" in key else f"{value:.2f}"
                 elif isinstance(value, bool):
@@ -98,6 +112,6 @@ class ChatBotEngine:
 
                 output.append(f"**{label}**: {val_str}")
             
-            output.append("\n") # Space between cards
+            output.append("\n") # Spacer between results
 
         return "\n".join(output)
