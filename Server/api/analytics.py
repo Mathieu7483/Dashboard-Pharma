@@ -28,9 +28,9 @@ class MonthlySales(Resource):
         results = facade.get_monthly_stats()
         graph_data = [
             {
-                "day": f"{int(r.day)}", 
+                "day": r.day, 
                 "revenue": float(r.revenue) if r.revenue else 0.0, 
-                "sale_count": r.sale_count
+                "sale_count": getattr(r, 'sale_count', 0)
             } for r in results
         ]
         return {"month": datetime.utcnow().strftime('%Y-%m'), "graph_data": graph_data}, 200
