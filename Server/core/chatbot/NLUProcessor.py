@@ -2,51 +2,51 @@ import spacy
 
 class NLUProcessor:
     """
-    NLU unit responsible for Intent Recognition and Entity Extraction
-    using the spaCy French model.
+    Handles Natural Language Understanding by identifying user intents 
+    and extracting relevant entities (names, products, etc.).
     """
 
     def __init__(self):
+        # Load the French model for better processing of French names/keywords
+        # Make sure to run: python -m spacy download fr_core_news_sm
         try:
-            # Loading the medium French model for better accuracy than 'sm'
-            self.nlp = spacy.load("fr_core_news_md")
+            self.nlp = spacy.load("fr_core_news_sm")
         except OSError:
-            # Professional error handling if the model is missing on the PC
-            raise OSError("Model 'fr_core_news_md' not found. Please run: python -m spacy download fr_core_news_md")
+            # Fallback to English if French is not installed
+            self.nlp = spacy.load("en_core_web_sm")
 
     def analyze(self, text):
-        """
-        Processes raw text to extract the user's goal and the subject.
-        """
-        doc = self.nlp(text)
-        intent = "unknown"
-        entity = None
-
-        # 1. ENTITY EXTRACTION
-        # We look for Proper Nouns (PROPN) or Nouns (NOUN) as potential search terms
-        for token in doc:
-            if token.pos_ in ["PROPN", "NOUN"] and len(token.text) > 2:
-                entity = token.text
-                break
-
-        # 2. INTENT DETECTION (Keyword-based mapping)
-        text_lower = text.lower()
+        doc = self.nlp(text.lower())
         
-        # Product detection keywords
-        if any(kw in text_lower for kw in ["produit", "médicament", "stock", "prix", "doliprane"]):
-            intent = "get_product"
-        # Doctor detection keywords
-        elif any(kw in text_lower for kw in ["docteur", "médecin", "dr", "spécialité"]):
+        # 1. Intent Detection (RESTE IDENTIQUE)
+        keywords = {
+            "get_client": ["client", "patient", "customer", "dupont"], # Optionnel: ajouter des noms communs si besoin
+            "get_doctor": ["docteur", "doctor", "dr", "medecin"],
+            "get_product": ["produit", "médicament", "stock", "prix"]
+        }
+        
+        intent = "get_product" # Default
+        if any(word in doc.text for word in ["docteur", "dr", "medecin"]):
             intent = "get_doctor"
-        # Client detection keywords
-        elif any(kw in text_lower for kw in ["client", "patient"]):
+        elif any(word in doc.text for word in ["client", "patient"]):
             intent = "get_client"
-            
-        # 3. SMART FALLBACK
-        # If no specific keyword is found but an entity is present (like just "Doliprane")
-        # we default the search to products as it's the most common query.
-        if intent == "unknown" and entity:
-            intent = "get_product"
+
+        # 2. Advanced Entity Extraction
+        # List of "noise" words to remove from the search query
+        noise_words = [
+            "cherche", "trouve", "search", "find", "show", "montre", 
+            "le", "la", "les", "des", "du", "un", "une", 
+            "stock", "de", "prix", "combien", "infos", "informations",
+            "client", "docteur", "dr", "produit"
+        ]
+        
+        # We only keep tokens that are NOT in noise_words and are not punctuation
+        entity_tokens = [
+            token.text for token in doc 
+            if token.text not in noise_words and not token.is_punct
+        ]
+        
+        entity = " ".join(entity_tokens).strip()
 
         return {
             "intent": intent,
