@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authentification Dashboard Pharma</title>
+    <title>Pharma Dashboard - Authentication</title>
     <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -13,40 +13,46 @@
     <div id="status-message" class="message" style="display: none;"></div>
 
     <form id="login-form">
-        <h2>Connexion</h2>
-        
-        <input type="text" id="login-username" placeholder="Nom d'utilisateur" required>
+        <h2>Login</h2>
         
         <div class="input-group">
-            <input type="password" id="login-password" placeholder="Mot de passe" required>
-            <span class="password-toggle" data-target="login-password">Afficher</span>
+            <input type="text" id="login-username" placeholder="Username" required>
         </div>
         
-        <button type="submit">Se connecter</button>
+        <div class="input-group">
+            <input type="password" id="login-password" placeholder="Password" required>
+            <span class="password-toggle" data-target="login-password">Show</span>
+        </div>
         
-        <p class="toggle-link">Pas encore de compte ? <a href="#">S'enregistrer</a></p>
+        <button type="submit">Sign In</button>
+        
+        <p class="toggle-link">Don't have an account yet? <a href="#">Register here</a></p>
     </form>
 
     <form id="register-form" style="display: none;">
-        <h2>Enregistrement</h2>
-        
-        <input type="text" id="register-username" placeholder="Nom d'utilisateur" required>
-        
-        <input type="email" id="register-email" placeholder="Adresse e-mail" required> 
+        <h2>Create Account</h2>
         
         <div class="input-group">
-            <input type="password" id="register-password" placeholder="Mot de passe" required>
-            <span class="password-toggle" data-target="register-password">Afficher</span>
+            <input type="text" id="register-username" placeholder="Username" required>
         </div>
         
         <div class="input-group">
-            <input type="password" id="register-password-confirm" placeholder="Confirmer le mot de passe" required>
-            <span class="password-toggle" data-target="register-password-confirm">Afficher</span>
+            <input type="email" id="register-email" placeholder="Email Address" required> 
         </div>
         
-        <button type="submit">S'enregistrer</button>
+        <div class="input-group">
+            <input type="password" id="register-password" placeholder="Password" required>
+            <span class="password-toggle" data-target="register-password">Show</span>
+        </div>
         
-        <p class="toggle-link">J'ai déjà un compte ? <a href="#">Se connecter</a></p>
+        <div class="input-group">
+            <input type="password" id="register-password-confirm" placeholder="Confirm Password" required>
+            <span class="password-toggle" data-target="register-password-confirm">Show</span>
+        </div>
+        
+        <button type="submit">Sign Up</button>
+        
+        <p class="toggle-link">Already registered? <a href="#">Login here</a></p>
     </form>
 
 </div>
