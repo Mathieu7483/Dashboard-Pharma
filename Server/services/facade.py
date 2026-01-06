@@ -5,6 +5,7 @@ from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from datetime import datetime
 
 class FacadeService:
     """
