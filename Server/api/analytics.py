@@ -20,3 +20,18 @@ class DailySales(Resource):
             } for r in results
         ]
         return {"date": datetime.utcnow().strftime('%Y-%m-%d'), "graph_data": graph_data}, 200
+    
+@analytics_ns.route('/monthly')
+class MonthlySales(Resource):
+    @jwt_required()
+    def get(self):
+        results = facade.get_monthly_stats()
+        graph_data = [
+            {
+                "day": f"{int(r.day)}", 
+                "revenue": float(r.revenue) if r.revenue else 0.0, 
+                "sale_count": r.sale_count
+            } for r in results
+        ]
+        return {"month": datetime.utcnow().strftime('%Y-%m'), "graph_data": graph_data}, 200
+    
