@@ -10,6 +10,8 @@ flask-jwt-extended==4.6.0
 
 # --- NLP ---
 spacy==3.7.4
+https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.7.0/fr_core_news_sm-3.7.0-py3-none-any.whl
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl
 
 # --- Development & Testing ---
 bandit==1.7.7
