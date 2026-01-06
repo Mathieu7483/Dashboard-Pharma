@@ -1,0 +1,101 @@
+name,active_ingredient,dosage,stock,price,is_prescription_only
+Paracétamol 500mg,Paracétamol,500mg,500,2.50,False
+Ibuprofène 200mg,Ibuprofène,200mg,350,3.10,False
+Amoxicilline 500mg,Amoxicilline,500mg,120,6.75,True
+Doliprane Liquide,Paracétamol,50mg/ml,200,4.90,False
+Hydrocortisone Crème,Hydrocortisone,1%,80,7.99,True
+Vitamines C 1000mg,Acide Ascorbique,1000mg,400,5.00,False
+Sérum Physiologique,Chlorure de Sodium,0.9%,600,1.50,False
+Aspirine 300mg,Acide Acétylsalicylique,300mg,450,2.99,False
+Oméprazole 20mg,Oméprazole,20mg,150,8.50,True
+Clarithromycine 250mg,Clarithromycine,250mg,90,12.30,True
+Cétirizine 10mg,Cétirizine,10mg,300,4.25,False
+Bétaméthasone Crème,Bétaméthasone,0.05%,70,9.90,True
+Complexe B,Vitamines B,N/A,250,6.50,False
+Spray Nasal Salin,Chlorure de Sodium,1.8%,380,3.50,False
+Métronidazole 500mg,Métronidazole,500mg,110,10.80,True
+Loratadine 10mg,Loratadine,10mg,320,5.50,False
+Furosémide 40mg,Furosémide,40mg,60,15.20,True
+Pantoprazole 40mg,Pantoprazole,40mg,140,9.75,True
+Fer 50mg,Sulfate Ferreux,50mg,280,7.20,False
+Gants Latex M,N/A,M,1000,0.50,False
+Tensiomètre Électronique,N/A,N/A,50,45.00,False
+Shampoing Antichute,Kératine,N/A,180,18.50,False
+Sonde Urinaire,N/A,CH14,40,22.00,True
+Insuline Rapide,Insuline Lispro,100 UI/ml,30,65.00,True
+Gaze Stérile,Coton,N/A,700,1.20,False
+Bande Élastique,Élastomère,5cmx4m,250,3.90,False
+Brosse à Dents Souple,Nylon,N/A,800,2.00,False
+Plaquettes de Diabète,Glucose Oxydase,N/A,150,15.90,False
+Amlodipine 5mg,Amlodipine,5mg,130,7.10,True
+Simvastatine 10mg,Simvastatine,10mg,160,8.80,True
+Clopidogrel 75mg,Clopidogrel,75mg,100,25.00,True
+Augmentin 625mg,Amoxicilline/Clavulanate,625mg,85,14.50,True
+Tramadol 50mg,Tramadol,50mg,75,18.90,True
+Vitamine D3 2000 UI,Cholécaciférol,2000 UI,300,9.50,False
+Crème Solaire SPF 50,Oxyde de Zinc,N/A,150,21.00,False
+Test de Grossesse,HCG,N/A,450,11.50,False
+Suppositoires Glycérine,Glycérol,1g,220,3.00,False
+MopralPro 20mg,Oméprazole,20mg,180,8.99,False
+Spirolactone 25mg,Spironolactone,25mg,95,11.90,True
+Tamsulosine 0.4mg,Tamsulosine,0.4mg,105,16.40,True
+Tylenol Extra,Paracétamol,650mg,380,3.80,False
+Zopiclone 7.5mg,Zopiclone,7.5mg,50,29.90,True
+Lexapro 10mg,Escitalopram,10mg,45,35.00,True
+Atorvastatine 20mg,Atorvastatine,20mg,115,14.20,True
+Losartan 50mg,Losartan,50mg,125,9.30,True
+Hydrochlorothiazide 25mg,Hydrochlorothiazide,25mg,145,6.00,True
+Metformine 500mg,Metformine,500mg,190,5.80,True
+Glibenclamide 5mg,Glibenclamide,5mg,80,9.10,True
+Ventoline Spray,Salbutamol,100mcg/dose,65,21.50,True
+Fluticasone Spray,Fluticasone,50mcg/dose,90,18.00,True
+Dexaméthasone 4mg,Dexaméthasone,4mg,55,16.90,True
+Prednisone 5mg,Prednisone,5mg,70,10.50,True
+Doxycycline 100mg,Doxycycline,100mg,100,13.75,True
+Minocycline 50mg,Minocycline,50mg,95,15.50,True
+Azithromycine 250mg,Azithromycine,250mg,110,17.20,True
+Ciprofloxacine 500mg,Ciprofloxacine,500mg,85,11.20,True
+Levofloxacine 500mg,Levofloxacine,500mg,75,19.90,True
+Fluconazole 150mg,Fluconazole,150mg,130,9.99,True
+Nystatine Crème,Nystatine,100000 UI,160,8.20,True
+Lamisil Crème,Terbinafine,1%,200,6.50,False
+Clotrimazole Crème,Clotrimazole,1%,250,5.90,False
+Vitamine B12,Cobalamine,1000mcg,300,11.00,False
+Calcium/Vitamine D,N/A,N/A,280,14.50,False
+Magnésium 300mg,Magnésium,300mg,350,12.90,False
+Zinc 15mg,Zinc,15mg,400,8.50,False
+Huile de Poisson Omega-3,Acides Gras Oméga-3,1000mg,150,22.50,False
+Complément Probiotique,Bifidobacterium,5 milliards UFC,190,17.80,False
+Théophylline 200mg,Théophylline,200mg,60,28.00,True
+Montelukast 10mg,Montelukast,10mg,120,19.50,True
+Singulair 5mg,Montelukast,5mg,140,16.00,True
+Xyzal 5mg,Lévocétirizine,5mg,280,6.90,False
+Benadryl Liquide,Diphenhydramine,12.5mg/5ml,210,4.75,False
+Mucosolvan,Ambroxol,30mg,230,5.20,False
+Dextrométhorphane Sirop,Dextrométhorphane,15mg/10ml,190,4.50,False
+Vicks VapoRub,Camphre/Menthol,N/A,320,5.99,False
+Thermometre Numérique,N/A,N/A,150,10.50,False
+Kit Premiers Secours,N/A,N/A,80,25.00,False
+Chambre d'Inhalation,N/A,N/A,40,35.00,False
+Compresse Alcoolisée,Alcool Isopropylique,70%,650,0.80,False
+Vaseline Pure,Pétrolatum,N/A,550,2.90,False
+Baume à Lèvres,Cire d'Abeille,N/A,700,1.99,False
+Crème Hydratante Corps,Glycérine,N/A,200,15.00,False
+Gel Hydroalcoolique,Éthanol,70%,380,4.00,False
+Masque Chirurgical,Polypropylène,3 plis,1500,0.30,False
+Seringue 5ml,N/A,5ml,400,0.75,False
+Bouchons d'Oreille,Mousse,N/A,300,3.20,False
+Crème Anti-Démangeaison,Pramoxine,1%,120,6.80,False
+Sérum Rétinol 0.5%,Rétinol,0.5%,90,32.00,False
+Acide Hyaluronique Sérum,Acide Hyaluronique,N/A,110,25.00,False
+Gel Douche pH Neutre,N/A,N/A,250,7.50,False
+Savon Antibactérien,Triclosan,N/A,300,3.50,False
+Laxatif Doux,Macrogol,N/A,180,9.90,False
+Bismuth Subsalicylate,Bismuth,262mg,160,8.10,False
+Lopéramide 2mg,Lopéramide,2mg,220,5.90,False
+Dimenhydrinate 50mg,Dimenhydrinate,50mg,140,4.00,False
+Captopril 25mg,Captopril,25mg,70,11.50,True
+Enalapril 10mg,Enalapril,10mg,85,9.20,True
+Warfarine 5mg,Warfarine,5mg,45,38.00,True
+Rivière 20mg,Rivaroxaban,20mg,35,45.00,True
+Amiodarone 200mg,Amiodarone,200mg,55,24.00,True
