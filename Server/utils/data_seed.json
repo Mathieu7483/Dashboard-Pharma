@@ -1,11 +1,10 @@
 {
   "users": [
-    { "username": "admin.mathieu", "email": "mathieu@pharma.com", "password": "adminpass", "is_admin": true, "first_name": "Mathieu", "last_name": "Admin" },
-    { "username": "admin.alain", "email": "alain@pharma.com", "password": "adminpass", "is_admin": true, "first_name": "Alain", "last_name": "Dupont" },
-    { "username": "emp.sophie", "email": "sophie@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Sophie", "last_name": "Mercier" },
-    { "username": "emp.marc", "email": "marc@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Marc", "last_name": "Petit" },
-    { "username": "emp.julie", "email": "julie@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Julie", "last_name": "Roux" },
-    { "username": "emp.pierre", "email": "pierre@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Pierre", "last_name": "Durand" }
+    { "username": "Claire.Rogé", "email": "Claire@pharma.com", "password": "adminpass", "is_admin": true, "first_name": "Claire", "last_name": "Rogé" },
+    { "username": "Marion.Bonsignore", "email": "Marion@pharma.com", "password": "userpass", "is_admin": true, "first_name": "Marion", "last_name": "Bonsignore Droguet" },
+    { "username": "Ingrid.Petit", "email": "Ingrid@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Ingrid", "last_name": "Petit" },
+    { "username": "Michelle.Roux", "email": "Michelle@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Michelle", "last_name": "Roux" },
+    { "username": "Pierre.Durand", "email": "Pierre@pharma.com", "password": "userpass", "is_admin": false, "first_name": "Pierre", "last_name": "Durand" }
   ],
   "clients": [
     { "first_name": "Jean", "last_name": "Dupont", "email": "j.dupont@mail.com", "address": "12 Rue des Lilas, Paris" },
