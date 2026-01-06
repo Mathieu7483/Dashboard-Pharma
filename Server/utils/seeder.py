@@ -68,6 +68,7 @@ def seed_all_initial_data():
                         last_name=c['last_name'],
                         email=c['email'],
                         address=c.get('address'),
+                        phone=c.get('phone'),
                         user_id=admin.id
                     ))
 
@@ -80,6 +81,7 @@ def seed_all_initial_data():
                         email=d['email'],
                         specialty=d.get('specialty'),
                         phone=d.get('phone'),
+                        address=d.get('address'),
                         user_id=admin.id
                     ))
 
