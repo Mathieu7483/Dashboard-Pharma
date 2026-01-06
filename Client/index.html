@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaDash | Analytics & Stock</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="assets/img/logo-pharma.jpg" alt="Pharma Logo" width="30">
+                <h2>Dashboard Pharma</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#" data-section="view-general" class="nav-link active">📊 General View</a></li>
+                    <li><a href="#" data-section="view-stocks" class="nav-link">📦 Inventory</a></li>
+                    <li><a href="#" data-section="view-clients" class="nav-link">👥 Clients</a></li>
+                    <li><a href="#" data-section="view-doctors" class="nav-link">👨‍⚕️ Doctors</a></li>
+                    <li><a href="#" data-section="view-settings" class="nav-link">⚙️ Settings</a></li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>Operator: <strong>Mathieu</strong></p>
+                </div>
+        </aside>
+
+        <main class="content-area">
+            
+            <header class="top-bar">
+                <div class="top-bar-left">
+                <header class="section-header">
+                    <h1>Dashboard Pharma Overview</h1>
+                </header>
+                </div>
+                
+                <div class="top-bar-right">
+                    <button id="logout-btn" class="btn-logout-top">Logout</button>
+                    
+                    <div class="user-profile">
+                        <div class="avatar">M</div>
+                    </div>
+                </div>
+            </header>
+
+            <section id="view-general" class="content-section">
+                <div class="dashboard-grid">
+                    <article class="widget graph-day">
+                        <h3>Daily Sales</h3>
+                        <div class="chart-container">
+                            <canvas id="chartDay"></canvas>
+                        </div>
+                    </article>
+
+                    <article class="widget graph-month">
+                        <h3>Monthly Sales</h3>
+                        <div class="chart-container">
+                            <canvas id="chartMonth"></canvas>
+                        </div>
+                    </article>
+
+                    <article class="widget stock-kpi">
+                        <h3>Inventory Stock</h3>
+                        <div class="kpi-value" id="stock-efficiency">0%</div>
+                        <p id="stock-status-text">Synchronizing...</p>
+                    </article>
+
+                    <article class="widget meds-team">
+                        <div class="meds-section">
+                        <h3>Critical Stock Levels</h3>
+                        <ul class="item-list" id="meds-list">
+                        <li>Loading inventory...</li>
+                        </ul>
+                        </div>
+    
+                        <hr class="widget-divider"> <div class="team-section">
+                        <h3>Staff On Duty</h3>
+                        <ul class="item-list" id="team-list">
+                        <li>Loading team...</li>
+                        </ul>
+                        </div>
+                    </article>
+
+                    <article class="widget client-data">
+                        <div class="widget-header">
+                            <h3>Client CRM</h3>
+                            <input type="text" id="search-client" class="widget-search" placeholder="Filter patients...">
+                        </div>
+                        <div class="kpi-value" id="total-clients">0</div>
+                        <div class="scroll-wrapper" id="client-search-result">Registered Clients</div>
+                    </article>
+
+                    <article class="widget chatbot-widget">
+                        <h3>AI Caducée</h3>
+                        <div id="chat-window">
+                            <div class="message bot">Hello Mathieu, I'm Caducée. How can I help you today?</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="user-input" placeholder="Ask Caducée about stocks, sales...">
+                            <button id="send-btn">SEND</button>
+                        </div>
+                    </article>
+
+                    <article class="widget doctor-data">
+                        <div class="widget-header">
+                            <h3>Medical Network</h3>
+                            <input type="text" id="search-doctor" class="widget-search" placeholder="Filter doctors...">
+                        </div>
+                        <div class="kpi-value" id="total-doctors">0</div>
+                        <div class="scroll-wrapper" id="doctor-search-result">Affiliated Doctors</div>
+                    </article>
+                </div>
+            </section>
+
+            <section id="view-stocks" class="content-section" style="display: none;">
+                <header class="section-header">
+                    <h1>Full Inventory Management</h1>
+                    <button class="btn-primary">+ Add New Product</button>
+                </header>
+                <div class="widget full-width">
+                    <table class="data-table" id="full-inventory-table">
+                    </table>
+                </div>
+            </section>
+            <footer class="main-footer">
+                <p>&copy; 2026 Dashboard Pharma</p>
+            </footer>
+        </main>
+        
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="javascript/dashboard.js"></script>
+</body>
+</html>
