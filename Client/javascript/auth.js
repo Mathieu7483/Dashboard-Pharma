@@ -1,32 +1,36 @@
 /**
- * PHARMA AUTHENTICATION SYSTEM
- * Handles User Login, Registration, and Cookie-based Session Management.
- * Optimized for Flask-RestX Backend and JWT Security.
+ * PHARMA DASHBOARD - AUTHENTICATION SYSTEM
+ * Handles JWT-based session management and UI toggling.
  */
 
-// --- UTILITIES: Cookie Management ---
+// --- CONFIGURATION ---
+const API_BASE_URL = 'http://127.0.0.1:5000/auth';
 
 /**
- * Sets a secure cookie in the browser storage.
- * @param {string} name - Key of the cookie.
- * @param {string} value - Data (JWT) to store.
- * @param {number} days - Duration before expiration.
+ * Helper to manage JWT storage via cookies (SameSite=Lax for CSRF protection)
  */
-function setCookie(name, value, days) {
-    let expires = "";
-    if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
+const CookieManager = {
+    set: (name, value, days) => {
+        let expires = "";
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = `${name}=${value || ""}${expires}; path=/; SameSite=Lax`;
+    },
+    get: (name) => {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
     }
-    // Using SameSite=Lax to protect against Cross-Site Request Forgery (CSRF)
-    document.cookie = `${name}=${value || ""}${expires}; path=/; SameSite=Lax`;
-}
+};
 
-/**
- * Main Application Logic
- * Initializes listeners once the DOM is fully parsed.
- */
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- DOM Elements ---
@@ -34,23 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const statusMessage = document.getElementById('status-message');
 
-    /**
-     * Displays feedback messages to the user.
-     * @param {string} msg - The text to display.
-     * @param {boolean} isError - Controls styling based on severity.
-     */
-    function showMessage(msg, isError = true) {
-        statusMessage.textContent = msg;
-        statusMessage.style.cssText = `
-            display: block; 
-            color: ${isError ? 'darkred' : 'darkgreen'}; 
-            background-color: ${isError ? '#ffe6e6' : '#e6ffe6'};
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            text-align: center;
-        `;
+    // --- UI Feedback ---
+    function showMessage(text, isError = true) {
+        statusMessage.textContent = text;
+        statusMessage.className = `message ${isError ? 'error' : 'success'}`;
+        statusMessage.style.display = 'block';
+        statusMessage.style.backgroundColor = isError ? '#ffe6e6' : '#e6ffe6';
+        statusMessage.style.color = isError ? 'darkred' : 'darkgreen';
     }
 
     function clearMessage() {
@@ -58,117 +52,101 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.textContent = '';
     }
 
-    // --- UI State Management (View Toggles) ---
-    const showLogin = (e) => {
-        if (e) e.preventDefault();
+    // --- View Switching Logic ---
+    const toggleView = (showLogin) => {
         clearMessage();
-        if (loginForm) loginForm.style.display = 'block';
-        if (registerForm) registerForm.style.display = 'none';
+        loginForm.style.display = showLogin ? 'block' : 'none';
+        registerForm.style.display = showLogin ? 'none' : 'block';
     };
 
-    const showRegister = (e) => {
-        if (e) e.preventDefault();
-        clearMessage();
-        if (loginForm) loginForm.style.display = 'none';
-        if (registerForm) registerForm.style.display = 'block';
-    };
-    
-    // --- Security UI: Password Visibility Toggle ---
-    const toggleButtons = document.querySelectorAll('.password-toggle');
-    toggleButtons.forEach(button => {
+    document.querySelector('#login-form .toggle-link a')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleView(false);
+    });
+
+    document.querySelector('#register-form .toggle-link a')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleView(true);
+    });
+
+    // --- Password Visibility Toggle ---
+    document.querySelectorAll('.password-toggle').forEach(button => {
         button.addEventListener('click', () => {
-            const targetId = button.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            
-            if (input && input.type === 'password') {
-                input.type = 'text';
-                button.textContent = 'Hide'; 
-            } else if (input) {
-                input.type = 'password';
-                button.textContent = 'Show';
+            const target = document.getElementById(button.getAttribute('data-target'));
+            if (target) {
+                const isPassword = target.type === 'password';
+                target.type = isPassword ? 'text' : 'password';
+                button.textContent = isPassword ? 'Hide' : 'Show';
             }
         });
     });
 
-    // Binding navigation links to UI toggle functions
-    document.querySelector('#login-form .toggle-link a')?.addEventListener('click', showRegister);
-    document.querySelector('#register-form .toggle-link a')?.addEventListener('click', showLogin);
+    // --- LOGIN SUBMIT ---
+    loginForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMessage();
 
-    // --- Authentication: Login Logic ---
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearMessage();
+        const payload = {
+            username: document.getElementById('login-username').value,
+            password: document.getElementById('login-password').value
+        };
 
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
+        try {
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-            try {
-                // Fetching the access token from the Flask API
-                const response = await fetch('http://127.0.0.1:5000/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
+            const data = await response.json();
 
+            if (response.ok) {
+                CookieManager.set('access_token', data.access_token, 1);
+                showMessage("Login successful! Redirecting...", false);
+                setTimeout(() => window.location.href = 'index.html', 1200);
+            } else {
+                showMessage(data.msg || "Authentication failed. Please check your credentials.");
+            }
+        } catch (err) {
+            showMessage("Server unreachable. Please check if the Flask backend is running.");
+        }
+    });
+
+    // --- REGISTER SUBMIT ---
+    registerForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMessage();
+
+        const password = document.getElementById('register-password').value;
+        const confirm = document.getElementById('register-password-confirm').value;
+
+        if (password !== confirm) {
+            showMessage("Passwords do not match.");
+            return;
+        }
+
+        const payload = {
+            username: document.getElementById('register-username').value,
+            email: document.getElementById('register-email').value,
+            password: password
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.status === 201) {
+                showMessage("Account created successfully! You can now login.", false);
+                setTimeout(() => toggleView(true), 2000);
+            } else {
                 const data = await response.json();
-
-                if (response.ok) {
-                    // Storing the JWT in a cookie for secure session persistence
-                    setCookie('access_token', data.access_token, 1);
-                    
-                    showMessage("Authentication successful! Redirecting...", false);
-                    
-                    // Controlled delay for better User Experience before redirection
-                    setTimeout(() => {
-                        window.location.href = 'index.html'; 
-                    }, 1000);
-
-                } else {
-                    showMessage(data.msg || "Invalid credentials. Access denied.");
-                }
-            } catch (error) {
-                console.error('Critical Network Failure:', error);
-                showMessage("Database/Server connection failed.");
+                showMessage(data.msg || "Registration failed. Username or Email might already exist.");
             }
-        });
-    }
-
-    // --- Authentication: Registration Logic ---
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearMessage();
-
-            const username = document.getElementById('register-username').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-password-confirm').value;
-
-            // Strict client-side validation for UX speed
-            if (password !== confirmPassword) {
-                showMessage("Error: Passwords do not match.");
-                return;
-            }
-
-            try {
-                const response = await fetch('http://127.0.0.1:5000/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-
-                if (response.status === 201) {
-                    showMessage("Account created. You may now login.", false);
-                    showLogin(null); 
-                } else {
-                    const error = await response.json();
-                    showMessage(error.msg || "Registration failed. Check your data.");
-                }
-            } catch (error) {
-                console.error('Registration Exception:', error);
-                showMessage("External server error during registration.");
-            }
-        });
-    }
+        } catch (err) {
+            showMessage("Connection error. Could not reach the registration service.");
+        }
+    });
 });
