@@ -5,7 +5,7 @@ from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
-from datetime import datetime
+from datetime import datetime, UTC
 
 class FacadeService:
     """
@@ -194,23 +194,34 @@ class FacadeService:
         return db.session.execute(stmt).scalars().all()
     
     def get_daily_stats(self):
-        today = datetime.utcnow().strftime('%Y-%m-%d')
-        return db.session.query(
-            func.strftime('%H', SaleModel.sale_date).label('hour'),
-            func.sum(SaleModel.total_amount).label('revenue'),
-            func.count(SaleModel.id).label('sale_count')
-        ).filter(func.strftime('%Y-%m-%d', SaleModel.sale_date) == today)\
-         .group_by(func.strftime('%H', SaleModel.sale_date))\
-         .order_by('hour').all()
+        today = datetime.now(UTC).strftime('%Y-%m-%d')
+        
+        stmt = (
+            db.select(
+                func.strftime('%H', SaleModel.sale_date).label('hour'),
+                func.sum(SaleModel.total_amount).label('revenue'),
+                func.count(SaleModel.id).label('sale_count')
+            )
+            .filter(func.strftime('%Y-%m-%d', SaleModel.sale_date) == today)
+            .group_by('hour')
+            .order_by('hour')
+        )
+        return db.session.execute(stmt).all()
 
     def get_monthly_stats(self):
-        first_day = datetime.utcnow().replace(day=1).strftime('%Y-%m-%d')
-        return db.session.query(
-            func.strftime('%Y-%m-%d', SaleModel.sale_date).label('day'),
-            func.sum(SaleModel.total_amount).label('revenue')
-        ).filter(SaleModel.sale_date >= first_day)\
-         .group_by(func.strftime('%Y-%m-%d', SaleModel.sale_date))\
-         .order_by('day').all()
+        first_day = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0).strftime('%Y-%m-%d')
+    
+        stmt = (
+            db.select(
+                func.strftime('%Y-%m-%d', SaleModel.sale_date).label('day'),
+                func.sum(SaleModel.total_amount).label('revenue'),
+                func.count(SaleModel.id).label('sale_count') # <--- AJOUTE CETTE LIGNE
+         )
+            .filter(SaleModel.sale_date >= first_day)
+            .group_by('day')
+            .order_by('day')
+     )
+        return db.session.execute(stmt).all()
     
 
     # --- CLIENT CRUD METHODS ---
