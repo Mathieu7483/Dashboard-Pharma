@@ -8,23 +8,21 @@ clients_ns = Namespace('clients', description="Client management operations")
 
 # --- DATA MODELS ---
 
-# Input model for client data validation
 client_input_model = clients_ns.model('clientInput', {
     'first_name': fields.String(required=True, description='Client first name'),
     'last_name': fields.String(required=True, description='Client last name'),
-    'email': fields.String(description='Client email address'),
-    'address': fields.String(description='Client physical address'),
-    'phone': fields.String(description='Client phone number')
+    'email': fields.String(required=True, description='Client email address'),
+    'phone': fields.String(description='Contact phone number'),
+    'address': fields.String(description='Home address')
 })
 
-# Output model for client data serialization
 client_output_model = clients_ns.model('clientOutput', {
     'id': fields.String(readOnly=True),
     'first_name': fields.String(),
     'last_name': fields.String(),
     'email': fields.String(),
-    'address': fields.String(),
-    'phone': fields.String()
+    'phone': fields.String(),
+    'address': fields.String()
 })
 
 # --- ROUTES ---
@@ -32,7 +30,7 @@ client_output_model = clients_ns.model('clientOutput', {
 @clients_ns.route('/')
 class ClientList(Resource):
     @clients_ns.marshal_list_with(client_output_model)
-    @jwt_required()
+    @jwt_required() 
     def get(self):
         """Fetch all registered clients"""
         return facade.get_all_clients(), 200
@@ -41,43 +39,38 @@ class ClientList(Resource):
     @clients_ns.marshal_with(client_output_model, code=201)
     @jwt_required()
     def post(self):
-        """Create a new client record"""
+        """Register a new client"""
         current_user_id = get_jwt_identity()
         data = clients_ns.payload
         new_client = facade.create_client(
             first_name=data['first_name'],
             last_name=data['last_name'],
-            email=data.get('email'),
+            email=data['email'],
             phone=data.get('phone'),
             address=data.get('address'),
             user_id=current_user_id
         )
-        return new_client or clients_ns.abort(400, "Client creation failed"), 201
+        return new_client or clients_ns.abort(400, "Client registration failed")
 
 @clients_ns.route('/search')
 class ClientSearch(Resource):
+    @clients_ns.marshal_list_with(client_output_model)
     @jwt_required()
     def get(self):
-        """Search clients by name: /clients/search?q=John"""
+        """Search clients by name or email: /clients/search?q=Dupont"""
         query = request.args.get('q', '')
-        if not query: 
+        if not query:
             return [], 200
-            
+        
         results = facade.search_clients(query)
-        return [
-            {
-                "id": c.id, 
-                "name": f"{c.first_name} {c.last_name}",
-                "info": c.email
-            } for c in results
-        ], 200
+        return results, 200
 
 @clients_ns.route('/<string:client_id>')
 class ClientItem(Resource):
     @clients_ns.marshal_with(client_output_model)
     @jwt_required()
     def get(self, client_id):
-        """Get a specific client by UUID"""
+        """Get specific client details"""
         client = facade.get_client_by_id(client_id)
         return client or clients_ns.abort(404, "Client not found")
 
@@ -85,18 +78,18 @@ class ClientItem(Resource):
     @clients_ns.marshal_with(client_output_model)
     @jwt_required()
     def put(self, client_id):
-        """Update existing client information"""
+        """Update client information"""
         data = clients_ns.payload
         updated_client = facade.update_client(client_id, data)
         return updated_client or clients_ns.abort(400, "Update failed")
 
     @jwt_required()
     def delete(self, client_id):
-        """Delete a client record (Admin only)"""
+        """Delete a client (Admin only)"""
         claims = get_jwt()
         if not claims.get('is_admin'):
-            clients_ns.abort(403, "Administrator privileges required")
-            
+            clients_ns.abort(403, "Admin access required")
+        
         if facade.delete_client(client_id):
             return '', 204
         clients_ns.abort(404, "Client not found")
