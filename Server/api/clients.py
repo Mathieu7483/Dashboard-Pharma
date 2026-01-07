@@ -48,6 +48,7 @@ class ClientList(Resource):
             first_name=data['first_name'],
             last_name=data['last_name'],
             email=data.get('email'),
+            phone=data.get('phone'),
             address=data.get('address'),
             user_id=current_user_id
         )
