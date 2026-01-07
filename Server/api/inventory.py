@@ -5,7 +5,7 @@ from services.facade import FacadeService
 inventory_ns = Namespace('inventory', description='Inventory operations')
 facade = FacadeService()
 
-# Modèle de sortie pour la cohérence
+# Model for product representation
 product_model = inventory_ns.model('Product', {
     'id': fields.String(description='Product ID'),
     'name': fields.String(description='Product name'),
@@ -25,13 +25,13 @@ class InventoryList(Resource):
         """List all products for the inventory table"""
         products = facade.get_all_products_detailed()
         
-        # Conversion en dictionnaire si to_dict() existe, sinon conversion manuelle
+        # Convert products to dicts if necessary
         result = []
         for p in products:
             if hasattr(p, 'to_dict'):
                 result.append(p.to_dict())
             else:
-                # Conversion manuelle si la méthode to_dict n'existe pas
+                # Convert manually
                 result.append({
                     'id': str(p.id),
                     'name': p.name,
@@ -50,9 +50,9 @@ class InventoryList(Resource):
     def post(self):
         """Create a new product - Available for all logged users"""
         data = inventory_ns.payload
-        user_id = get_jwt_identity()
+        current_user_id = get_jwt_identity()
         
-        # Validation basique
+        # basic validation
         if not data.get('name') or not data.get('active_ingredient'):
             return {"message": "Name and active ingredient are required"}, 400
         
@@ -63,11 +63,11 @@ class InventoryList(Resource):
             stock=data.get('stock', 0),
             price=data.get('price', 0.0),
             is_prescription_only=data.get('is_prescription_only', False),
-            user_id=user_id
+            user_id=current_user_id
         )
         
         if new_product:
-            # Retourner le produit créé
+            # Return the created product details
             product_data = {
                 'id': str(new_product.id),
                 'name': new_product.name,
@@ -113,7 +113,7 @@ class InventoryItem(Resource):
     @inventory_ns.expect(product_model)
     def put(self, product_id):
         """Update a product - Admin only"""
-        # Vérification admin
+        # admin check
         if not get_jwt().get('is_admin'):
             inventory_ns.abort(403, "Admin privileges required")
         
@@ -146,7 +146,7 @@ class InventoryItem(Resource):
     @jwt_required()
     def delete(self, product_id):
         """Delete a product - Admin only"""
-        # Vérification admin
+        # admin check
         if not get_jwt().get('is_admin'):
             inventory_ns.abort(403, "Admin privileges required")
         
