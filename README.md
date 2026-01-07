@@ -48,14 +48,20 @@ Directory structure:
     ├── requirements.txt
     ├── Client/
     │   ├── auth.html
-    │   ├── chatbot.html
+    │   ├── clients.html
+    │   ├── doctors.html
     │   ├── index.html
+    │   ├── inventory.html
+    │   ├── navbar.html
     │   ├── css/
     │   │   ├── auth.css
     │   │   └── style.css
     │   └── javascript/
     │       ├── auth.js
-    │       └── dashboard.js
+    │       ├── clients.js
+    │       ├── dashboard.js
+    │       ├── doctors.js
+    │       └── inventory.js
     └── Server/
         ├── app.py
         ├── config.py
@@ -67,6 +73,7 @@ Directory structure:
         │   ├── chatbot.py
         │   ├── clients.py
         │   ├── doctors.py
+        │   ├── inventory.py
         │   ├── products.py
         │   ├── sales.py
         │   └── users.py
@@ -98,6 +105,7 @@ Directory structure:
             ├── decorator.py
             ├── seed_sales.py
             └── seeder.py
+
 
 ```
 ----
