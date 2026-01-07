@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharma Dashboard | Inventory Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <div id="navbar-placeholder"></div>
+
+        <main class="content-area">
+            <header class="top-bar">
+                <div class="page-info">
+                    <h2>Pharmacy Management System</h2>
+                </div>
+                <div class="top-bar-right">
+                    <div class="avatar">M</div>
+                    <button class="btn-logout-top">Logout</button>
+                </div>
+            </header>
+
+            <section class="content-section inventory-page-content">
+                <div class="inventory-container">
+                    <header class="page-header">
+                        <h1>📦 Inventory Management</h1>
+                        <button id="add-product-btn" class="btn-logout-top">+ Add New Product</button>
+                    </header>
+
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px;">
+                        <div class="widget">
+                            <span class="label">Total Products</span>
+                            <div id="total-count" class="kpi-value">0</div>
+                        </div>
+                        <div class="widget">
+                            <span class="label">Low Stock Alerts</span>
+                            <div id="low-stock-count" class="kpi-value" style="color: #ff4757;">0</div>
+                        </div>
+                    </div>
+
+                    <div class="search-bar widget" style="margin-bottom: 20px;">
+                        <input type="text" id="inventory-search" placeholder="Search product..." class="search-box input" style="width: 100%;">
+                    </div>
+
+                    <div class="table-responsive widget">
+                        <table id="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Ingredient</th>
+                                    <th>Stock</th>
+                                    <th>Price</th>
+                                    <th>Prescription</th>
+                                    <th class="admin-only">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="main-footer">
+                <p>&copy; 2026 Dashboard Pharma</p>
+            </footer>
+        </main>
+    </div>
+
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <header class="widget-header">
+                <h3>Add New Medication</h3>
+            </header>
+            <form id="product-form">
+                <input type="text" name="name" placeholder="Name" required>
+                <input type="text" name="active_ingredient" placeholder="Active Ingredient">
+                <input type="text" name="dosage" placeholder="Dosage">
+                <input type="number" name="stock" placeholder="Initial Stock" required>
+                <input type="number" step="0.01" name="price" placeholder="Price (€)" required>
+                
+                <label class="item-entry" style="display: flex; align-items: center; gap: 10px; border: none;">
+                    <input type="checkbox" name="is_prescription_only"> 
+                    <span>Prescription required?</span>
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" id="close-modal" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn-logout-top">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="javascript/inventory.js"></script>
+</body>
+</html>
