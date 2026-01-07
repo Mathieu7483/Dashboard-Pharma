@@ -704,3 +704,60 @@ footer {
 .btn-edit:hover, .btn-delete:hover {
     transform: scale(1.1);
 }
+
+/* ==========================================================================
+   13. DOCTOR MANAGEMENT (SPECIFIC STYLING)
+   ========================================================================== */
+
+/* Full-width container for the Doctor list */
+.doctor-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+}
+
+/* Specific styling for the Doctor List Table */
+#doctors-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+/* Modern & Bold Headers for Doctors */
+#doctors-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--color-primary); /* Blue border for Doctors */
+    color: var(--color-primary);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+}
+
+/* Spaced out entries for professional look */
+#doctors-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+/* Specialty Badge Styling */
+.badge-specialty {
+    background: #e8f4fd;
+    color: var(--color-primary);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+    border: 1px solid rgba(30, 144, 255, 0.2);
+}
+
+#doctors-table tr:hover {
+    background-color: rgba(30, 144, 255, 0.04);
+}
