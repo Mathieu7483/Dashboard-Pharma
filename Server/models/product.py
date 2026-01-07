@@ -63,3 +63,16 @@ class ProductModel(BaseModel):
         Provides a useful representation for debugging.
         """
         return f'<ProductModel name={self.name} dosage={self.dosage} stock={self.stock}>'
+    
+    def to_dict(self):
+        """Convert product instance to dictionary"""
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'active_ingredient': self.active_ingredient,
+            'dosage': self.dosage,
+            'stock': self.stock,
+            'price': float(self.price),
+            'is_prescription_only': self.is_prescription_only,
+            'user_id': str(self.user_id) if self.user_id else None
+        }
