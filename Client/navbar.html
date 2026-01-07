@@ -1,0 +1,42 @@
+<aside class="sidebar">
+    <header class="sidebar-header">
+        <h2 style="color: #1E90FF; font-size: 1.5rem; margin: 0;">💊 Dashboard Pharma</h2>
+        <p style="font-size: 0.85rem; color: #888; margin-top: 5px;">Management System</p>
+    </header>
+
+    <nav class="sidebar-nav">
+        <ul>
+            <li><a href="index.html" id="nav-dashboard">🏠 Dashboard</a></li>
+            <li><a href="inventory.html" id="nav-inventory">📦 Inventory</a></li>
+            <li><a href="clients.html" id="nav-clients">👤 Clients</a></li>
+            <li><a href="doctors.html" id="nav-doctors">🩺 Doctors</a></li>
+        </ul>
+    </nav>
+
+    <footer class="sidebar-footer">
+        <div style="text-align: center; padding: 10px;">
+            <small style="color: #888;">Version 1.0</small>
+        </div>
+    </footer>
+</aside>
+
+<script>
+    // Highlight active page in navigation
+    (function() {
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const navLinks = {
+            'index.html': 'nav-dashboard',
+            'inventory.html': 'nav-inventory',
+            'clients.html': 'nav-clients',
+            'doctors.html': 'nav-doctors'
+        };
+        
+        const activeId = navLinks[currentPage];
+        if (activeId) {
+            const activeLink = document.getElementById(activeId);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+    })();
+</script>
