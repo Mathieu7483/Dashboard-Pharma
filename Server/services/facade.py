@@ -241,8 +241,8 @@ class FacadeService:
     def get_client_by_last_name(self, last_name):
         return db.session.execute(db.select(ClientModel).filter_by(last_name=last_name)).scalar_one_or_none()
     
-    def create_client(self, first_name, last_name, email, address, user_id):
-        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email, address=address, user_id=user_id)
+    def create_client(self, first_name, last_name, email,phone, address, user_id):
+        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email,phone=phone, address=address, user_id=user_id)
         return new_client if new_client.save_to_db() else None
 
     def search_clients(self, query):
@@ -259,6 +259,11 @@ class FacadeService:
                     setattr(client, key, value)
             return client if client.save_to_db() else None
         return None
+    
+    def delete_client(self, client_id):
+        client = self.get_client_by_id(client_id)
+        return client.delete_from_db() if client else False
+    
         
     # --- DOCTOR CRUD METHODS ---
     
@@ -290,3 +295,7 @@ class FacadeService:
                     setattr(doctor, key, value)
             return doctor if doctor.save_to_db() else None
         return None
+    
+    def delete_doctor(self, doctor_id):
+        doctor = self.get_doctor_by_id(doctor_id)
+        return doctor.delete_from_db() if doctor else False
