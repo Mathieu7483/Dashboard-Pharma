@@ -18,7 +18,7 @@ doctor_input_model = doctors_ns.model('doctorInput', {
     'phone': fields.String(description='Contact phone number')
 })
 
-# Output model for API responses
+# Output model for API responses (Shared by Dashboard and Chatbot)
 doctor_output_model = doctors_ns.model('doctorOutput', {
     'id': fields.String(readOnly=True),
     'first_name': fields.String(),
@@ -55,25 +55,26 @@ class DoctorList(Resource):
             phone=data.get('phone'),
             user_id=current_user_id
         )
-        return new_doctor or doctors_ns.abort(400, "Doctor registration failed"), 201
+        return new_doctor or doctors_ns.abort(400, "Doctor registration failed")
 
 @doctors_ns.route('/search')
 class DoctorSearch(Resource):
+    @doctors_ns.marshal_list_with(doctor_output_model)
     @jwt_required()
     def get(self):
-        """Search doctors using a query parameter: /doctors/search?q=Smith"""
+        """
+        Search doctors using a query parameter: /doctors/search?q=Smith
+        Returns full profiles to satisfy both Dashboard and Chatbot requirements.
+        """
         query = request.args.get('q', '')
         if not query: 
             return [], 200
             
+        # Fetches list of DoctorModel objects from Facade
         results = facade.search_doctors(query)
-        return [
-            {
-                "id": d.id, 
-                "name": f"Dr. {d.first_name} {d.last_name}", 
-                "info": d.specialty
-            } for d in results
-        ], 200
+        
+        # marshal_list_with handles the conversion of objects to the dictionary structure
+        return results, 200
 
 @doctors_ns.route('/<string:doctor_id>')
 class DoctorItem(Resource):
