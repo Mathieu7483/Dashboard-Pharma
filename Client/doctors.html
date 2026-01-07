@@ -69,26 +69,26 @@
     </div>
 
     <!-- Modal pour ajout/édition de doctor -->
-    <div id="doctor-modal" class="modal">
-        <div class="modal-content">
-            <header class="widget-header">
-                <h3>Add New doctor</h3>
-            </header>
-            <form id="doctor-form">
-                <input type="text" name="first_name" placeholder="First Name *" required>
-                <input type="text" name="last_name" placeholder="Last Name *" required>
-                <input type="email" name="email" placeholder="Email *" required>
-                <input type="text" name="specialty" placeholder="Specialty">
-                <input type="text" name="phone" placeholder="Phone Number">
-                <input type="text" name="address" placeholder="Address">
+   <div id="doctor-modal" class="modal">
+    <div class="modal-content">
+        <header class="widget-header">
+            <h3>Add New doctor</h3>
+        </header>
+        <form id="doctor-form" style="display: flex; flex-direction: column; gap: 10px; padding-top: 15px;">
+            <input type="text" name="first_name" placeholder="First Name *" required>
+            <input type="text" name="last_name" placeholder="Last Name *" required>
+            <input type="email" name="email" placeholder="Email *" required>
+            <input type="text" name="specialty" placeholder="Specialty">
+            <input type="text" name="phone" placeholder="Phone Number">
+            <input type="text" name="address" placeholder="Address">
 
-                <div class="form-actions">
-                    <button type="button" id="close-modal" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; cursor: pointer; background: #ddd; border: none;">Cancel</button>
-                    <button type="submit" class="btn-logout-top">Save doctor</button>
-                </div>
-            </form>
-        </div>
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" id="close-modal" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button type="submit" class="btn-logout-top">Save doctor</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <script src="javascript/doctors.js"></script>
 </body>
