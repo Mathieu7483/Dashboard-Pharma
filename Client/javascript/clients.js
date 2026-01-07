@@ -1,6 +1,6 @@
 /**
- * Client Management Logic
- * Handles CRUD operations and Dashboard synchronization.
+ * Client Management
+ * Handles CRUD operations and advanced Server-side search.
  */
 
 const CookieManager = {
@@ -32,9 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSearch();
 });
 
-/**
- * Decodes JWT and returns token + admin status.
- */
 function getAuthInfo() {
     const token = CookieManager.get('access_token');
     if (!token) return { token: null, isAdmin: false };
@@ -47,17 +44,12 @@ function getAuthInfo() {
     }
 }
 
-/**
- * Fetch all clients and render.
- */
 async function fetchClients() {
     const { token, isAdmin } = getAuthInfo();
     try {
         const response = await fetch('http://127.0.0.1:5000/clients/', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
         const clients = await response.json();
         renderTable(clients, isAdmin);
         updateStats(clients);
@@ -66,13 +58,15 @@ async function fetchClients() {
     }
 }
 
-/**
- * Build table rows with Admin check for buttons.
- */
 function renderTable(clients, isAdmin) {
     const tbody = document.getElementById('clients-body');
     if (!tbody) return;
     tbody.innerHTML = '';
+
+    if (clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No clients found.</td></tr>';
+        return;
+    }
 
     clients.forEach(c => {
         const row = document.createElement('tr');
@@ -93,23 +87,39 @@ function renderTable(clients, isAdmin) {
     });
 }
 
-/**
- * Setup modal controls, logout, and form submission.
- */
+function setupSearch() {
+    const searchInput = document.getElementById('clients-search');
+    let debounceTimer;
+
+    searchInput?.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length === 0) {
+            fetchClients();
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            const { token, isAdmin } = getAuthInfo();
+            try {
+                const res = await fetch(`http://127.0.0.1:5000/clients/search?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const results = await res.json();
+                    renderTable(results, isAdmin);
+                }
+            } catch (err) { console.error("Search error:", err); }
+        }, 300);
+    });
+}
+
 function setupEventListeners() {
     const modal = document.getElementById('client-modal');
     const form = document.getElementById('client-form');
 
-    // Logout - Specific selector to avoid conflict with "Add Client" button class
-    const logoutBtn = document.querySelector('.top-bar-right .btn-logout-top');
-    if (logoutBtn) {
-        logoutBtn.onclick = () => {
-            CookieManager.erase('access_token');
-            window.location.href = 'auth.html';
-        };
-    }
-
-    // Modal open
+    // Add button logic
     document.getElementById('add-client-btn').onclick = () => {
         form.reset();
         form.removeAttribute('data-client-id');
@@ -117,10 +127,8 @@ function setupEventListeners() {
         modal.style.display = 'block';
     };
 
-    // Modal close
     document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; };
 
-    // Create or Update
     form.onsubmit = async (e) => {
         e.preventDefault();
         const { token } = getAuthInfo();
@@ -128,119 +136,66 @@ function setupEventListeners() {
         const formData = new FormData(form);
         
         const payload = {
-            first_name: formData.get('first_name').trim(),
-            last_name: formData.get('last_name').trim(),
-            email: formData.get('email').trim(),
-            phone: formData.get('phone').trim() || null,
-            address: formData.get('address').trim() || null
+            first_name: formData.get('first_name'),
+            last_name: formData.get('last_name'),
+            email: formData.get('email'),
+            phone: formData.get('phone') || null,
+            address: formData.get('address') || null
         };
 
         const url = clientId ? `http://127.0.0.1:5000/clients/${clientId}` : 'http://127.0.0.1:5000/clients/';
         const method = clientId ? 'PUT' : 'POST';
 
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-            if (res.ok) {
-                modal.style.display = 'none';
-                fetchClients();
-            } else {
-                const err = await res.json();
-                alert(`Error: ${err.message || 'Operation failed'}`);
-            }
-        } catch (err) {
-            console.error("Request Error:", err);
+        if (res.ok) {
+            modal.style.display = 'none';
+            fetchClients();
         }
     };
 }
 
-/**
- * Fetch specific client and open edit modal.
- */
 window.editClient = async (id) => {
     const { token } = getAuthInfo();
-    try {
-        const res = await fetch(`http://127.0.0.1:5000/clients/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            const c = await res.json();
-            const form = document.getElementById('client-form');
-            form.querySelector('[name="first_name"]').value = c.first_name;
-            form.querySelector('[name="last_name"]').value = c.last_name;
-            form.querySelector('[name="email"]').value = c.email;
-            form.querySelector('[name="phone"]').value = c.phone || '';
-            form.querySelector('[name="address"]').value = c.address || '';
-            
-            form.setAttribute('data-client-id', id);
-            document.querySelector('#client-modal h3').textContent = 'Edit Client';
-            document.getElementById('client-modal').style.display = 'block';
-        }
-    } catch (err) { console.error("Load Error:", err); }
-};
-
-/**
- * Delete client by ID.
- */
-window.deleteClient = async (id) => {
-    if (!confirm("Confirm client deletion?")) return;
-    const { token } = getAuthInfo();
-    try {
-        const res = await fetch(`http://127.0.0.1:5000/clients/${id}`, { 
-            method: 'DELETE',
-            headers: { 
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (res.status === 204 || res.ok) {
-            console.log("Deleted successfully");
-            await fetchClients();
-        } else if (res.status === 403) {
-            alert("Permission denied: You must be an administrator.");
-        } else {
-            const err = await res.json();
-            alert(`Error: ${err.message}`);
-        }
-    } catch (err) {
-        console.error("Delete request failed:", err);
-        alert("Server connection failed. Check if CORS or the URL is correct (Missing slash?)");
+    const res = await fetch(`http://127.0.0.1:5000/clients/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const c = await res.json();
+        const form = document.getElementById('client-form');
+        form.querySelector('[name="first_name"]').value = c.first_name;
+        form.querySelector('[name="last_name"]').value = c.last_name;
+        form.querySelector('[name="email"]').value = c.email;
+        form.querySelector('[name="phone"]').value = c.phone || '';
+        form.querySelector('[name="address"]').value = c.address || '';
+        form.setAttribute('data-client-id', id);
+        document.querySelector('#client-modal h3').textContent = 'Edit Client';
+        document.getElementById('client-modal').style.display = 'block';
     }
 };
 
-/**
- * Filter table rows.
- */
-function setupSearch() {
-    document.getElementById('clients-search')?.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#clients-body tr').forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-        });
+window.deleteClient = async (id) => {
+    if (!confirm("Delete this client?")) return;
+    const { token } = getAuthInfo();
+    const res = await fetch(`http://127.0.0.1:5000/clients/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
     });
-}
+    if (res.ok) fetchClients();
+};
 
-/**
- * Update Dashboard counters.
- */
 function updateStats(clients) {
     const total = document.getElementById('total-clients-count');
     if (total) total.textContent = clients.length;
 }
 
-/**
- * Loads shared navbar.
- */
 function loadNavbar() {
-    fetch('navbar.html')
-        .then(res => res.text())
-        .then(html => document.getElementById('navbar-placeholder').innerHTML = html)
-        .catch(err => console.error("Navbar Error:", err));
+    fetch('navbar.html').then(res => res.text()).then(html => {
+        const placeholder = document.getElementById('navbar-placeholder');
+        if (placeholder) placeholder.innerHTML = html;
+    });
 }
