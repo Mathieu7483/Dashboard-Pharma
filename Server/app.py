@@ -52,6 +52,7 @@ def create_app(config_class=DevelopmentConfig):
     from api.clients import clients_ns
     from api.analytics import analytics_ns
     from api.chatbot import ns as chatbot_ns # Importing your chatbot namespace
+    from api.inventory import inventory_ns
     
     # 3. REGISTER NAMESPACES
     # Resetting the list prevents duplicates during development hot-reloads
@@ -65,6 +66,7 @@ def create_app(config_class=DevelopmentConfig):
     api.add_namespace(clients_ns, path='/clients')
     api.add_namespace(analytics_ns, path='/analytics')
     api.add_namespace(chatbot_ns, path='/chatbot') # Registering chatbot namespace
+    api.add_namespace(inventory_ns, path='/inventory')
 
     # 4. BIND API TO APP INSTANCE
     api.init_app(app)
