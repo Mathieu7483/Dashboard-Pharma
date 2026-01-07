@@ -1,6 +1,6 @@
 /**
  * Doctor and Medical Management
- * Handles CRUD operations and Dashboard synchronization.
+ * Handles CRUD operations, Dashboard synchronization, and Server-side search.
  */
 
 const CookieManager = {
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNavbar();
     fetchDoctors();
     setupEventListeners();
-    setupSearch();
+    setupSearch(); // Integrated advanced search
 });
 
 /**
@@ -48,7 +48,7 @@ function getAuthInfo() {
 }
 
 /**
- * Fetch all doctors and render.
+ * Fetch all doctors and render the table.
  */
 async function fetchDoctors() {
     const { token, isAdmin } = getAuthInfo();
@@ -67,12 +67,17 @@ async function fetchDoctors() {
 }
 
 /**
- * Build table rows with Admin check for buttons.
+ * Build table rows with Admin check for action buttons.
  */
 function renderTable(doctors, isAdmin) {
     const tbody = document.getElementById('doctors-body');
     if (!tbody) return;
     tbody.innerHTML = '';
+
+    if (doctors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No records found.</td></tr>';
+        return;
+    }
 
     doctors.forEach(d => {
         const row = document.createElement('tr');
@@ -85,8 +90,8 @@ function renderTable(doctors, isAdmin) {
             <td>${d.address || '-'}</td>
             <td>
                 ${isAdmin ? `
-                    <button class="btn-edit" onclick="editDoctor('${d.id}')">✎</button>
-                    <button class="btn-delete" onclick="deleteDoctor('${d.id}')">🗑</button>
+                    <button class="btn-edit" onclick="editDoctor('${d.id}')" title="Edit">✎</button>
+                    <button class="btn-delete" onclick="deleteDoctor('${d.id}')" title="Delete">🗑</button>
                 ` : '-'}
             </td>
         `;
@@ -101,7 +106,7 @@ function setupEventListeners() {
     const modal = document.getElementById('doctor-modal');
     const form = document.getElementById('doctor-form');
 
-    // Logout
+    // Logout operation
     const logoutBtn = document.querySelector('.top-bar-right .btn-logout-top');
     if (logoutBtn) {
         logoutBtn.onclick = () => {
@@ -110,7 +115,7 @@ function setupEventListeners() {
         };
     }
 
-    // Modal open
+    // Modal opening (Create mode)
     const addBtn = document.getElementById('add-doctor-btn');
     if (addBtn) {
         addBtn.onclick = () => {
@@ -121,13 +126,13 @@ function setupEventListeners() {
         };
     }
 
-    // Modal close
+    // Modal closing
     const closeBtn = document.getElementById('close-modal');
     if (closeBtn) {
         closeBtn.onclick = () => { modal.style.display = 'none'; };
     }
 
-    // Create or Update
+    // Create or Update submission
     form.onsubmit = async (e) => {
         e.preventDefault();
         const { token } = getAuthInfo();
@@ -158,7 +163,7 @@ function setupEventListeners() {
 
             if (res.ok) {
                 modal.style.display = 'none';
-                fetchDoctors();
+                fetchDoctors(); // Refresh list
             } else {
                 const err = await res.json();
                 alert(`Error: ${err.message || 'Operation failed'}`);
@@ -170,7 +175,46 @@ function setupEventListeners() {
 }
 
 /**
- * Fetch specific doctor and open edit modal.
+ * Advanced Server-Side Search with Debounce Logic.
+ */
+function setupSearch() {
+    const searchInput = document.getElementById('doctors-search');
+    let debounceTimer;
+
+    searchInput?.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        // Clear previous timer to avoid multiple API calls
+        clearTimeout(debounceTimer);
+
+        // If query is empty, revert to full list
+        if (query.length === 0) {
+            fetchDoctors();
+            return;
+        }
+
+        // Wait 300ms after last keystroke before calling API
+        debounceTimer = setTimeout(async () => {
+            const { token, isAdmin } = getAuthInfo();
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/doctors/search?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const searchResults = await response.json();
+                    // We reuse renderTable since we updated the Backend to return full models
+                    renderTable(searchResults, isAdmin);
+                }
+            } catch (error) {
+                console.error("Search API Error:", error);
+            }
+        }, 300);
+    });
+}
+
+/**
+ * Fetch specific doctor data and open the edit modal.
  */
 window.editDoctor = async (id) => {
     const { token } = getAuthInfo();
@@ -185,7 +229,7 @@ window.editDoctor = async (id) => {
             form.querySelector('[name="last_name"]').value = d.last_name;
             form.querySelector('[name="email"]').value = d.email;
             form.querySelector('[name="phone"]').value = d.phone || '';
-            form.querySelector('[name="specialty"]').value = d.specialty || ''; // CORRECTED: no 'i'
+            form.querySelector('[name="specialty"]').value = d.specialty || '';
             form.querySelector('[name="address"]').value = d.address || '';
             
             form.setAttribute('data-doctor-id', id);
@@ -196,10 +240,10 @@ window.editDoctor = async (id) => {
 };
 
 /**
- * Delete doctor by ID.
+ * Delete a doctor record by ID.
  */
 window.deleteDoctor = async (id) => {
-    if (!confirm("Confirm doctor deletion?")) return;
+    if (!confirm("Are you sure you want to delete this doctor?")) return;
     const { token } = getAuthInfo();
     try {
         const res = await fetch(`http://127.0.0.1:5000/doctors/${id}`, { 
@@ -219,19 +263,7 @@ window.deleteDoctor = async (id) => {
 };
 
 /**
- * Filter table rows.
- */
-function setupSearch() {
-    document.getElementById('doctors-search')?.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#doctors-body tr').forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-        });
-    });
-}
-
-/**
- * Update dashboard counters.
+ * Update the dashboard counters (KPIs).
  */
 function updateStats(doctors) {
     const total = document.getElementById('total-doctors-count');
@@ -239,7 +271,7 @@ function updateStats(doctors) {
 }
 
 /**
- * Loads shared navbar.
+ * Injects the shared navigation bar.
  */
 function loadNavbar() {
     fetch('navbar.html')
@@ -248,5 +280,5 @@ function loadNavbar() {
             const placeholder = document.getElementById('navbar-placeholder');
             if (placeholder) placeholder.innerHTML = html;
         })
-        .catch(err => console.error("Navbar Error:", err));
+        .catch(err => console.error("Navbar Loading Error:", err));
 }
