@@ -641,3 +641,66 @@ footer {
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn { from { transform: translateY(-20px); } to { transform: translateY(0); } }  
+
+/* ==========================================================================
+   12. CLIENT MANAGEMENT (SPECIFIC STYLING)
+   ========================================================================== */
+
+/* Enhanced space for Client Table Container */
+.client-container {
+    max-width: 1600px; /* Increased width as requested */
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* Specific styling for the Client List Table */
+#clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+/* Modern & Professional Title Headers */
+#clients-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--color-secondary); /* Thicker emerald border */
+    color: var(--color-primary);
+    font-weight: 800;
+    text-transform: uppercase; /* Capitalized titles */
+    letter-spacing: 1.5px;      /* Spaced out letters */
+    font-size: 0.85rem;
+}
+
+/* Spaced out list entries */
+#clients-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+#clients-table tr:hover {
+    background-color: rgba(30, 144, 255, 0.04);
+}
+
+/* Unified Action Buttons style */
+.btn-edit, .btn-delete {
+    padding: 7px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    color: white;
+}
+
+.btn-edit { background: var(--color-primary); }
+.btn-delete { background: #ff4757; }
+
+.btn-edit:hover, .btn-delete:hover {
+    transform: scale(1.1);
+}
