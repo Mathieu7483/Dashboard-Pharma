@@ -29,14 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNavbar();
     fetchInventory();
     setupEventListeners();
-    setupSearch(); // ✅ Ajout de la recherche
+    setupSearch();
 });
 
 /**
  * Extract auth token and admin status from JWT.
  */
 function getAuthInfo() {
-    const token = CookieManager.get('access_token'); // ✅ CHANGEMENT ICI
+    const token = CookieManager.get('access_token');
     if (!token) return { isAdmin: false, token: null };
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -141,9 +141,8 @@ function setupEventListeners() {
     const logoutBtn = document.querySelector('.btn-logout-top');
     if (logoutBtn) {
         logoutBtn.onclick = () => {
-            // Supprimer le cookie
             document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            window.location.href = 'auth.html'; // ou votre page de login
+            window.location.href = 'auth.html';
         };
     }
 
@@ -162,7 +161,6 @@ function setupEventListeners() {
             is_prescription_only: formData.get('is_prescription_only') === 'on'
         };
 
-        // Vérifier si on est en mode édition ou création
         const productId = form.getAttribute('data-product-id');
         const isEditing = !!productId;
         const url = isEditing 
@@ -205,7 +203,6 @@ window.editProduct = async (id) => {
     const { token } = getAuthInfo();
     
     try {
-        // Récupérer les données du produit
         const response = await fetch(`http://127.0.0.1:5000/inventory/${id}`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -218,7 +215,6 @@ window.editProduct = async (id) => {
 
         const product = await response.json();
         
-        // Pré-remplir le formulaire
         const form = document.getElementById('product-form');
         const modal = document.getElementById('product-modal');
         const modalTitle = document.querySelector('#product-modal .widget-header h3');
@@ -230,13 +226,11 @@ window.editProduct = async (id) => {
         form.querySelector('input[name="price"]').value = product.price;
         form.querySelector('input[name="is_prescription_only"]').checked = product.is_prescription_only;
         
-        // Stocker l'ID du produit pour savoir qu'on est en mode édition
         form.setAttribute('data-product-id', id);
         
-        // Changer le titre du modal
+
         if (modalTitle) modalTitle.textContent = 'Edit Medication';
         
-        // Ouvrir le modal
         modal.style.display = 'block';
         
     } catch (err) {
@@ -273,7 +267,6 @@ window.deleteProduct = async (id) => {
  */
 window.editProduct = (id) => {
     alert(`Edit functionality for product ${id} - To be implemented`);
-    // TODO: Implémenter la modification
 };
 
 /**
@@ -311,7 +304,7 @@ function setupSearch() {
  * Loads shared navbar.
  */
 function loadNavbar() {
-    fetch('./navbar.html')
+    fetch('navbar.html')
         .then(res => res.text())
         .then(html => document.getElementById('navbar-placeholder').innerHTML = html)
         .catch(err => console.error("Navbar Error:", err));
