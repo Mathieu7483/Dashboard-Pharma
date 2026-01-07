@@ -78,6 +78,12 @@ class FacadeService:
     
     def get_all_products(self):
         return db.session.execute(db.select(ProductModel)).scalars().all()
+    
+    def get_all_products_detailed(self, user_id=None):
+        stmt = db.select(ProductModel).order_by(ProductModel.name)
+        if user_id:
+            stmt = stmt.filter(ProductModel.user_id == user_id)
+        return db.session.execute(stmt).scalars().all()
 
     def get_product_by_id(self, product_id):
         return db.session.get(ProductModel, product_id)
