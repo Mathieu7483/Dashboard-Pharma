@@ -102,6 +102,51 @@ body {
 }
 
 /* ==========================================================================
+   4. SIDEBAR (SUITE - Fix pour navbar chargée dynamiquement)
+   ========================================================================== */
+
+/* Fix pour navbar chargée dynamiquement via JavaScript */
+#navbar-placeholder {
+    display: contents; /* Les enfants se comportent comme s'ils étaient directement dans .app-wrapper */
+}
+
+/* S'assurer que la sidebar reste fixe */
+#navbar-placeholder .sidebar {
+    position: sticky;
+    top: 0;
+    left: 0;
+}
+
+/* Style pour le lien actif avec animation */
+.sidebar-nav a.active {
+    color: var(--color-primary);
+    background: rgba(30, 144, 255, 0.05);
+    border-left: 5px solid var(--color-secondary);
+    padding-left: 20px; /* Compenser la bordure */
+}
+
+/* Animation smooth pour les transitions de menu */
+.sidebar-nav a {
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-nav a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0;
+    background: rgba(30, 144, 255, 0.05);
+    transition: width 0.3s ease;
+    z-index: -1;
+}
+
+.sidebar-nav a:hover::before {
+    width: 100%;
+}
+/* ==========================================================================
    5. TOP BAR & USER UI
    ========================================================================== */
 .top-bar {
