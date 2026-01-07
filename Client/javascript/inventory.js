@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNavbar();
     fetchInventory();
     setupEventListeners();
+    setupSearch(); // ✅ Ajout de la recherche
 });
 
 /**
@@ -120,10 +121,21 @@ function renderTable(products, isAdmin) {
 function setupEventListeners() {
     const modal = document.getElementById('product-modal');
     const form = document.getElementById('product-form');
+    const modalTitle = document.querySelector('#product-modal .widget-header h3');
 
-    // Modal Interaction
-    document.getElementById('add-product-btn').onclick = () => modal.style.display = 'block';
-    document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; form.reset(); };
+    // Modal Interaction - Ouvrir en mode "création"
+    document.getElementById('add-product-btn').onclick = () => {
+        form.reset();
+        form.removeAttribute('data-product-id'); // Retirer l'ID si présent
+        if (modalTitle) modalTitle.textContent = 'Add New Medication';
+        modal.style.display = 'block';
+    };
+
+    document.getElementById('close-modal').onclick = () => { 
+        modal.style.display = 'none'; 
+        form.reset();
+        form.removeAttribute('data-product-id');
+    };
 
     // Logout Logic
     const logoutBtn = document.querySelector('.btn-logout-top');
@@ -135,7 +147,7 @@ function setupEventListeners() {
         };
     }
 
-    // Product Creation (POST)
+    // Product Creation (POST) or Update (PUT)
     form.onsubmit = async (e) => {
         e.preventDefault();
         const { token } = getAuthInfo();
@@ -150,9 +162,17 @@ function setupEventListeners() {
             is_prescription_only: formData.get('is_prescription_only') === 'on'
         };
 
+        // Vérifier si on est en mode édition ou création
+        const productId = form.getAttribute('data-product-id');
+        const isEditing = !!productId;
+        const url = isEditing 
+            ? `http://127.0.0.1:5000/inventory/${productId}` 
+            : 'http://127.0.0.1:5000/inventory/';
+        const method = isEditing ? 'PUT' : 'POST';
+
         try {
-            const response = await fetch('http://127.0.0.1:5000/inventory/', {
-                method: 'POST',
+            const response = await fetch(url, {
+                method: method,
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -163,11 +183,13 @@ function setupEventListeners() {
             if (response.ok) {
                 modal.style.display = 'none';
                 form.reset();
+                form.removeAttribute('data-product-id');
                 await fetchInventory();
+                alert(isEditing ? 'Product updated successfully!' : 'Product created successfully!');
             } else {
                 const errorData = await response.json();
-                console.error("Creation Failed:", errorData);
-                alert(`Error: ${JSON.stringify(errorData.message || errorData)}`);
+                console.error(isEditing ? "Update Failed:" : "Creation Failed:", errorData);
+                alert(`Error: ${errorData.message || JSON.stringify(errorData)}`);
             }
         } catch (err) {
             console.error("Network Error:", err);
@@ -175,6 +197,53 @@ function setupEventListeners() {
         }
     };
 }
+
+/**
+ * Global function to edit a product - Opens modal with pre-filled data
+ */
+window.editProduct = async (id) => {
+    const { token } = getAuthInfo();
+    
+    try {
+        // Récupérer les données du produit
+        const response = await fetch(`http://127.0.0.1:5000/inventory/${id}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            alert('Failed to load product data');
+            return;
+        }
+
+        const product = await response.json();
+        
+        // Pré-remplir le formulaire
+        const form = document.getElementById('product-form');
+        const modal = document.getElementById('product-modal');
+        const modalTitle = document.querySelector('#product-modal .widget-header h3');
+        
+        form.querySelector('input[name="name"]').value = product.name;
+        form.querySelector('input[name="active_ingredient"]').value = product.active_ingredient;
+        form.querySelector('input[name="dosage"]').value = product.dosage || '';
+        form.querySelector('input[name="stock"]').value = product.stock;
+        form.querySelector('input[name="price"]').value = product.price;
+        form.querySelector('input[name="is_prescription_only"]').checked = product.is_prescription_only;
+        
+        // Stocker l'ID du produit pour savoir qu'on est en mode édition
+        form.setAttribute('data-product-id', id);
+        
+        // Changer le titre du modal
+        if (modalTitle) modalTitle.textContent = 'Edit Medication';
+        
+        // Ouvrir le modal
+        modal.style.display = 'block';
+        
+    } catch (err) {
+        console.error('Edit Error:', err);
+        alert('Network error while loading product');
+    }
+};
 
 /**
  * Global function to delete a product.
@@ -215,6 +284,27 @@ function updateStats(products) {
     const low = document.getElementById('low-stock-count');
     if (total) total.textContent = products.length;
     if (low) low.textContent = products.filter(p => p.stock < 10).length;
+}
+
+/**
+ * Setup search functionality
+ */
+function setupSearch() {
+    const searchInput = document.getElementById('inventory-search');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#inventory-body tr');
+
+        rows.forEach(row => {
+            const productName = row.cells[0]?.textContent.toLowerCase() || '';
+            const ingredient = row.cells[1]?.textContent.toLowerCase() || '';
+            
+            const matches = productName.includes(searchTerm) || ingredient.includes(searchTerm);
+            row.style.display = matches ? '' : 'none';
+        });
+    });
 }
 
 /**
