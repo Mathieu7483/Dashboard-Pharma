@@ -248,9 +248,11 @@ class FacadeService:
     def search_clients(self, query):
         stmt = db.select(ClientModel).filter(
             (ClientModel.first_name.ilike(f"%{query}%")) | 
-            (ClientModel.last_name.ilike(f"%{query}%"))
-        ).limit(5)
+            (ClientModel.last_name.ilike(f"%{query}%")) |
+            (ClientModel.email.ilike(f"%{query}%"))
+     ).limit(20)
         return db.session.execute(stmt).scalars().all()
+    
     def update_client(self, client_id, data):
         client = self.get_client_by_id(client_id)
         if client:
@@ -276,8 +278,9 @@ class FacadeService:
     def search_doctors(self, query):
         stmt = db.select(DoctorModel).filter(
             (DoctorModel.first_name.ilike(f"%{query}%")) | 
-            (DoctorModel.last_name.ilike(f"%{query}%"))
-        ).limit(5)
+            (DoctorModel.last_name.ilike(f"%{query}%")) |
+            (DoctorModel.specialty.ilike(f"%{query}%"))
+        ).limit(20)
         return db.session.execute(stmt).scalars().all()
 
     def create_doctor(self, first_name, last_name, email, address, specialty, phone, user_id):
