@@ -1,7 +1,9 @@
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity 
 from flask import request
-from services.facade import FacadeService 
+from services.facade import FacadeService
+from utils.decorator import admin_required
+
 
 facade = FacadeService()
 doctors_ns = Namespace('doctors', description="Doctor management operations")
@@ -95,6 +97,7 @@ class DoctorItem(Resource):
         return updated_doctor or doctors_ns.abort(400, "Update failed")
 
     @jwt_required()
+    @admin_required()
     def delete(self, doctor_id):
         """Delete a doctor record (Admin only)"""
         claims = get_jwt()
