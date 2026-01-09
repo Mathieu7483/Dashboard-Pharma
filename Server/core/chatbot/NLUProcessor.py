@@ -2,66 +2,78 @@ import spacy
 
 class NLUProcessor:
     """
-    Handles Natural Language Understanding by identifying user intents 
-    and extracting relevant entities (names, products, etc.).
+    Handles Natural Language Understanding (NLU).
+    Improved to detect interactions based on context and multiple entities.
     """
 
     def __init__(self):
-        # Using the medium French model for better accuracy in entity recognition
+        # Professional-grade French model
         try:
             self.nlp = spacy.load("fr_core_news_md")
         except OSError:
-            # Fallback to the small model if the medium one is missing
             self.nlp = spacy.load("fr_core_news_sm")
 
     def analyze(self, text):
         """
-        Analyzes the input text to extract intent and the specific entity name.
+        Analyzes input to determine intent and extract entities.
         """
-        # Process the text without lowercasing first to help spaCy identify Proper Nouns
         doc = self.nlp(text)
-        
-        # 1. Intent Detection using Lemmatization (root form of words)
-        intent = "get_product"  # Default fallback intent
         tokens_lemma = [token.lemma_.lower() for token in doc]
         
-        # Checking for doctor or client keywords in their base form
-        if any(w in tokens_lemma for w in ["docteur", "dr", "médecin", "doctor"]):
-            intent = "get_doctor"
-        elif any(w in tokens_lemma for w in ["client", "patient", "customer"]):
-            intent = "get_client"
-
-        # 2. Advanced Entity Extraction
-        # Words strictly related to navigation/intents that should never be searched in DB
+        # 1. PRIMARY ENTITY EXTRACTION
+        # We extract nouns and proper nouns that are not stop words
+        # This is crucial for detecting if the user mentions MULTIPLE products
         intent_keywords = [
-            "docteur", "dr", "médecin", "doctor", 
-            "client", "patient", "customer", 
-            "infos", "info", "information", "stock", "prix", "price"
+            "docteur", "dr", "médecin", "doctor", "client", "patient", 
+            "customer", "stock", "prix", "price", "alerte", "vente"
         ]
         
-        # Filter logic:
-        # - Not a spaCy stop word (le, la, sur, etc.)
-        # - Not a punctuation mark
-        # - Not in our intent keywords list
-        # - Must be a Noun, Proper Noun or Adjective
-        entity_parts = []
+        found_entities = []
         for token in doc:
             clean_lemma = token.lemma_.lower()
             if not token.is_stop and not token.is_punct:
                 if clean_lemma not in intent_keywords:
-                    if token.pos_ in ["PROPN", "NOUN", "ADJ"]:
-                        entity_parts.append(token.text)
+                    if token.pos_ in ["PROPN", "NOUN"]:
+                        found_entities.append(token.text)
 
-        entity = " ".join(entity_parts).strip()
+        # 2. INTENT DETECTION LOGIC
+        intent = "get_product"  # Default fallback
 
-        # Debugging output for the terminal
+        # A. Interaction Detection (The fix for your Advil/Aspirine issue)
+        # If the user uses "avec", "et", or mentions 2+ products
+        if any(w in tokens_lemma for w in ["incompatible", "conflit", "danger", "mélange", "interaction", "avec"]):
+            intent = "check_interaction"
+        elif len(found_entities) >= 2:
+            intent = "check_interaction"
+
+        # B. Stock Alerts
+        elif any(w in tokens_lemma for w in ["alerte", "manquer", "rupture", "stock"]):
+            intent = "get_stock_alerts"
+
+        # C. Sales Summary
+        elif any(w in tokens_lemma for w in ["vente", "chiffre", "ca", "argent", "vendre"]):
+            intent = "get_sales_summary"
+
+        # D. Medical Staff / Clients
+        elif any(w in tokens_lemma for w in ["docteur", "dr", "médecin", "doctor"]):
+            intent = "get_doctor"
+        elif any(w in tokens_lemma for w in ["client", "patient", "customer"]):
+            intent = "get_client"
+
+        # E. Prescription
+        elif any(w in tokens_lemma for w in ["ordonnance", "prescription", "obligatoire"]):
+            intent = "get_prescription_info"
+
+        # 3. DEBUG OUTPUT
+        entity_str = " ".join(found_entities).strip()
         print(f"--- NLU DEBUG ---")
         print(f"Input: '{text}'")
-        print(f"Extracted Entity: '{entity}'")
+        print(f"Found Entities: {found_entities}")
         print(f"Detected Intent: '{intent}'")
         print(f"-----------------")
 
         return {
             "intent": intent,
-            "entity": entity
+            "entity": entity_str,
+            "entity_list": found_entities # We return a list for easier processing in the Engine
         }
