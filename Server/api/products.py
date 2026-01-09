@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity 
-from services.facade import FacadeService 
+from services.facade import FacadeService
+from utils.decorator import admin_required 
 
 # --- INITIALIZATION ---
 
@@ -61,14 +62,12 @@ class ProductList(Resource):
     @products_ns.response(403, 'Access Forbidden: Admin privileges required.')
     @products_ns.response(400, 'Validation Error: Invalid input data.')
     @jwt_required()
+    @admin_required()
     def post(self):
         """
         Creates a new product entry. Restricted to administrators only.
         """
-        # 1. Admin privilege check
-        if not get_jwt().get('is_admin'):
-            products_ns.abort(403, message="Access Forbidden. Only administrators can create new products.")
-            
+        # 1. Get current user ID from JWT            
         current_user_id = get_jwt_identity()
         data = products_ns.payload
         
