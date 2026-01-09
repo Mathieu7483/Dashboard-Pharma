@@ -169,7 +169,8 @@ class ProductSearch(Resource):
         Search for products by name (returns a list of matching results).
         """
         # Assumes the Facade service has a method for fuzzy or partial searching
-        products = facade.search_products_by_name(name) 
+        products = facade.get_product_by_name(name) 
         if not products:
             products_ns.abort(404, message=f"No products found matching '{name}'.")
         return products, 200
+    
