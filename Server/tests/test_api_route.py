@@ -144,8 +144,8 @@ class TestCompletePharmaAPI(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_17_search_prod(self):
-        res = self.client.get(f'/products/search?name={self.t_prod.name}', headers=self.staff_headers)
-        self.assertIn(res.status_code, [200, 404])
+        res = self.client.get(f'/products/search/{self.t_prod.name}', headers=self.staff_headers)
+        self.assertEqual(res.status_code, 200)
 
     # --- SECTION 3: CLIENTS (9) ---
     def test_18_get_clients(self):
