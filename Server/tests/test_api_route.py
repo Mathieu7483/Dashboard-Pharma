@@ -76,7 +76,7 @@ class TestCompletePharmaAPI(unittest.TestCase):
 
     def test_04_rbac_users(self):
         res = self.client.get('/users/', headers=self.staff_headers)
-        self.assertIn(res.status_code, [403, 200]) # 200 indique une faille de sécu à corriger
+        self.assertEqual(res.status_code, 403)
 
     def test_05_update_user(self):
         res = self.client.put(f'/users/{self.staff.id}', json={"first_name":"X"}, headers=self.admin_headers)
