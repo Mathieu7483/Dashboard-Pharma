@@ -76,7 +76,7 @@ def create_app(config_class=DevelopmentConfig):
 
     # --- Models Import pour SQLAlchemy ---
     with app.app_context():
-        from models import user, product, sale, client, doctor
+        from models import user, product, sale, client, doctor, interaction
 
     return app
 
