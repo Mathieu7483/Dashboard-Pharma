@@ -3,17 +3,20 @@ from database.data_manager import db
 from models.product import ProductModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from models.sale import SaleModel
+from models.interaction import InteractionModel
 from core.chatbot.NLUProcessor import NLUProcessor
 
 class ChatBotEngine:
     """
-    Core engine that manages the workflow: NLU analysis -> DB Search -> Result Formatting.
+    Core engine that orchestrates the chatbot logic:
+    Analysis (NLU) -> Routing -> Database Query -> Markdown Formatting.
     """
 
     def __init__(self):
         self.nlu = NLUProcessor()
-        # Map intents to their corresponding SQLAlchemy models
-        self.models = {
+        # Model mapping for standard search intents
+        self.search_models = {
             "get_product": ProductModel,
             "get_client": ClientModel,
             "get_doctor": DoctorModel
@@ -21,41 +24,60 @@ class ChatBotEngine:
 
     def process_query(self, user_text):
         """
-        Coordinates the search and handles the smart fallback logic.
+        Main entry point for processing user messages.
         """
         analysis = self.nlu.analyze(user_text)
         intent = analysis.get("intent")
-        entity = analysis.get("entity")
+        
+        # We now prioritize the list of entities found by the NLU
+        entities = analysis.get("entity_list", [])
 
-        if not entity:
-            return "❓ **Please specify a name.** (e.g., 'Search Doliprane' or 'Find Dr. Martin')"
+        # 1. SPECIALIZED HANDLERS (Non-standard search)
+        if intent == "get_stock_alerts":
+            return self._handle_stock_alerts()
+        
+        if intent == "get_sales_summary":
+            return self._handle_sales_summary()
+        
+        if intent == "check_interaction":
+            return self._handle_interaction_check(entities)
 
-        # 1. Primary search based on NLU intent
-        primary_model = self.models.get(intent)
-        results = self._search_database(primary_model, entity)
+        # 2. STANDARD SEARCH LOGIC
+        if not entities:
+            return "❓ **Please specify a name.** (e.g., 'Search Advil' or 'Show sales')"
 
-        # 2. SMART FALLBACK: If no results, loop through other models to find a match
+        # We use the first found entity for standard search
+        return self._execute_standard_search(intent, entities[0])
+
+    def _execute_standard_search(self, intent, main_entity):
+        """
+        Performs a database search based on the detected intent, 
+        with a fallback system to other models.
+        """
+        primary_model = self.search_models.get(intent)
+        results = self._search_database(primary_model, main_entity)
+
+        # Smart Fallback: If no results in the primary category, check others
         if not results:
-            for model_key, model_class in self.models.items():
+            for model_key, model_class in self.search_models.items():
                 if model_class == primary_model:
-                    continue # Skip the one we already searched
-                
-                results = self._search_database(model_class, entity)
+                    continue
+                results = self._search_database(model_class, main_entity)
                 if results:
-                    intent = model_key # Update intent for correct formatting
+                    intent = model_key
                     break
 
         return self._format_results(results, intent)
 
     def _search_database(self, model, search_term):
         """
-        Performs a database query using the ILIKE operator for flexible matching.
+        Executes a SQL query using ILIKE for flexible matching.
         """
+        if not model: return []
+        
         if model == ProductModel:
-            # Products are usually searched by name only
             condition = model.name.ilike(f"%{search_term}%")
         else:
-            # Clients and Doctors search across first AND last names
             condition = or_(
                 model.last_name.ilike(f"%{search_term}%"),
                 model.first_name.ilike(f"%{search_term}%")
@@ -64,66 +86,117 @@ class ChatBotEngine:
         query = db.select(model).where(condition)
         return db.session.execute(query).scalars().all()
 
+    def _handle_interaction_check(self, entity_list):
+        """
+        Logic for checking drug-drug interactions via active ingredients.
+        Uses the InteractionModel table.
+        """
+        if len(entity_list) < 2:
+            return "⚠️ **Please mention at least two products** to verify compatibility."
+
+        # 1. Resolve product names to active ingredients
+        resolved_ingredients = []
+        found_names = []
+        
+        for name in entity_list:
+            # We search the Product table to find the molecule
+            product = db.session.execute(
+                db.select(ProductModel).where(ProductModel.name.ilike(f"%{name}%"))
+            ).scalar()
+            
+            if product:
+                resolved_ingredients.append(product.active_ingredient)
+                found_names.append(product.name)
+            else:
+                # If not in Product table, assume the user typed the ingredient directly
+                resolved_ingredients.append(name.capitalize())
+                found_names.append(name.capitalize())
+
+        # 2. Query the interactions table for pairs (Direction A->B or B->A)
+        query = db.select(InteractionModel).where(
+            or_(
+                (InteractionModel.ingredient_a.in_(resolved_ingredients)) & 
+                (InteractionModel.ingredient_b.in_(resolved_ingredients)),
+                (InteractionModel.ingredient_b.in_(resolved_ingredients)) & 
+                (InteractionModel.ingredient_a.in_(resolved_ingredients))
+            )
+        )
+        
+        conflicts = db.session.execute(query).scalars().all()
+
+        if not conflicts:
+            return f"✅ **No known interactions** found between **{', '.join(found_names)}**."
+
+        # 3. Format the danger report
+        output = [f"## 🚨 DRUG INTERACTION WARNING"]
+        output.append(f"Analysis for: **{', '.join(found_names)}**\n")
+        
+        for c in conflicts:
+            output.append(f"### ⚠️ Conflict: {c.ingredient_a} + {c.ingredient_b}")
+            output.append(f"**Severity**: {c.severity}")
+            output.append(f"**Clinical Note**: {c.description}")
+            output.append("---")
+
+        return "\n".join(output)
+
+    def _handle_stock_alerts(self):
+        """
+        Reports products with low stock levels (< 10).
+        """
+        threshold = 10
+        query = db.select(ProductModel).where(ProductModel.stock < threshold)
+        results = db.session.execute(query).scalars().all()
+        
+        if not results:
+            return "✅ **All stock levels are correct.**"
+        
+        output = [f"## ⚠️ Low Stock Alerts (< {threshold})"]
+        for p in results:
+            output.append(f"- **{p.name}**: {p.stock} units (Ingredient: {p.active_ingredient})")
+        return "\n".join(output)
+
+    def _handle_sales_summary(self):
+        """
+        Returns a high-level summary of store revenue.
+        """
+        sales = db.session.execute(db.select(SaleModel)).scalars().all()
+        if not sales:
+            return "📊 **No sales data available yet.**"
+            
+        total = sum(s.total_price for s in sales if s.total_price)
+        return (f"## 📈 Sales Performance\n"
+                f"- **Total Sales**: {len(sales)}\n"
+                f"- **Cumulative Revenue**: {total:.2f} €")
+
     def _format_results(self, records, intent):
         """
-        Formats SQLAlchemy records into a professional Markdown report.
-        Limits the output to the first 3 results to avoid information overload.
+        Converts SQLAlchemy records into structured Markdown cards.
         """
         if not records:
-            category = intent.split('_')[1]
-            return f"❌ **No results found** for '{category}'. Please try a different spelling."
+            return "❌ **No matches found.** Please check the spelling."
 
-        search_type = intent.split('_')[1].upper()
-        total_found = len(records)
-        
-        # Limit to the first 3 matches
-        display_limit = 3
-        to_display = records[:display_limit]
-
+        search_type = intent.split('_')[1].upper() if '_' in intent else "INFO"
         output = [f"## 📋 Results: {search_type}"]
         
-        # Inform the user about the total count
-        if total_found > 1:
-            output.append(f"I found **{total_found}** matches. Showing the first {len(to_display)}:\n")
-        else:
-            output.append(f"Found **1** exact match:\n")
-        
-        for record in to_display:
-            # Determine display title (Full Name or Product Name)
+        for record in records[:3]: # Security limit
             title = getattr(record, 'name', 
                     f"{getattr(record, 'first_name', '')} {getattr(record, 'last_name', '')}".strip())
             
             output.append(f"### 🔹 {title}")
             output.append("---")
             
-            # Introspect model columns
             mapper = inspect(record).mapper
             for column in mapper.attrs:
                 key = column.key
-                value = getattr(record, key)
-
-                # Security & Cleanliness: Fields to skip
-                excluded_fields = ['password_hash', 'id', 'user_id', 'created_at', 'updated_at']
-                if key in excluded_fields or key.endswith('_entries'):
+                if key in ['id', 'user_id', 'password_hash'] or key.endswith('_entries'):
                     continue
-
-                label = key.replace('_', ' ').capitalize()
                 
-                # Intelligent value styling
-                if value is None or value == "": 
-                    val_str = "*Not provided*"
-                elif isinstance(value, float): 
-                    val_str = f"{value:.2f} €" if "price" in key else f"{value:.2f}"
-                elif isinstance(value, bool): 
-                    val_str = "✅ Yes" if value else "❌ No"
-                else: 
-                    val_str = str(value)
-
-                output.append(f"**{label}**: {val_str}")
-            output.append("\n") # Space between cards
-
-        # If there are more results than displayed, add a footer note
-        if total_found > display_limit:
-            output.append(f"⚠️ *Note: {total_found - display_limit} other results exist. Please be more specific if you haven't found the right one.*")
+                val = getattr(record, key)
+                if isinstance(val, float): val = f"{val:.2f} €" if "price" in key else f"{val:.2f}"
+                elif isinstance(val, bool): val = "✅ Yes" if val else "❌ No"
+                elif val is None: val = "N/A"
+                
+                output.append(f"**{key.replace('_', ' ').capitalize()}**: {val}")
+            output.append("\n")
 
         return "\n".join(output)
