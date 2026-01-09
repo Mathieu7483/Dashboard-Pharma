@@ -12,22 +12,11 @@ def admin_required():
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
-            # 1. Get the claims from the current JWT
-            try:
-                # Use get_jwt() for modern JWT handling
-                claims = get_jwt() 
-                is_admin = claims.get('is_admin', False)
-
-                if is_admin is True:
-                    # User is admin, proceed with the original function
-                    return fn(*args, **kwargs)
-                else:
-                    # User is not admin, abort with 403 Forbidden
-                    abort(403, message="Access Forbidden: Administrative privileges required.")
+            claims = get_jwt()
+            if claims.get('is_admin') is True:
+                return fn(*args, **kwargs)
             
-            except Exception as e:
-                # Handle cases where JWT might be missing or invalid
-                abort(401, message="Access Denied: Authentication token required or invalid.")
+            abort(403, message="Access Forbidden: Administrative privileges required.")
         return decorator
     return wrapper
 
