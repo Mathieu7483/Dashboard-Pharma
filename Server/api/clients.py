@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity 
 from flask import request
 from services.facade import FacadeService 
+from utils.decorator import admin_required
 
 facade = FacadeService()
 clients_ns = Namespace('clients', description="Client management operations")
@@ -84,6 +85,7 @@ class ClientItem(Resource):
         return updated_client or clients_ns.abort(400, "Update failed")
 
     @jwt_required()
+    @admin_required()
     def delete(self, client_id):
         """Delete a client (Admin only)"""
         claims = get_jwt()
