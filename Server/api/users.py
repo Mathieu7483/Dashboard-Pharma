@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity 
 from services.facade import FacadeService 
+from utils.decorator import admin_required
 
 # --- INITIALIZATION ---
 
@@ -47,6 +48,8 @@ class UserList(Resource):
     @users_ns.doc('get_all_users')
     @users_ns.marshal_list_with(user_output_model)
     @jwt_required() 
+    @admin_required()
+    @users_ns.marshal_list_with(user_output_model)
     def get(self):
         """
         Retrieves the list of all employees. Accessible to all authenticated users.
