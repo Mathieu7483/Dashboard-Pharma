@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from datetime import timedelta
 
 load_dotenv()
+basedir = os.path.abspath(os.path.dirname(__file__))
+database = os.path.join(basedir, 'database')
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__)
@@ -17,7 +19,7 @@ def create_app(config_class=DevelopmentConfig):
     # Configuration JWT
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///pharma.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(database, 'database.sqlite')
 
     # --- Extensions ---
     CORS(app)
@@ -76,7 +78,7 @@ def create_app(config_class=DevelopmentConfig):
 
     # --- Models Import pour SQLAlchemy ---
     with app.app_context():
-        from models import user, product, sale, client, doctor, interaction
+        from models import user, product, sale, client, doctor, interaction, product_alias
 
     return app
 
