@@ -8,6 +8,7 @@ from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.interaction import InteractionModel
 from utils.seed_aliases import seed_product_aliases
+from utils.seed_sales import seed_product_sales
 
 
 def seed_all_initial_data():
@@ -30,8 +31,11 @@ def seed_all_initial_data():
 
     # 4. MEDICAL INTERACTIONS (Safety Logic)
     _seed_medical_interactions()
+    
+    #5. PRODUCT SALES SEEDING
+    seed_product_sales()
 
-    # 5. PRODUCT ALIASES
+    # 6. PRODUCT ALIASES
     seed_product_aliases()
     print("--- ✅ Seeding Process Completed ---\n")
 
