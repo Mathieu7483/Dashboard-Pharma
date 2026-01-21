@@ -148,45 +148,66 @@ class DashboardManager {
     }
 
     updateKPIs(meds, clientCount, doctorCount) {
-        const total = meds.length;
-        const available = meds.filter(m => m.stock > 0).length;
-        const lowStock = meds.filter(m => m.stock > 0 && m.stock < 10).length;
-        const outOfStock = total - available;
-        const efficiency = total > 0 ? Math.round((available / total) * 100) : 0;
+    const total = meds.length;
+    
+    // 1. running out of stock
+    const outOfStock = meds.filter(m => m.stock === 0).length;
+    
+    // 2. Alerts for low stock (1-9)
+    const lowStock = meds.filter(m => m.stock > 0 && m.stock < 10).length;
+    
+    // 3. Products with healthy stock (10+)
+    const healthyStock = meds.filter(m => m.stock >= 10).length;
 
-        if (this.kpis.efficiency) {
-            this.kpis.efficiency.innerText = `${efficiency}%`;
-            this.kpis.efficiency.style.color = efficiency > 85 ? "#2ecc71" : "#e67e22";
-        }
+    // calculate efficiency
+    const totalAvailable = lowStock + healthyStock;
+    const efficiency = total > 0 ? Math.round((totalAvailable / total) * 100) : 0;
 
-        if (this.kpis.status) {
-            this.kpis.status.innerHTML = `
-                <span style="color: #e74c3c">${outOfStock} Out</span> | 
-                <span style="color: #f1c40f">${lowStock} Low</span> | 
-                <span style="color: #2ecc71">${available} OK</span>
-            `;
-        }
-
-        if (this.kpis.totalClients) this.kpis.totalClients.innerText = clientCount;
-        if (this.kpis.totalDoctors) this.kpis.totalDoctors.innerText = doctorCount;
+    if (this.kpis.efficiency) {
+        this.kpis.efficiency.innerText = `${efficiency}%`;
+        this.kpis.efficiency.style.color = efficiency > 85 ? "#2ecc71" : "#e67e22";
     }
+
+    if (this.kpis.status) {
+        this.kpis.status.innerHTML = `
+            <span style="color: #e74c3c; font-weight: bold;">${outOfStock} Out</span> | 
+            <span style="color: #f1c40f; font-weight: bold;">${lowStock} Low</span> | 
+            <span style="color: #2ecc71; font-weight: bold;">${healthyStock} OK</span>
+        `;
+    }
+
+    if (this.kpis.totalClients) this.kpis.totalClients.innerText = clientCount;
+    if (this.kpis.totalDoctors) this.kpis.totalDoctors.innerText = doctorCount;
+}
 
     renderAll(meds, clients, doctors) {
         // Render Medicines
-        if (this.lists.meds) {
-            this.lists.meds.classList.add('scroll-container');
-            this.lists.meds.innerHTML = meds.map(m => {
-                const statusClass = m.stock === 0 ? 'critical' : (m.stock < 10 ? 'warning' : 'good');
-                const icon = m.stock === 0 ? '❌' : (m.stock < 10 ? '⚠️' : '✅');
+    if (this.lists.meds) {
+        this.lists.meds.classList.add('scroll-container');
+        
+        // filter critical meds
+        const criticalMeds = meds.filter(m => m.stock < 10);
+
+        if (criticalMeds.length === 0) {
+            this.lists.meds.innerHTML = '<li class="item-entry good">✅ All stock levels optimal</li>';
+        } else {
+            this.lists.meds.innerHTML = criticalMeds.map(m => {
+                const isOut = m.stock === 0;
+                const statusClass = isOut ? 'critical' : 'warning';
+                const icon = isOut ? '❌' : '⚠️';
+                const message = isOut ? 'OUT OF STOCK' : 'LOW STOCK';
+
                 return `
                     <li class="item-entry ${statusClass}">
                         <div class="info">
-                            <strong>${m.name}</strong> ${icon}<br>
-                            <small>Stock: ${m.stock} units | ${m.price}€</small>
+                            <strong>${m.name}</strong> ${icon} 
+                            <span class="badge-alert">${message}</span><br>
+                            <small>Remaining: <strong>${m.stock}</strong> units</small>
                         </div>
                     </li>`;
             }).join('');
         }
+    }
 
         // Render detailed CRM lists
         this.renderDetailedList(this.lists.clients, clients, 'client');
