@@ -851,3 +851,28 @@ label.item-entry input[type="checkbox"] {
     gap: 10px;
     margin-top: 20px;
 }
+
+.btn-sell {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-sell:hover {
+            background-color: #218838;
+        }
+        .qty-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .low-stock-row {
+            background-color: #fff3f3;
+        }
+        .text-danger { color: #dc3545; }
+        .fw-bold { font-weight: bold; }
