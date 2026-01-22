@@ -1,168 +1,155 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Pharma | Administration</title>
+    <title>Pharma Dashboard | Administration</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin-panel.css">
 </head>
 <body>
-    <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
     </div>
 
-    <!-- Toast Notification System -->
     <div id="toast-container" class="toast-container"></div>
 
     <div class="app-wrapper">
-        <!-- Sidebar Navigation (injected) -->
         <div id="navbar-placeholder"></div>
 
         <main class="content-area">
-            <!-- Top Bar -->
             <header class="top-bar">
                 <div class="page-info">
                     <h2>🛡️ Administration Panel</h2>
-                    <p class="subtitle">Gestion centralisée du personnel et de la sécurité</p>
+                    <p class="subtitle">Centralized management panel for administrators</p>
                 </div>
                 <div class="top-bar-right">
-                    <div class="avatar" id="user-avatar">A</div>
-                    <button class="btn-logout-top">Déconnexion</button>
+                    <div class="avatar" id="user-avatar">M</div>
+                    <button class="btn-logout-top">Logout</button>
                 </div>
             </header>
 
-            <!-- Tab Navigation -->
             <div class="admin-tabs">
                 <button class="tab-btn active" data-target="users-mgmt">
                     <span class="tab-icon">👥</span>
-                    <span class="tab-label">Personnel</span>
+                    <span class="tab-label">Users</span>
                     <span class="tab-count" id="users-count">0</span>
                 </button>
                 <button class="tab-btn" data-target="planning-mgmt">
                     <span class="tab-icon">📅</span>
-                    <span class="tab-label">Plannings</span>
+                    <span class="tab-label">Schedules</span>
                 </button>
                 <button class="tab-btn" data-target="security-mgmt">
                     <span class="tab-icon">🔐</span>
-                    <span class="tab-label">Sécurité</span>
+                    <span class="tab-label">Security</span>
                 </button>
                 <button class="tab-btn" data-target="analytics-mgmt">
                     <span class="tab-icon">📊</span>
-                    <span class="tab-label">Statistiques</span>
+                    <span class="tab-label">Statistics</span>
                 </button>
             </div>
 
-            <!-- ============ TAB 1: STAFF MANAGEMENT ============ -->
             <section id="users-mgmt" class="tab-content active">
                 <div class="section-header">
                     <div>
-                        <h3>Gestion du Personnel</h3>
-                        <p class="section-subtitle">Administrez les comptes utilisateurs et leurs permissions</p>
+                        <h3>Employees Control Panel</h3>
+                        <p class="section-subtitle">Manage user accounts and permissions</p>
                     </div>
                     <button class="btn-primary" onclick="openCreateModal()">
-                        <span>➕</span> Nouvel Utilisateur
+                        <span>➕</span> New Employee
                     </button>
                 </div>
 
-                <!-- Search & Filters -->
                 <div class="filter-bar">
                     <div class="search-box">
-                        <input type="text" id="user-search" placeholder="🔍 Rechercher par nom ou email..." />
+                        <input type="text" id="user-search" placeholder="🔍 Search by name or email..." />
                     </div>
                     <div class="filter-group">
                         <select id="role-filter" class="filter-select">
-                            <option value="all">Tous les rôles</option>
-                            <option value="admin">Administrateurs</option>
-                            <option value="staff">Personnel</option>
+                            <option value="all">All roles</option>
+                            <option value="admin">Administrators</option>
+                            <option value="staff">Employees</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- User Table -->
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Utilisateur</th>
+                                <th>User</th>
                                 <th>Contact</th>
-                                <th>Rôle</th>
-                                <th>Statut</th>
-                                <th>Dernière connexion</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last connection</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="user-table-body">
-                            <!-- Populated by JS -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
 
-                <!-- Empty State -->
                 <div id="empty-state" class="empty-state" style="display: none;">
                     <div class="empty-icon">👤</div>
-                    <h3>Aucun utilisateur trouvé</h3>
-                    <p>Commencez par créer un nouveau compte utilisateur</p>
+                    <h3>No users found</h3>
+                    <p>Start by creating a new user account</p>
                 </div>
             </section>
 
-            <!-- ============ TAB 2: PLANNING ============ -->
             <section id="planning-mgmt" class="tab-content">
                 <div class="section-header">
-                    <h3>Gestion des Plannings</h3>
+                    <h3>Schedule Management</h3>
                 </div>
                 <div class="placeholder-content">
                     <div class="placeholder-icon">📅</div>
-                    <h3>Fonctionnalité en développement</h3>
-                    <p>Le système de planification sera disponible prochainement</p>
+                    <h3>Feature under development</h3>
+                    <p>The scheduling system will be available soon</p>
                 </div>
             </section>
 
-            <!-- ============ TAB 3: SECURITY ============ -->
             <section id="security-mgmt" class="tab-content">
                 <div class="section-header">
-                    <h3>Journaux de Sécurité</h3>
+                    <h3>Security Logs</h3>
                 </div>
                 <div class="placeholder-content">
                     <div class="placeholder-icon">🔐</div>
-                    <h3>Logs d'authentification</h3>
-                    <p>L'historique des connexions sera disponible prochainement</p>
+                    <h3>Authentication Logs</h3>
+                    <p>Connection history will be available soon</p>
                 </div>
             </section>
 
-            <!-- ============ TAB 4: ANALYTICS ============ -->
             <section id="analytics-mgmt" class="tab-content">
                 <div class="section-header">
-                    <h3>Statistiques d'Administration</h3>
+                    <h3>Admin Statistics</h3>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
                         <div class="stat-info">
-                            <h4>Utilisateurs Actifs</h4>
+                            <h4>Active Users</h4>
                             <p class="stat-value" id="stat-active-users">-</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🛡️</div>
                         <div class="stat-info">
-                            <h4>Administrateurs</h4>
+                            <h4>Administrators</h4>
                             <p class="stat-value" id="stat-admins">-</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🔑</div>
                         <div class="stat-info">
-                            <h4>Connexions (24h)</h4>
+                            <h4>Logins (24h)</h4>
                             <p class="stat-value">N/A</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">⚠️</div>
                         <div class="stat-info">
-                            <h4>Alertes Sécurité</h4>
+                            <h4>Security Alerts</h4>
                             <p class="stat-value">0</p>
                         </div>
                     </div>
@@ -171,12 +158,11 @@
         </main>
     </div>
 
-    <!-- ============ MODAL: EDIT USER ============ -->
     <div id="edit-modal" class="modal">
         <div class="modal-overlay" onclick="closeEditModal()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h3>✏️ Modifier l'utilisateur</h3>
+                <h3>✏️ Edit User</h3>
                 <button class="modal-close" onclick="closeEditModal()">&times;</button>
             </div>
             
@@ -185,7 +171,7 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Nom d'utilisateur</label>
+                        <label>Username</label>
                         <input type="text" id="edit-username" readonly class="input-readonly">
                     </div>
                 </div>
@@ -199,19 +185,19 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Prénom</label>
-                        <input type="text" id="edit-first-name" placeholder="Jean">
+                        <label>First Name</label>
+                        <input type="text" id="edit-first-name" placeholder="John">
                     </div>
                     <div class="form-group">
-                        <label>Nom</label>
-                        <input type="text" id="edit-last-name" placeholder="Dupont">
+                        <label>Last Name</label>
+                        <input type="text" id="edit-last-name" placeholder="Doe">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Nouveau mot de passe (optionnel)</label>
-                        <input type="password" id="edit-password" placeholder="Laisser vide pour conserver">
+                        <label>New Password (optional)</label>
+                        <input type="password" id="edit-password" placeholder="Leave empty to keep current">
                     </div>
                 </div>
 
@@ -219,57 +205,56 @@
                     <label class="checkbox-label">
                         <input type="checkbox" id="edit-is-admin">
                         <span class="checkbox-custom"></span>
-                        <span class="checkbox-text">Droits administrateur</span>
+                        <span class="checkbox-text">Administrator privileges</span>
                     </label>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Annuler</button>
-                    <button type="submit" class="btn-primary">Enregistrer</button>
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ============ MODAL: CREATE USER ============ -->
     <div id="create-modal" class="modal">
         <div class="modal-overlay" onclick="closeCreateModal()"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h3>➕ Créer un utilisateur</h3>
+                <h3>➕ Create User</h3>
                 <button class="modal-close" onclick="closeCreateModal()">&times;</button>
             </div>
             
             <form id="create-user-form" class="modal-form">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Nom d'utilisateur *</label>
-                        <input type="text" id="create-username" required placeholder="jean.dupont">
+                        <label>Username *</label>
+                        <input type="text" id="create-username" required placeholder="john.doe">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Email *</label>
-                        <input type="email" id="create-email" required placeholder="jean@pharma.com">
+                        <input type="email" id="create-email" required placeholder="john@pharma.com">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Prénom</label>
-                        <input type="text" id="create-first-name" placeholder="Jean">
+                        <label>First Name</label>
+                        <input type="text" id="create-first-name" placeholder="John">
                     </div>
                     <div class="form-group">
-                        <label>Nom</label>
-                        <input type="text" id="create-last-name" placeholder="Dupont">
+                        <label>Last Name</label>
+                        <input type="text" id="create-last-name" placeholder="Doe">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Mot de passe *</label>
-                        <input type="password" id="create-password" required placeholder="Min. 6 caractères">
+                        <label>Password *</label>
+                        <input type="password" id="create-password" required placeholder="Min. 6 characters">
                     </div>
                 </div>
 
@@ -277,13 +262,13 @@
                     <label class="checkbox-label">
                         <input type="checkbox" id="create-is-admin">
                         <span class="checkbox-custom"></span>
-                        <span class="checkbox-text">Créer en tant qu'administrateur</span>
+                        <span class="checkbox-text">Create as administrator</span>
                     </label>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeCreateModal()">Annuler</button>
-                    <button type="submit" class="btn-primary">Créer</button>
+                    <button type="button" class="btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Create User</button>
                 </div>
             </form>
         </div>
