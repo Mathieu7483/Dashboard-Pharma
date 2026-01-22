@@ -35,8 +35,6 @@ class PharmaCharts {
             const daily = await resD.json();
             const monthly = await resM.json();
 
-            console.log(daily, monthly)
-
             this.render(this.chartDay, daily.graph_data, 'line', '#1E90FF', 'Hourly Revenue (€)');
             this.render(this.chartMonth, monthly.graph_data, 'bar', '#00FF7F', 'Daily Revenue (€)');
         } catch (e) { console.error("Analytics Load Failed", e); }
@@ -59,9 +57,7 @@ class PharmaCharts {
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
-                scales: {
-                y: { beginAtZero: true }
-                }
+                scales: { y: { beginAtZero: true } }
             }
         });
     }
@@ -114,7 +110,8 @@ class DashboardManager {
             meds: document.getElementById('meds-list'),
             clients: document.getElementById('client-search-result'),
             doctors: document.getElementById('doctor-search-result'),
-            team: document.getElementById('team-list')
+            team: document.getElementById('team-list'),
+            notifs: document.getElementById('team-notif-list')
         };
         this.kpis = {
             efficiency: document.getElementById('stock-efficiency'),
@@ -140,111 +137,121 @@ class DashboardManager {
             const meds = await resM.json();
 
             this.updateKPIs(meds, clients.length, doctors.length);
-            this.renderAll(meds, clients, doctors);
+            this.renderCriticalMeds(meds);
+            this.renderDetailedList(this.lists.clients, clients, 'client');
+            this.renderDetailedList(this.lists.doctors, doctors, 'doctor');
+            
             this.loadTeam();
+            this.loadPersistentNotes(); // Start the 24h note system
+            this.initNoteSystem();      
             this.initSearchFilters();
 
         } catch (e) { console.error("Data Engine Error", e); }
     }
 
-    updateKPIs(meds, clientCount, doctorCount) {
-    const total = meds.length;
-    
-    // 1. running out of stock
-    const outOfStock = meds.filter(m => m.stock === 0).length;
-    
-    // 2. Alerts for low stock (1-9)
-    const lowStock = meds.filter(m => m.stock > 0 && m.stock < 10).length;
-    
-    // 3. Products with healthy stock (10+)
-    const healthyStock = meds.filter(m => m.stock >= 10).length;
+    // --- TEAM NOTES (WITH 24H PERSISTENCE & ADMIN DELETE) ---
 
-    // calculate efficiency
-    const totalAvailable = lowStock + healthyStock;
-    const efficiency = total > 0 ? Math.round((totalAvailable / total) * 100) : 0;
+    initNoteSystem() {
+        const addBtn = document.getElementById('add-note-btn');
+        const noteInput = document.getElementById('new-note-text');
 
-    if (this.kpis.efficiency) {
-        this.kpis.efficiency.innerText = `${efficiency}%`;
-        this.kpis.efficiency.style.color = efficiency > 85 ? "#2ecc71" : "#e67e22";
-    }
-
-    if (this.kpis.status) {
-        this.kpis.status.innerHTML = `
-            <span style="color: #e74c3c; font-weight: bold;">${outOfStock} Out</span> | 
-            <span style="color: #f1c40f; font-weight: bold;">${lowStock} Low</span> | 
-            <span style="color: #2ecc71; font-weight: bold;">${healthyStock} OK</span>
-        `;
-    }
-
-    if (this.kpis.totalClients) this.kpis.totalClients.innerText = clientCount;
-    if (this.kpis.totalDoctors) this.kpis.totalDoctors.innerText = doctorCount;
-}
-
-    renderAll(meds, clients, doctors) {
-        // Render Medicines
-    if (this.lists.meds) {
-        this.lists.meds.classList.add('scroll-container');
-        
-        // filter critical meds
-        const criticalMeds = meds.filter(m => m.stock < 10);
-
-        if (criticalMeds.length === 0) {
-            this.lists.meds.innerHTML = '<li class="item-entry good">✅ All stock levels optimal</li>';
-        } else {
-            this.lists.meds.innerHTML = criticalMeds.map(m => {
-                const isOut = m.stock === 0;
-                const statusClass = isOut ? 'critical' : 'warning';
-                const icon = isOut ? '❌' : '⚠️';
-                const message = isOut ? 'OUT OF STOCK' : 'LOW STOCK';
-
-                return `
-                    <li class="item-entry ${statusClass}">
-                        <div class="info">
-                            <strong>${m.name}</strong> ${icon} 
-                            <span class="badge-alert">${message}</span><br>
-                            <small>Remaining: <strong>${m.stock}</strong> units</small>
-                        </div>
-                    </li>`;
-            }).join('');
+        if (addBtn && noteInput) {
+            addBtn.addEventListener('click', () => {
+                const text = noteInput.value.trim();
+                if (!text) return;
+                const newNote = { text: text, timestamp: Date.now() };
+                this.saveNote(newNote);
+                this.loadPersistentNotes(); // Refresh list
+                noteInput.value = "";
+            });
+            noteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addBtn.click(); });
         }
     }
 
-        // Render detailed CRM lists
-        this.renderDetailedList(this.lists.clients, clients, 'client');
-        this.renderDetailedList(this.lists.doctors, doctors, 'doctor');
+    saveNote(note) {
+        let notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
+        notes.push(note);
+        localStorage.setItem('pharma_notes', JSON.stringify(notes));
     }
 
-    /**
-     * Renders detailed information for Patients and Doctors
-     */
+    deleteNote(timestamp) {
+        let notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
+        notes = notes.filter(n => n.timestamp !== timestamp);
+        localStorage.setItem('pharma_notes', JSON.stringify(notes));
+        this.loadPersistentNotes();
+    }
+
+    loadPersistentNotes() {
+        if (!this.lists.notifs) return;
+        const now = Date.now();
+        const expiration = 24 * 60 * 60 * 1000;
+        const isAdmin = localStorage.getItem('is_admin') === 'true';
+
+        let notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
+        const validNotes = notes.filter(n => (now - n.timestamp) < expiration);
+        localStorage.setItem('pharma_notes', JSON.stringify(validNotes));
+
+        this.lists.notifs.innerHTML = validNotes.length ? "" : '<li class="item-entry">No current notes.</li>';
+
+        validNotes.sort((a,b) => b.timestamp - a.timestamp).forEach(note => {
+            const timeStr = new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const li = document.createElement('li');
+            li.className = "item-entry";
+            li.innerHTML = `
+                <div class="info" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>📌 Note:</strong> ${note.text}<br>
+                        <small>Posted at ${timeStr}</small>
+                    </div>
+                    ${isAdmin ? `<button class="del-note" style="background:none; border:none; cursor:pointer;">🗑️</button>` : ''}
+                </div>
+            `;
+            
+            if(isAdmin) {
+                li.querySelector('.del-note').addEventListener('click', () => this.deleteNote(note.timestamp));
+            }
+            this.lists.notifs.appendChild(li);
+        });
+    }
+
+    // --- STOCK & CRM METHODS ---
+
+    renderCriticalMeds(meds) {
+        if (!this.lists.meds) return;
+        const critical = meds.filter(m => m.stock < 10);
+        this.lists.meds.innerHTML = critical.length ? critical.map(m => `
+            <li class="item-entry ${m.stock === 0 ? 'critical' : 'warning'}">
+                <div class="info"><strong>${m.name}</strong> (${m.stock} units left)</div>
+            </li>`).join('') : '<li class="item-entry">✅ Stock optimal</li>';
+    }
+
+    updateKPIs(meds, clientCount, doctorCount) {
+        const total = meds.length;
+        const outOfStock = meds.filter(m => m.stock === 0).length;
+        const lowStock = meds.filter(m => m.stock > 0 && m.stock < 10).length;
+        const healthyStock = meds.filter(m => m.stock >= 10).length;
+        const efficiency = total > 0 ? Math.round(((lowStock + healthyStock) / total) * 100) : 0;
+
+        if (this.kpis.efficiency) {
+            this.kpis.efficiency.innerText = `${efficiency}%`;
+            this.kpis.efficiency.style.color = efficiency > 85 ? "#2ecc71" : "#e67e22";
+        }
+        if (this.kpis.status) {
+            this.kpis.status.innerHTML = `<span style="color:#e74c3c;">${outOfStock} Out</span> | <span style="color:#f1c40f;">${lowStock} Low</span> | <span style="color:#2ecc71;">${healthyStock} OK</span>`;
+        }
+        if (this.kpis.totalClients) this.kpis.totalClients.innerText = clientCount;
+        if (this.kpis.totalDoctors) this.kpis.totalDoctors.innerText = doctorCount;
+    }
+
     renderDetailedList(container, data, type) {
         if (!container) return;
-        container.classList.add('scroll-container');
-        
-        container.innerHTML = data.map(item => {
-            if (type === 'doctor') {
-                return `
-                    <div class="item-entry">
-                        <div class="info">
-                            <strong>DR. ${item.last_name.toUpperCase()} ${item.first_name || ''}</strong><br>
-                            <span class="tag-specialty">${item.specialty || 'Generalist'}</span><br>
-                            <small>📧 ${item.email || 'No email'}</small>
-                            <small>📍 ${item.address || 'No address stored'}</small>
-                            <small>📞 ${item.phone || 'No phone'}</small>
-                        </div>
-                    </div>`;
-            } else {
-                return `
-                    <div class="item-entry">
-                        <div class="info">
-                            <strong>${item.last_name.toUpperCase()} ${item.first_name}</strong><br>
-                            <small>📧 ${item.email}</small>
-                            <small>📍 ${item.address || 'No address stored'}</small>
-                            <small>📞 ${item.phone || 'No phone'}</small>
-                        </div>
-                    </div>`;
-            }
-        }).join('');
+        container.innerHTML = data.map(item => `
+            <div class="item-entry">
+                <div class="info">
+                    <strong>${type === 'doctor' ? 'DR. ' : ''}${item.last_name.toUpperCase()} ${item.first_name || ''}</strong><br>
+                    <small>📧 ${item.email || 'N/A'}</small> | <small>📞 ${item.phone || 'N/A'}</small>
+                </div>
+            </div>`).join('');
     }
 
     async loadTeam() {
@@ -252,18 +259,10 @@ class DashboardManager {
         try {
             const res = await fetch(`${API_BASE_URL}/users/`, { headers: HEADERS });
             const users = await res.json();
-            
             this.lists.team.innerHTML = users.map(user => `
-                <li class="item-entry">
-                    <div class="info">
-                        <strong>${user.username}</strong><br>
-                        <small>Role: ${user.role || 'Staff Member'}</small>
-                    </div>
-                </li>
+                <li class="item-entry"><div class="info"><strong>${user.username}</strong><br><small>${user.role || 'Staff'}</small></div></li>
             `).join('');
-        } catch (e) {
-            this.lists.team.innerHTML = "<li>Staff information unavailable</li>";
-        }
+        } catch (e) { this.lists.team.innerHTML = "<li>Error loading staff</li>"; }
     }
 
     initSearchFilters() {
@@ -271,17 +270,13 @@ class DashboardManager {
             const input = document.getElementById(inputId);
             const container = document.getElementById(containerId);
             if (!input || !container) return;
-
             input.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
-                const items = container.querySelectorAll('.item-entry');
-                items.forEach(item => {
-                    const isVisible = item.innerText.toLowerCase().includes(term);
-                    item.style.display = isVisible ? "block" : "none";
+                container.querySelectorAll('.item-entry').forEach(item => {
+                    item.style.display = item.innerText.toLowerCase().includes(term) ? "block" : "none";
                 });
             });
         };
-
         setupSearch('search-client', 'client-search-result');
         setupSearch('search-doctor', 'doctor-search-result');
     }
@@ -290,22 +285,14 @@ class DashboardManager {
 // --- GLOBAL ACTIONS ---
 const logoutUser = () => {
     document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    localStorage.removeItem('username');
+    localStorage.clear();
     window.location.href = 'auth.html';
 };
 
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Security Check
     if (!AUTH_TOKEN) { window.location.href = 'auth.html'; return; }
-    
-    // Bind Logout
     document.getElementById('logout-btn')?.addEventListener('click', logoutUser);
-
-    // Start Modules
     new PharmaCharts();
     new PharmaChat();
     new DashboardManager();
-    
-    console.log("Systems synchronized. Monitoring active.");
 });
