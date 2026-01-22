@@ -1,10 +1,9 @@
 /**
  * settings.js - Admin Panel Management
- * Handles user CRUD, authentication, and UI interactions
  */
 
 // ============================================
-// 1. COOKIE & SESSION UTILITIES
+// 1. COOKIE MANAGER
 // ============================================
 
 const CookieManager = {
@@ -18,328 +17,132 @@ const CookieManager = {
         }
         return null;
     },
-    set: (name, value, days = 7) => {
-        const expires = new Date(Date.now() + days * 864e5).toUTCString();
-        document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
-    },
     erase: (name) => {
-        document.cookie = name + '=; Max-Age=-99999999; path=/; SameSite=Lax';
+        document.cookie = name + '=; Max-Age=-99999999; path=/;';
     }
 };
 
 // ============================================
-// 2. TOAST NOTIFICATION SYSTEM
+// 2. AUTH HELPER
 // ============================================
 
-const Toast = {
-    show: (message, type = 'info') => {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        const icons = {
-            success: '✓',
-            error: '✗',
-            warning: '⚠',
-            info: 'ℹ'
-        };
-        
-        toast.innerHTML = `
-            <span style="font-size: 20px;">${icons[type]}</span>
-            <span>${message}</span>
-        `;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    },
-    
-    success: (msg) => Toast.show(msg, 'success'),
-    error: (msg) => Toast.show(msg, 'error'),
-    warning: (msg) => Toast.show(msg, 'warning'),
-    info: (msg) => Toast.show(msg, 'info')
-};
-
-// ============================================
-// 3. LOADING OVERLAY
-// ============================================
-
-const Loading = {
-    show: () => {
-        document.getElementById('loading-overlay').style.display = 'flex';
-    },
-    hide: () => {
-        document.getElementById('loading-overlay').style.display = 'none';
-    }
-};
-
-// ============================================
-// 4. API SERVICE
-// ============================================
-
-const API = {
-    baseURL: '/api',
-    
-    async request(endpoint, options = {}) {
-        const token = CookieManager.get('access_token');
-        
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                ...options.headers
-            },
-            ...options
-        };
-        
-        try {
-            const response = await fetch(`${this.baseURL}${endpoint}`, config);
-            
-            // Handle authentication errors
-            if (response.status === 401 || response.status === 403) {
-                Toast.error('Session expirée. Reconnexion requise.');
-                setTimeout(() => {
-                    CookieManager.erase('access_token');
-                    window.location.href = 'auth.html';
-                }, 1500);
-                throw new Error('Unauthorized');
-            }
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Erreur serveur');
-            }
-            
-            return data;
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
-        }
-    },
-    
-    // User endpoints
-    users: {
-        getAll: () => API.request('/users/'),
-        getById: (id) => API.request(`/users/${id}`),
-        create: (data) => API.request('/users/', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        }),
-        update: (id, data) => API.request(`/users/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        }),
-        delete: (id) => API.request(`/users/${id}`, { method: 'DELETE' })
-    }
-};
-
-// ============================================
-// 5. STATE MANAGEMENT
-// ============================================
-
-const State = {
-    users: [],
-    currentUser: null,
-    filters: {
-        search: '',
-        role: 'all'
-    },
-    
-    setUsers(users) {
-        this.users = users;
-        this.render();
-    },
-    
-    getFilteredUsers() {
-        return this.users.filter(user => {
-            const matchesSearch = !this.filters.search || 
-                user.username.toLowerCase().includes(this.filters.search.toLowerCase()) ||
-                (user.email && user.email.toLowerCase().includes(this.filters.search.toLowerCase()));
-            
-            const matchesRole = this.filters.role === 'all' ||
-                (this.filters.role === 'admin' && user.is_admin) ||
-                (this.filters.role === 'staff' && !user.is_admin);
-            
-            return matchesSearch && matchesRole;
-        });
-    },
-    
-    render() {
-        renderUserTable(this.getFilteredUsers());
-        updateStats();
-    }
-};
-
-// ============================================
-// 6. INITIALIZATION
-// ============================================
-
-document.addEventListener('DOMContentLoaded', async () => {
+function getAuthInfo() {
     const token = CookieManager.get('access_token');
+    if (!token) return { token: null, isAdmin: false };
     
-    if (!token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const isAdmin = payload.is_admin === true;
+        console.log('🔐 Auth Info:', { isAdmin, userId: payload.sub });
+        return { token, isAdmin };
+    } catch (e) {
+        console.error('Token decode error:', e);
+        return { token: null, isAdmin: false };
+    }
+}
+
+// ============================================
+// 3. INITIALIZATION
+// ============================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Settings page initializing...');
+    
+    const auth = getAuthInfo();
+    if (!auth.token) {
+        alert('You must be logged in to access this page');
         window.location.href = 'auth.html';
         return;
     }
     
-    await loadNavbar();
+    if (!auth.isAdmin) {
+        alert('Admin access required');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    loadNavbar();
+    fetchUsers();
+    setupEventListeners();
     initTabSystem();
     initFilters();
-    await loadUsers();
-    setupFormHandlers();
-    setupUserProfile();
 });
 
 // ============================================
-// 7. UI COMPONENTS
+// 4. FETCH USERS
 // ============================================
 
-async function loadNavbar() {
-    const placeholder = document.getElementById('navbar-placeholder');
-    if (!placeholder) return;
-    
+async function fetchUsers() {
+    const { token, isAdmin } = getAuthInfo();
+    if (!token) return;
+
+    console.log('📋 Loading users...');
+
     try {
-        const response = await fetch('navbar.html');
-        if (response.ok) {
-            placeholder.innerHTML = await response.text();
-            highlightActiveLink();
-            setupLogout();
-        }
-    } catch (error) {
-        console.error("Navbar loading error:", error);
-    }
-}
-
-function highlightActiveLink() {
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-    const navLinks = {
-        'index.html': 'nav-dashboard',
-        'inventory.html': 'nav-inventory',
-        'clients.html': 'nav-clients',
-        'doctors.html': 'nav-doctors',
-        'settings.html': 'nav-settings'
-    };
-    
-    const activeId = navLinks[currentPage];
-    if (activeId) {
-        const activeLink = document.getElementById(activeId);
-        if (activeLink) activeLink.classList.add('active');
-    }
-}
-
-function setupUserProfile() {
-    const firstName = localStorage.getItem('first_name') || "A";
-    const avatar = document.getElementById('user-avatar');
-    
-    if (avatar) {
-        avatar.textContent = firstName.charAt(0).toUpperCase();
-    }
-}
-
-function setupLogout() {
-    const logoutBtn = document.querySelector('.btn-logout-top');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm("Êtes-vous sûr de vouloir vous déconnecter ?")) {
-                CookieManager.erase('access_token');
-                localStorage.clear();
-                Toast.success('Déconnexion réussie');
-                setTimeout(() => window.location.href = 'auth.html', 1000);
+        const response = await fetch('http://127.0.0.1:5000/users/', {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
-    }
-}
 
-// ============================================
-// 8. TAB SYSTEM
-// ============================================
+        console.log('📡 Response status:', response.status);
 
-function initTabSystem() {
-    const tabs = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
-    
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const target = tab.dataset.target;
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            contents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === target) {
-                    content.classList.add('active');
-                }
-            });
-        });
-    });
-}
+        if (!response.ok) {
+            if (response.status === 401) {
+                alert('Session expired. Please login again.');
+                window.location.href = 'auth.html';
+                return;
+            }
+            if (response.status === 403) {
+                alert('Access forbidden. Admin rights required.');
+                window.location.href = 'index.html';
+                return;
+            }
+            throw new Error(`Fetch failed: ${response.status}`);
+        }
 
-// ============================================
-// 9. FILTERS
-// ============================================
-
-function initFilters() {
-    const searchInput = document.getElementById('user-search');
-    const roleFilter = document.getElementById('role-filter');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            State.filters.search = e.target.value;
-            State.render();
-        });
-    }
-    
-    if (roleFilter) {
-        roleFilter.addEventListener('change', (e) => {
-            State.filters.role = e.target.value;
-            State.render();
-        });
-    }
-}
-
-// ============================================
-// 10. USER CRUD OPERATIONS
-// ============================================
-
-async function loadUsers() {
-    Loading.show();
-    
-    try {
-        const users = await API.users.getAll();
-        State.setUsers(users);
-        Toast.success(`${users.length} utilisateurs chargés`);
+        const users = await response.json();
+        console.log('✅ Users loaded:', users);
+        
+        window.allUsers = users; // Store globally for filtering
+        renderUserTable(users, isAdmin);
+        updateStats(users);
+        
     } catch (error) {
-        Toast.error('Erreur lors du chargement des utilisateurs');
-        console.error(error);
-    } finally {
-        Loading.hide();
+        console.error("❌ User Fetch Error:", error);
+        alert('Error loading users. Check console for details.');
     }
 }
 
-function renderUserTable(users) {
-    const tableBody = document.getElementById('user-table-body');
+// ============================================
+// 5. RENDER TABLE
+// ============================================
+
+function renderUserTable(users, isAdmin) {
+    const tbody = document.getElementById('user-table-body');
     const emptyState = document.getElementById('empty-state');
     const currentUserId = localStorage.getItem('user_id');
     
+    if (!tbody) {
+        console.error('Table body not found!');
+        return;
+    }
+
     // Update count badge
     const countBadge = document.getElementById('users-count');
     if (countBadge) countBadge.textContent = users.length;
     
-    if (users.length === 0) {
-        tableBody.innerHTML = '';
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found</td></tr>';
         if (emptyState) emptyState.style.display = 'block';
         return;
     }
     
     if (emptyState) emptyState.style.display = 'none';
     
-    tableBody.innerHTML = users.map(user => {
+    tbody.innerHTML = users.map(user => {
         const initials = (user.first_name?.[0] || user.username[0]).toUpperCase();
         const isCurrentUser = user.id === currentUserId;
         const roleBadge = user.is_admin ? 
@@ -384,9 +187,13 @@ function renderUserTable(users) {
     }).join('');
 }
 
-function updateStats() {
-    const totalUsers = State.users.length;
-    const admins = State.users.filter(u => u.is_admin).length;
+// ============================================
+// 6. UPDATE STATS
+// ============================================
+
+function updateStats(users) {
+    const totalUsers = users.length;
+    const admins = users.filter(u => u.is_admin).length;
     
     const statActiveUsers = document.getElementById('stat-active-users');
     const statAdmins = document.getElementById('stat-admins');
@@ -396,14 +203,24 @@ function updateStats() {
 }
 
 // ============================================
-// 11. MODAL MANAGEMENT
+// 7. MODAL MANAGEMENT
 // ============================================
 
 window.openEditModal = async (userId) => {
-    Loading.show();
+    const { token } = getAuthInfo();
     
     try {
-        const user = await API.users.getById(userId);
+        const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            alert('Failed to load user data');
+            return;
+        }
+
+        const user = await response.json();
         
         document.getElementById('edit-user-id').value = user.id;
         document.getElementById('edit-username').value = user.username;
@@ -414,10 +231,10 @@ window.openEditModal = async (userId) => {
         document.getElementById('edit-password').value = '';
         
         document.getElementById('edit-modal').classList.add('active');
+        
     } catch (error) {
-        Toast.error('Erreur lors du chargement de l\'utilisateur');
-    } finally {
-        Loading.hide();
+        console.error('Edit modal error:', error);
+        alert('Network error while loading user');
     }
 };
 
@@ -437,83 +254,235 @@ window.closeCreateModal = () => {
 window.deleteUser = async (userId) => {
     if (!confirm("⚠️ Confirmer la suppression ?\nCette action est irréversible.")) return;
     
-    Loading.show();
+    const { token } = getAuthInfo();
     
     try {
-        await API.users.delete(userId);
-        Toast.success('Utilisateur supprimé avec succès');
-        await loadUsers();
+        const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            await fetchUsers();
+            alert('Utilisateur supprimé avec succès');
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Delete failed');
+        }
     } catch (error) {
-        Toast.error('Erreur lors de la suppression');
-    } finally {
-        Loading.hide();
+        console.error("Delete Error:", error);
+        alert('Network error during deletion');
     }
 };
 
 // ============================================
-// 12. FORM HANDLERS
+// 8. EVENT LISTENERS & FORMS
 // ============================================
 
-function setupFormHandlers() {
-    // Edit User Form
+function setupEventListeners() {
     const editForm = document.getElementById('edit-user-form');
+    const createForm = document.getElementById('create-user-form');
+    
+    // Edit Form
     if (editForm) {
-        editForm.addEventListener('submit', async (e) => {
+        editForm.onsubmit = async (e) => {
             e.preventDefault();
+            const { token } = getAuthInfo();
             
             const userId = document.getElementById('edit-user-id').value;
-            const updatedData = {
-                email: document.getElementById('edit-email').value,
-                first_name: document.getElementById('edit-first-name').value,
-                last_name: document.getElementById('edit-last-name').value,
+            const formData = new FormData(editForm);
+            
+            const payload = {
+                email: formData.get('email')?.trim() || null,
+                first_name: formData.get('first_name')?.trim() || null,
+                last_name: formData.get('last_name')?.trim() || null,
                 is_admin: document.getElementById('edit-is-admin').checked
             };
             
-            const password = document.getElementById('edit-password').value;
-            if (password) updatedData.password = password;
-            
-            Loading.show();
+            const password = document.getElementById('edit-password').value?.trim();
+            if (password) payload.password = password;
             
             try {
-                await API.users.update(userId, updatedData);
-                Toast.success('Utilisateur modifié avec succès');
-                closeEditModal();
-                await loadUsers();
+                const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    closeEditModal();
+                    await fetchUsers();
+                    alert('Utilisateur modifié avec succès');
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Update failed');
+                }
             } catch (error) {
-                Toast.error('Erreur lors de la modification');
-            } finally {
-                Loading.hide();
+                console.error('Update error:', error);
+                alert('Network error');
             }
-        });
+        };
     }
     
-    // Create User Form
-    const createForm = document.getElementById('create-user-form');
+    // Create Form
     if (createForm) {
-        createForm.addEventListener('submit', async (e) => {
+        createForm.onsubmit = async (e) => {
             e.preventDefault();
+            const { token } = getAuthInfo();
             
-            const newUserData = {
-                username: document.getElementById('create-username').value,
-                email: document.getElementById('create-email').value,
-                password: document.getElementById('create-password').value,
-                first_name: document.getElementById('create-first-name').value,
-                last_name: document.getElementById('create-last-name').value,
+            const formData = new FormData(createForm);
+            
+            const payload = {
+                username: formData.get('username').trim(),
+                email: formData.get('email').trim(),
+                password: formData.get('password').trim(),
+                first_name: formData.get('first_name')?.trim() || null,
+                last_name: formData.get('last_name')?.trim() || null,
                 is_admin: document.getElementById('create-is-admin').checked
             };
             
-            Loading.show();
-            
             try {
-                await API.users.create(newUserData);
-                Toast.success('Utilisateur créé avec succès');
-                closeCreateModal();
-                await loadUsers();
+                const response = await fetch('http://127.0.0.1:5000/users/', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    closeCreateModal();
+                    await fetchUsers();
+                    alert('Utilisateur créé avec succès');
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Creation failed');
+                }
             } catch (error) {
-                Toast.error('Erreur lors de la création');
-            } finally {
-                Loading.hide();
+                console.error('Create error:', error);
+                alert('Network error');
+            }
+        };
+    }
+    
+    // Logout
+    const logoutBtn = document.querySelector('.btn-logout-top');
+    if (logoutBtn) {
+        logoutBtn.onclick = () => {
+            CookieManager.erase('access_token');
+            localStorage.clear();
+            window.location.href = 'auth.html';
+        };
+    }
+}
+
+// ============================================
+// 9. TAB SYSTEM
+// ============================================
+
+function initTabSystem() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.target;
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            contents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === target) {
+                    content.classList.add('active');
+                }
+            });
+        });
+    });
+}
+
+// ============================================
+// 10. FILTERS
+// ============================================
+
+function initFilters() {
+    const searchInput = document.getElementById('user-search');
+    const roleFilter = document.getElementById('role-filter');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const { isAdmin } = getAuthInfo();
+            
+            if (!window.allUsers) return;
+            
+            const filtered = window.allUsers.filter(user => {
+                const matchesSearch = !query || 
+                    user.username.toLowerCase().includes(query) ||
+                    (user.email && user.email.toLowerCase().includes(query));
+                
+                const role = roleFilter ? roleFilter.value : 'all';
+                const matchesRole = role === 'all' ||
+                    (role === 'admin' && user.is_admin) ||
+                    (role === 'staff' && !user.is_admin);
+                
+                return matchesSearch && matchesRole;
+            });
+            
+            renderUserTable(filtered, isAdmin);
+        });
+    }
+    
+    if (roleFilter) {
+        roleFilter.addEventListener('change', () => {
+            if (searchInput) {
+                searchInput.dispatchEvent(new Event('input'));
             }
         });
+    }
+}
+
+// ============================================
+// 11. NAVBAR
+// ============================================
+
+function loadNavbar() {
+    fetch('navbar.html')
+        .then(res => res.text())
+        .then(html => {
+            const placeholder = document.getElementById('navbar-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = html;
+                highlightActiveLink();
+                
+                // Setup user profile avatar
+                const firstName = localStorage.getItem('first_name') || "A";
+                const avatar = document.getElementById('user-avatar');
+                if (avatar) {
+                    avatar.textContent = firstName.charAt(0).toUpperCase();
+                }
+            }
+        })
+        .catch(err => console.error("Navbar Error:", err));
+}
+
+function highlightActiveLink() {
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const navLinks = {
+        'index.html': 'nav-dashboard',
+        'inventory.html': 'nav-inventory',
+        'clients.html': 'nav-clients',
+        'doctors.html': 'nav-doctors',
+        'settings.html': 'nav-settings'
+    };
+    
+    const activeId = navLinks[currentPage];
+    if (activeId) {
+        const activeLink = document.getElementById(activeId);
+        if (activeLink) activeLink.classList.add('active');
     }
 }
