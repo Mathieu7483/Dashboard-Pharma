@@ -1,7 +1,7 @@
 # File: Server/utils/decorator.py (Corrected Imports)
 
 from functools import wraps
-from flask_jwt_extended import get_jti, get_jwt
+from flask_jwt_extended import get_jti, get_jwt, get_jwt_identity
 from flask_restx import abort
 
 def admin_required():
@@ -13,6 +13,7 @@ def admin_required():
         @wraps(fn)
         def decorator(*args, **kwargs):
             claims = get_jwt()
+            print(f"DEBUG - User: {get_jwt_identity()} - Is Admin Claim: {claims.get('is_admin')}")
             if claims.get('is_admin') is True:
                 return fn(*args, **kwargs)
             
