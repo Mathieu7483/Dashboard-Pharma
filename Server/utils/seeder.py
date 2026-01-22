@@ -112,7 +112,7 @@ def _seed_json_data(admin_id):
 def _seed_csv_inventory(admin_id):
     """Imports products from the CSV file."""
     current_dir = os.path.dirname(__file__)
-    csv_path = os.path.abspath(os.path.join(current_dir, '..', 'database', 'initial_inventory.csv'))
+    csv_path = os.path.abspath(os.path.join(current_dir, '..', 'utils', 'initial_inventory.csv'))
 
     if not os.path.exists(csv_path):
         print(f"Warning: CSV not found at {csv_path}")
