@@ -66,26 +66,45 @@
                         </div>
                     </article>
 
-                    <article class="widget stock-kpi">
+                    <article class="widget inventory-stock">
                         <h3>Inventory Stock</h3>
                         <div class="kpi-value" id="stock-efficiency">0%</div>
                         <p id="stock-status-text">Synchronizing...</p>
-                    </article>
-
-                    <article class="widget meds-team">
-                        <div class="meds-section">
+                        <hr class="widget-divider">
                         <h3>Critical Stock Levels</h3>
                         <ul class="item-list" id="meds-list">
                         <li>Loading inventory...</li>
                         </ul>
+                    </article>
+
+                    <article class="widget meds-team">
+                        <div class="meds-section">
+                            <h3>📢 Team Notifications</h3>
+        
+                        <div id="admin-note-input" class="admin-only" style="margin-bottom: 15px;">
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="new-note-text" class="widget-search" placeholder="Ajouter une note rapide..." style="flex: 1;">
+                                <button id="add-note-btn" class="btn-logout-top" style="background: #2ecc71; border: none; height: 35px; margin-top: 5px;">ADD</button>
+                            </div>
                         </div>
-    
-                        <hr class="widget-divider"> <div class="team-section">
-                        <h3>Staff On Duty</h3>
-                        <ul class="item-list" id="team-list">
-                        <li>Loading team...</li>
+
+                        <ul class="item-list" id="team-notif-list">
+                            <li class="item-entry">
+                                <div class="info">
+                                    <strong>📌 Note :</strong> Bienvenue sur le dashboard.<br>
+                                    <small>Système opérationnel</small>
+                                </div>
+                            </li>
                         </ul>
-                        </div>
+                    </div>
+                    <hr class="widget-divider">
+
+                    <div class="team-section">
+                        <h3>Staff On Duty</h3>
+                            <ul class="item-list" id="team-list">
+                            <li>Loading team...</li>
+                            </ul>
+                    </div>
                     </article>
 
                     <article class="widget client-data">
