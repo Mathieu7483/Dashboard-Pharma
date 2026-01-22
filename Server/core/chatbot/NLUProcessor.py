@@ -4,6 +4,7 @@ Enhanced NLU optimized for your actual database schema and products
 """
 
 import spacy
+import re
 from typing import Dict, List
 
 class NLUProcessor:
@@ -14,6 +15,7 @@ class NLUProcessor:
     - Multi-entity extraction (for drug interactions)
     - Intent classification with weighted scoring
     - Product name normalization (handles "Doliprane" variants)
+    - Symbol detection (+, &) for interaction queries
     """
 
     def __init__(self):
@@ -30,9 +32,9 @@ class NLUProcessor:
             # HIGHEST PRIORITY - Safety critical
             "check_interaction": {
                 "keywords": [
-                    "incompatible", "interaction", "danger", "mélange", 
+                    "incompatible", "interaction", "danger", "mélange", "mélanger",
                     "ensemble", "avec", "combiner", "conflit", "prendre",
-                    "compatible", "contre-indication"
+                    "compatible", "contre-indication", "associer", "puis-je", "peut-on"
                 ],
                 "priority": 10
             },
@@ -67,6 +69,15 @@ class NLUProcessor:
                 "priority": 6
             },
             
+            # Contact info
+            "get_contact_info": {
+                "keywords": [
+                    "téléphone", "telephone", "numéro", "numero", "tél", "tel", 
+                    "joindre", "appeler", "contact", "email", "mail", "adresse"
+                ],
+                "priority": 9
+            },
+            
             # People search
             "get_doctor": {
                 "keywords": [
@@ -83,13 +94,7 @@ class NLUProcessor:
                 ],
                 "priority": 5
             },
-            "get_contact_info": {
-                "keywords": [
-                    "téléphone", "telephone", "numéro", "numero", "tél", "tel", 
-                    "joindre", "appeler", "contact", "email", "mail", "adresse"
-                ],
-            "priority": 9
-},
+            
             # Product queries
             "check_stock": {
                 "keywords": [
@@ -118,10 +123,12 @@ class NLUProcessor:
             # Common words
             "cherche", "find", "search", "trouve", "trouver",
             "quel", "quelle", "quoi", "comment", "combien",
-            "le", "la", "les", "un", "une", "des",
+            "le", "la", "les", "un", "une", "des", "du", "de",
             
             # Question words
-            "est", "sont", "a", "ont", "fait", "faire"
+            "est", "sont", "a", "ont", "fait", "faire",
+            "puis", "je", "peut", "on", "mélanger", "prendre",
+            "compatibles", "danger", "ensemble"
         }
 
     def analyze(self, text: str) -> Dict:
@@ -159,8 +166,16 @@ class NLUProcessor:
             if clean_words:
                 entities = [clean_words[0].capitalize()]    
         
-        # 2. Detect intent with scoring
+        # 2. ✨ NEW: Check for interaction patterns FIRST
+        is_interaction_query = self._detect_interaction_pattern(text, entities)
+        
+        # 3. Detect intent with scoring
         intent, confidence = self._detect_intent(tokens_lemma, entities, text)
+        
+        # 4. ✨ NEW: Override intent if interaction detected
+        if is_interaction_query:
+            intent = "check_interaction"
+            confidence = max(confidence, 0.9)
         
         # Legacy compatibility
         entity_str = entities[0] if entities else ""
@@ -172,15 +187,70 @@ class NLUProcessor:
             "confidence": confidence
         }
     
+    def _detect_interaction_pattern(self, text: str, entities: List[str]) -> bool:
+        """
+        ✨ NEW METHOD: Detects if query is about drug interactions.
+        
+        Patterns detected:
+        - "Aspirine + Ibuprofène" (symbol +)
+        - "Doliprane & Advil" (symbol &)
+        - "Warfarine et Plavix" (conjunction with 2+ entities)
+        - "Puis-je mélanger X et Y" (interaction keywords + 2+ entities)
+        
+        Returns:
+            True if interaction query detected
+        """
+        text_lower = text.lower()
+        
+        # Pattern 1: Contains interaction symbols (+, &)
+        if '+' in text or '&' in text:
+            return len(entities) >= 2
+        
+        # Pattern 2: Conjunction words with 2+ entities
+        conjunction_words = ['et', 'avec', 'plus']
+        has_conjunction = any(f' {word} ' in f' {text_lower} ' for word in conjunction_words)
+        if has_conjunction and len(entities) >= 2:
+            return True
+        
+        # Pattern 3: Interaction keywords + 2+ entities
+        interaction_keywords = [
+            'interaction', 'compatible', 'mélanger', 'ensemble',
+            'danger', 'puis-je', 'peut-on', 'associer', 'incompatible'
+        ]
+        has_keyword = any(kw in text_lower for kw in interaction_keywords)
+        if has_keyword and len(entities) >= 2:
+            return True
+        
+        # Pattern 4: Just 2+ product names in a short query
+        # (e.g., "Aspirine Ibuprofène" - likely interaction)
+        if len(entities) >= 2 and len(text.split()) <= 4:
+            return True
+        
+        return False
+    
     def _extract_entities(self, doc, original_text: str) -> List[str]:
         """
         Extract product, doctor, and client names with smart normalization.
+        ✨ UPDATED: Now handles symbol splitting for interactions
         """
         entities = []
         text_lower = original_text.lower()
+        
+        # --- ✨ NEW PHASE 0: Split by interaction symbols ---
+        # "Aspirine + Ibuprofène" → ["Aspirine", "Ibuprofène"]
+        if '+' in original_text or '&' in original_text:
+            parts = re.split(r'[+&]', original_text)
+            for part in parts:
+                clean_part = part.strip().strip('.,!?;:')
+                if clean_part and clean_part.lower() not in self.stop_entities:
+                    if len(clean_part) >= 3:
+                        entities.append(clean_part.capitalize())
+            
+            # If we found entities via symbol split, return them
+            if len(entities) >= 2:
+                return entities[:5]
     
-    # --- PHASE 1: Known product pattern matching ---
-    # We keep this for high-precision drug detection
+        # --- PHASE 1: Known product pattern matching ---
         known_products = [
             "paracétamol", "doliprane", "ibuprofène", "ibuprofen",
             "amoxicilline", "aspirine", "oméprazole", "cétirizine",
@@ -188,12 +258,13 @@ class NLUProcessor:
             "clarithromycine", "métronidazole", "loratadine",
             "furosémide", "pantoprazole", "insuline", "tramadol",
             "warfarine", "augmentin", "ventoline", "dexaméthasone",
-            "azithromycine", "fluconazole", "montelukast"
+            "azithromycine", "fluconazole", "montelukast", "plavix",
+            "clopidogrel", "coumadine"
         ]
     
         for product in known_products:
             if product in text_lower:
-            # Check for qualifiers (e.g., "Doliprane Sirop")
+                # Check for qualifiers (e.g., "Doliprane Sirop")
                 words = text_lower.split()
                 for i, word in enumerate(words):
                     if product in word:
@@ -205,23 +276,18 @@ class NLUProcessor:
                             if product.capitalize() not in entities:
                                 entities.append(product.capitalize())
 
-    # --- PHASE 2: Universal Entity Extraction (POS Tagging) ---
-    # Crucial change: We remove the 'if not entities' to catch doctors/clients 
-    # even if a product was already found.
+        # --- PHASE 2: Universal Entity Extraction (POS Tagging) ---
         for token in doc:
             clean_token = token.text.lower()
         
-        # Skip functional words and intent triggers (prix, stock, etc.)
+            # Skip functional words and intent triggers
             if token.is_stop or token.is_punct or clean_token in self.stop_entities:
                 continue
             
-        # Extract Proper Nouns (PROPN) like 'Lefevre' and Nouns (NOUN)
-        # We also catch 'X' for words spaCy doesn't recognize (common with surnames)
+            # Extract Proper Nouns (PROPN), Nouns (NOUN), and unknown words (X)
             if token.pos_ in ["PROPN", "NOUN", "X"]:
-            # Ensure the word is long enough and not already added by Phase 1
                 cap_token = token.text.capitalize()
                 if len(cap_token) > 2 and cap_token not in entities:
-                # Basic check: avoid adding common verbs or words mistaken as NOUNs
                     if not token.like_num and not token.is_digit:
                         entities.append(cap_token)
     
@@ -251,7 +317,7 @@ class NLUProcessor:
                 
                 # Boost score for specific patterns
                 if intent_name == "check_interaction":
-                    if any(word in text_lower for word in ["avec", "ensemble", "et"]):
+                    if any(word in text_lower for word in ["avec", "ensemble", "et", "mélanger"]):
                         base_score *= 1.5
                 
                 if intent_name == "get_sales_summary":
@@ -272,16 +338,3 @@ class NLUProcessor:
         
         # Default: assume product search
         return "get_product", 0.4
-    
-    def _debug_print(self, text: str, entities: List[str], intent: str, conf: float):
-        """Development debug output."""
-        print(f"\n{'='*60}")
-        print(f"🔍 NLU Analysis")
-        print(f"{'='*60}")
-        print(f"📝 Input:      '{text}'")
-        print(f"🏷️  Entities:   {entities}")
-        print(f"🎯 Intent:     {intent}")
-        print(f"📊 Confidence: {conf:.2%}")
-        print(f"{'='*60}\n")
-
-    
