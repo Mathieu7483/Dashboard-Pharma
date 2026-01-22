@@ -41,25 +41,31 @@ def seed_all_initial_data():
 
 
 def _seed_admin():
-    """Initializes the primary admin account."""
+    """Initializes or updates the primary admin account."""
     admin = UserModel.query.filter_by(username='Mathieu').first()
+    
     if not admin:
         print("Creating primary admin account...")
         admin = UserModel(
             username='Mathieu', 
             email='mathieu.admin@pharma.com', 
-            is_admin=True,
+            is_admin=True, # Défini ici
             password='Admin@1234' 
         )
         admin.set_password('Admin@1234')
         db.session.add(admin)
-        try:
-            db.session.commit()
-            print("Success: Admin 'Mathieu' is ready.")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Abort: Critical error during admin initialization: {e}")
-            return None
+    else:
+        print("Admin account exists. Ensuring administrative privileges...")
+        admin.is_admin = True 
+        admin.set_password('Admin@1234') 
+
+    try:
+        db.session.commit()
+        print("Success: Admin 'Mathieu' is ready and verified.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Abort: Critical error during admin initialization: {e}")
+        return None
     return admin
 
 def _seed_json_data(admin_id):
