@@ -102,22 +102,22 @@ body {
 }
 
 /* ==========================================================================
-   4. SIDEBAR (SUITE - Fix pour navbar chargée dynamiquement)
+   4. SIDEBAR FIXES & ENHANCEMENTS
    ========================================================================== */
 
-/* Fix pour navbar chargée dynamiquement via JavaScript */
+/* Fix for javascript */
 #navbar-placeholder {
-    display: contents; /* Les enfants se comportent comme s'ils étaient directement dans .app-wrapper */
+    display: contents; 
 }
 
-/* S'assurer que la sidebar reste fixe */
+/* sidebar stay at the place */
 #navbar-placeholder .sidebar {
     position: sticky;
     top: 0;
     left: 0;
 }
 
-/* Style pour le lien actif avec animation */
+/* Style for link animation */
 .sidebar-nav a.active {
     color: var(--color-primary);
     background: rgba(30, 144, 255, 0.05);
@@ -125,7 +125,7 @@ body {
     padding-left: 20px; /* Compenser la bordure */
 }
 
-/* Animation smooth pour les transitions de menu */
+/* Smooth animation */
 .sidebar-nav a {
     position: relative;
     overflow: hidden;
@@ -218,6 +218,49 @@ body {
 .btn-logout-top:active {
     transform: translateY(0);
 }
+.search-bar.widget input#clients-search,
+.search-bar.widget input#doctors-search,
+.search-bar.widget input#inventory-search {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    border: 3px solid rgba(30, 144, 255, 0.2);
+    border-radius: 15px;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+}
+
+.search-bar.widget input#clients-search :focus,
+.search-bar.widget input#doctors-search :focus,
+.search-bar.widget input#inventory-search  :focus {
+    outline: none;
+    border-color: var(--color-secondary);
+    box-shadow: 0 10px 25px rgba(0, 255, 127, 0.2);
+    background-color: #fff;
+}
+
+.search-bar.widget input#clients-search::placeholder,
+.search-bar.widget input#doctors-search::placeholder,
+.search-bar.widget input#inventory-search::placeholder {
+    font-size: 1.1rem;
+    color: #bbb;
+}
+.search-bar.widget {
+    position: relative;
+}
+
+.search-bar.widget::after {
+    content: '🔍';
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    opacity: 0.5;
+    pointer-events: none;
+}
 
 /* ==========================================================================
    6. CONTENT SECTIONS
@@ -245,7 +288,7 @@ body {
     min-height: 0;
 }
 
-/* Placements */
+/* Disposition */
 .graph-day   { grid-column: 1; grid-row: 1; }
 .graph-month { grid-column: 2; grid-row: 1; }
 .stock-kpi   { grid-column: 3; grid-row: 1; }
@@ -489,7 +532,7 @@ footer {
     }
 
     .search-box input {
-        width: 250px;
+        width: 100%;
     }
 }
 
@@ -556,10 +599,12 @@ footer {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #products-table th {
-    text-align: left;
+    text-align: center;
     padding: 15px;
     border-bottom: 2px solid var(--color-primary);
     color: var(--color-primary);
@@ -716,6 +761,7 @@ footer {
 .btn-edit:hover, .btn-delete:hover {
     transform: scale(1.1);
 }
+
 
 /* ==========================================================================
    13. DOCTOR MANAGEMENT (SPECIFIC STYLING)
@@ -888,3 +934,5 @@ label.item-entry input[type="checkbox"] {
         }
         .text-danger { color: #dc3545; }
         .fw-bold { font-weight: bold; }
+
+  
