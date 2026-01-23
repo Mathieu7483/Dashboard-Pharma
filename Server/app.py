@@ -27,15 +27,6 @@ def create_app(config_class=DevelopmentConfig):
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    # --- cofigure additional claims in JWT ---
-    @jwt.additional_claims_loader
-    def add_claims_to_access_token(identity):
-        """
-        On laisse cette fonction vide ou minimale. 
-        On passera 'is_admin' directement dans create_access_token lors du login.
-        """
-        return {}
-
     # --- Initialization Flask-RESTX ---
     authorizations = {
         'apikey': {
