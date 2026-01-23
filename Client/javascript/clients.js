@@ -104,8 +104,8 @@ function renderTable(clients, isAdmin) {
             <td>${c.address || '-'}</td>
             <td>
                 ${isAdmin ? `
-                    <button class="btn-edit" onclick="editClient('${c.id}')">✎</button>
-                    <button class="btn-delete" onclick="deleteClient('${c.id}')">🗑</button>
+                    <button class="btn-edit" onclick="editClient('${c.id}')">✏️ Modifier</button>
+                    <button class="btn-delete" onclick="deleteClient('${c.id}')">🗑️ Supprimer</button>
                 ` : '-'}
             </td>
         `;
