@@ -102,10 +102,11 @@ function renderTable(doctors, isAdmin) {
             <td><span class="badge-specialty">${d.specialty || '-'}</span></td>
             <td>${d.email}</td>
             <td>${d.phone || '-'}</td>
+            <td>${d.address || '-'}</td>
             <td>
                 ${isAdmin ? `
-                    <button class="btn-edit" onclick="editDoctor('${d.id}')" title="Edit">✎</button>
-                    <button class="btn-delete" onclick="deleteDoctor('${d.id}')" title="Delete">🗑</button>
+                    <button class="btn-edit" onclick="editDoctor('${d.id}')" title="Edit">✏️ Modifier</button>
+                    <button class="btn-delete" onclick="deleteDoctor('${d.id}')" title="Delete">🗑️ Supprimer</button>
                 ` : '-'}
             </td>
         `;
