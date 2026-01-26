@@ -279,7 +279,8 @@ class FacadeService:
         stmt = db.select(DoctorModel).filter(
             (DoctorModel.first_name.ilike(f"%{query}%")) | 
             (DoctorModel.last_name.ilike(f"%{query}%")) |
-            (DoctorModel.specialty.ilike(f"%{query}%"))
+            (DoctorModel.specialty.ilike(f"%{query}%")) |
+            (DoctorModel.email.ilike(f"%{query}%"))
         ).limit(20)
         return db.session.execute(stmt).scalars().all()
 
