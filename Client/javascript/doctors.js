@@ -1,7 +1,7 @@
 /**
  * Doctor Management Logic
  * Handles doctor retrieval, creation, update, and deletion via Flask API.
- * Features: Admin check, Server-side search, Debounce optimization
+ * Features: Admin check, Server-side search by name/email/specialty, Debounce optimization
  */
 
 // --- COOKIE MANAGER ---
@@ -74,6 +74,10 @@ async function fetchDoctors() {
 
         const doctors = await response.json();
         console.log('Doctors loaded:', doctors);
+        
+        // Store globally for client-side search fallback
+        window.allDoctors = doctors;
+        
         renderTable(doctors, isAdmin);
         updateStats(doctors);
     } catch (error) {
@@ -90,7 +94,7 @@ function renderTable(doctors, isAdmin) {
     tbody.innerHTML = '';
 
     if (!doctors || doctors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No doctors found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No doctors found</td></tr>';
         return;
     }
 
@@ -274,7 +278,7 @@ window.deleteDoctor = async (id) => {
 };
 
 /**
- * Setup search functionality with server-side search and debounce
+ * Setup search functionality with server-side search by name/email/specialty
  */
 function setupSearch() {
     const searchInput = document.getElementById('doctors-search');
@@ -283,7 +287,7 @@ function setupSearch() {
     let debounceTimer;
 
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
+        const query = e.target.value.trim().toLowerCase();
         clearTimeout(debounceTimer);
 
         // Si la recherche est vide, recharger tous les doctors
@@ -306,12 +310,34 @@ function setupSearch() {
                     renderTable(results, isAdmin);
                 } else {
                     console.error('Search failed:', res.status);
+                    // Fallback: recherche côté client
+                    performClientSideSearch(query, isAdmin);
                 }
             } catch (err) {
                 console.error("Search error:", err);
+                // Fallback: recherche côté client
+                performClientSideSearch(query, isAdmin);
             }
         }, 300);
     });
+}
+
+/**
+ * 🆕 Client-side search fallback - recherche par nom, email ET spécialité
+ */
+function performClientSideSearch(query, isAdmin) {
+    if (!window.allDoctors) return;
+    
+    const filtered = window.allDoctors.filter(doctor => {
+        const firstNameMatch = doctor.first_name && doctor.first_name.toLowerCase().includes(query);
+        const lastNameMatch = doctor.last_name && doctor.last_name.toLowerCase().includes(query);
+        const emailMatch = doctor.email && doctor.email.toLowerCase().includes(query);
+        const specialtyMatch = doctor.specialty && doctor.specialty.toLowerCase().includes(query);
+        
+        return firstNameMatch || lastNameMatch || emailMatch || specialtyMatch;
+    });
+    
+    renderTable(filtered, isAdmin);
 }
 
 /**
