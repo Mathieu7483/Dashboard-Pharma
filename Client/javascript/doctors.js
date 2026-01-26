@@ -99,8 +99,8 @@ function renderTable(doctors, isAdmin) {
         row.innerHTML = `
             <td>${d.first_name}</td>
             <td>${d.last_name}</td>
-            <td><span class="badge-specialty">${d.specialty || '-'}</span></td>
             <td>${d.email}</td>
+            <td><span class="badge-specialty">${d.specialty || '-'}</span></td>
             <td>${d.phone || '-'}</td>
             <td>${d.address || '-'}</td>
             <td>
