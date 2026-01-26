@@ -1,7 +1,7 @@
 /**
  * Client Management Logic
  * Handles client retrieval, creation, update, and deletion via Flask API.
- * Features: Admin check, Server-side search, Debounce optimization
+ * Features: Admin check, Server-side search by name AND email, Debounce optimization
  */
 
 // --- COOKIE MANAGER ---
@@ -74,6 +74,10 @@ async function fetchClients() {
 
         const clients = await response.json();
         console.log('Clients loaded:', clients);
+        
+        // Store globally for client-side search fallback
+        window.allClients = clients;
+        
         renderTable(clients, isAdmin);
         updateStats(clients);
     } catch (error) {
@@ -265,7 +269,7 @@ window.deleteClient = async (id) => {
 };
 
 /**
- * Setup search functionality with server-side search and debounce
+ * Setup search functionality with server-side search by name AND email
  */
 function setupSearch() {
     const searchInput = document.getElementById('clients-search');
@@ -274,7 +278,7 @@ function setupSearch() {
     let debounceTimer;
 
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
+        const query = e.target.value.trim().toLowerCase();
         clearTimeout(debounceTimer);
 
         // Si la recherche est vide, recharger tous les clients
@@ -297,12 +301,33 @@ function setupSearch() {
                     renderTable(results, isAdmin);
                 } else {
                     console.error('Search failed:', res.status);
+                    // Fallback: recherche côté client
+                    performClientSideSearch(query, isAdmin);
                 }
             } catch (err) {
                 console.error("Search error:", err);
+                // Fallback: recherche côté client
+                performClientSideSearch(query, isAdmin);
             }
         }, 300);
     });
+}
+
+/**
+ * 🆕 Client-side search fallback - recherche par nom ET email
+ */
+function performClientSideSearch(query, isAdmin) {
+    if (!window.allClients) return;
+    
+    const filtered = window.allClients.filter(client => {
+        const firstNameMatch = client.first_name && client.first_name.toLowerCase().includes(query);
+        const lastNameMatch = client.last_name && client.last_name.toLowerCase().includes(query);
+        const emailMatch = client.email && client.email.toLowerCase().includes(query);
+        
+        return firstNameMatch || lastNameMatch || emailMatch;
+    });
+    
+    renderTable(filtered, isAdmin);
 }
 
 /**
