@@ -1,6 +1,6 @@
 """
 Server/core/chatbot/ChatBot_engine.py
-Optimized chatbot using database-driven alias resolution
+🆕 Enhanced with multi-category search - shows ALL matching results
 """
 
 from sqlalchemy import inspect, or_, func, cast, Date
@@ -16,19 +16,12 @@ from core.chatbot.NLUProcessor import NLUProcessor
 
 class ChatBotEngine:
     """
-    Core chatbot orchestrator with database-driven product resolution.
-    Uses ProductAliasModel for flexible name mapping.
+    Core chatbot orchestrator with multi-category search.
+    🆕 Now shows products, clients, AND doctors in same query.
     """
 
     def __init__(self):
         self.nlu = NLUProcessor()
-        
-        # Model mapping for entity searches
-        self.search_models = {
-            "get_product": ProductModel,
-            "get_client": ClientModel,
-            "get_doctor": DoctorModel
-        }
 
     def process_query(self, user_text: str) -> str:
         """
@@ -71,12 +64,12 @@ class ChatBotEngine:
             elif intent == "get_contact_info":
                 return self._handle_contact_search(entities)
             
-            # Standard entity search (products, clients, doctors)
+            # 🆕 MULTI-CATEGORY SEARCH (default)
             else:
                 if not entities:
                     return self._generate_help_message()
                 
-                return self._execute_standard_search(intent, entities[0])
+                return self._execute_multi_category_search(entities[0])
         
         except Exception as e:
             print(f"❌ ChatBot Error: {e}")
@@ -88,12 +81,12 @@ class ChatBotEngine:
 
     def _resolve_to_active_ingredient(self, product_name: str) -> tuple:
         """
-    Resolves a product name to its active ingredient with multi-result safety.
-    """
+        Resolves a product name to its active ingredient with multi-result safety.
+        """
         name_clean = product_name.strip()
     
         try:
-        # 1. Search in ALIASES table (Exact match, case-insensitive)
+            # 1. Search in ALIASES table (Exact match, case-insensitive)
             alias_result = db.session.execute(
                 db.select(ProductAliasModel).where(
                     ProductAliasModel.alias.ilike(f"{name_clean}")
@@ -103,7 +96,7 @@ class ChatBotEngine:
             if alias_result:
                 return (alias_result.active_ingredient, name_clean)
 
-        # 2. Search in PRODUCTS table (Fuzzy match)
+            # 2. Search in PRODUCTS table (Fuzzy match)
             product = db.session.execute(
                 db.select(ProductModel)
                 .where(ProductModel.name.ilike(f"%{name_clean}%"))
@@ -113,22 +106,16 @@ class ChatBotEngine:
             if product:
                 return (product.active_ingredient, product.name)
 
-        # 3. Fallback : we could not resolve, return input as-is
+            # 3. Fallback : we could not resolve, return input as-is
             return (name_clean.capitalize(), name_clean.capitalize())
 
         except Exception as e:
             print(f"⚠️ Erreur résolution produit '{product_name}': {e}")
-        # In case of error, return input as-is
             return (name_clean.capitalize(), name_clean.capitalize())
 
     def _handle_interaction_check(self, entity_list: list) -> str:
         """
         Checks drug-drug interactions with flexible name resolution.
-        
-        Logic:
-        1. Resolve commercial names → active ingredients via database
-        2. Query InteractionModel for conflicts
-        3. Return safety report
         """
         if len(entity_list) < 2:
             return ("⚠️ **Mentionnez au moins DEUX produits** pour vérifier la compatibilité.\n\n"
@@ -147,7 +134,6 @@ class ChatBotEngine:
             resolved.append(active_ingredient)
             display_names.append(display_name)
         
-        # Debug output
         print(f"🔬 Resolved ingredients: {list(zip(display_names, resolved))}")
         
         # Step 2: Query interactions (bidirectional check)
@@ -156,7 +142,6 @@ class ChatBotEngine:
             for j in range(i + 1, len(resolved)):
                 ing_a, ing_b = resolved[i], resolved[j]
                 
-                # Check both directions (A+B and B+A)
                 query = db.select(InteractionModel).where(
                     or_(
                         (InteractionModel.ingredient_a == ing_a) & 
@@ -181,7 +166,6 @@ class ChatBotEngine:
                    f"*Principes actifs analysés : {', '.join(set(resolved))}*\n\n"
                    f"*Consultez toujours un professionnel de santé pour un avis personnalisé.*")
         
-        # Safety warning format
         output = ["## 🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n"]
         output.append(f"**Analyse pour :** {' + '.join(display_names)}\n")
         
@@ -209,7 +193,6 @@ class ChatBotEngine:
         if not entities:
             return "❓ Quel produit souhaitez-vous vérifier ?"
         
-        # Try fuzzy search
         product = db.session.execute(
             db.select(ProductModel).where(
                 ProductModel.name.ilike(f"%{entities[0]}%")
@@ -217,7 +200,6 @@ class ChatBotEngine:
         ).scalar_one_or_none()
         
         if product:
-            # Status indicators
             if product.stock > 100:
                 emoji, status = "✅", "Stock excellent"
             elif product.stock > 50:
@@ -300,7 +282,6 @@ class ChatBotEngine:
         
         output = [f"## ⚠️ Alertes Stock Bas (< {threshold} unités)\n"]
         
-        # Group by severity
         critical = [p for p in low_stock if p.stock < 5]
         warning = [p for p in low_stock if 5 <= p.stock < threshold]
         
@@ -324,28 +305,23 @@ class ChatBotEngine:
         try:
             now = datetime.now()
             today = now.date()
-            # beginning of the week (Monday)
             week_start = today - timedelta(days=today.weekday())
 
-            # 1. Request for Today
             stats_today = db.session.query(
                 func.count(SaleModel.id),
                 func.sum(SaleModel.total_amount)
             ).filter(cast(SaleModel.sale_date, Date) == today).first()
 
-            # 2. Request for This Week
             stats_week = db.session.query(
                 func.count(SaleModel.id),
                 func.sum(SaleModel.total_amount)
             ).filter(SaleModel.sale_date >= week_start).first()
 
-            # 3. Request for All Time
             stats_total = db.session.query(
                 func.count(SaleModel.id),
                 func.sum(SaleModel.total_amount)
             ).first()
 
-            # Extraction of values
             count_day, rev_day = stats_today[0] or 0, stats_today[1] or 0.0
             count_week, rev_week = stats_week[0] or 0, stats_week[1] or 0.0
             count_all, rev_all = stats_total[0] or 0, stats_total[1] or 0.0
@@ -353,26 +329,25 @@ class ChatBotEngine:
             output = ["## 📈 Performances de Vente\n"]
         
             output.append(f"### Aujourd'hui ({today.strftime('%d/%m/%Y')})")
-            output.append(f"   • Transactions : **{count_day}**")
-            output.append(f"   • Chiffre d'affaires : **{rev_day:.2f} €**\n")
+            output.append(f"   • Transactions : **{count_day}**")
+            output.append(f"   • Chiffre d'affaires : **{rev_day:.2f} €**\n")
         
             output.append(f"### Cette semaine (depuis le {week_start.strftime('%d/%m')})")
-            output.append(f"   • Transactions : **{count_week}**")
-            output.append(f"   • CA : **{rev_week:.2f} €**\n")
+            output.append(f"   • Transactions : **{count_week}**")
+            output.append(f"   • CA : **{rev_week:.2f} €**\n")
         
             output.append(f"### Cumulé total")
-            output.append(f"   • Transactions totales : **{count_all}**")
-            output.append(f"   • CA total : **{rev_all:.2f} €**")
+            output.append(f"   • Transactions totales : **{count_all}**")
+            output.append(f"   • CA total : **{rev_all:.2f} €**")
         
             if count_all > 0:
                 avg_ticket = rev_all / count_all
-                output.append(f"   • Panier moyen : **{avg_ticket:.2f} €**")
+                output.append(f"   • Panier moyen : **{avg_ticket:.2f} €**")
             
             return "\n".join(output)
 
         except Exception as e:
             return f"⚠️ Erreur lors de l'extraction des statistiques : {str(e)}"
-        
 
     def _handle_contact_search(self, entities: list) -> str:
         """Extract contact info for a doctor or client."""
@@ -381,11 +356,9 @@ class ChatBotEngine:
     
         search_term = entities[0]
     
-    # search in doctors first
         person = self._search_database(DoctorModel, search_term)
         category = "docteur"
     
-    # if not found, search in clients
         if not person:
             person = self._search_database(ClientModel, search_term)
             category = "client"
@@ -393,7 +366,6 @@ class ChatBotEngine:
         if not person:
             return f"❌ Je n'ai trouvé aucun contact pour **{search_term}**."
 
-    # take the first match
         p = person[0]
         name = f"{p.first_name} {p.last_name}"
     
@@ -407,29 +379,88 @@ class ChatBotEngine:
         
         return "\n".join(output)
 
-    # ==================== STANDARD SEARCH ====================
+    # ==================== 🆕 MULTI-CATEGORY SEARCH ====================
 
-    def _execute_standard_search(self, intent: str, main_entity: str) -> str:
+    def _execute_multi_category_search(self, search_term: str) -> str:
         """
-        Database search with smart fallback.
+        🆕 NEW METHOD: Search in ALL categories and group results.
+        
+        Shows products, clients, AND doctors if they match the search term.
+        User can see all possibilities at once.
+        
+        Args:
+            search_term: User's search query
+            
+        Returns:
+            Grouped markdown response with all matches
         """
-        results = []
-        detected_intent = intent
-
-        # potential results in primary model
-        potential_results ={
-            "get_product": self._search_database(ProductModel, main_entity),
-            "get_client": self._search_database(ClientModel,main_entity),
-            "get_doctor": self._search_database(DoctorModel,main_entity)
+        # Search in all 3 categories
+        all_results = {
+            "products": self._search_database(ProductModel, search_term),
+            "clients": self._search_database(ClientModel, search_term),
+            "doctors": self._search_database(DoctorModel, search_term)
         }
-       
-        for model_key, records in potential_results.items():
-            if records:
-                results = records
-                detected_intent = model_key
-                break
+        
+        # Count total results
+        total_count = sum(len(results) for results in all_results.values())
+        
+        if total_count == 0:
+            return (f"❌ **Aucun résultat pour '{search_term}'.**\n\n"
+                   "**Suggestions :**\n"
+                   " • Vérifiez l'orthographe\n"
+                   " • Essayez un nom plus court (ex: 'Doli' au lieu de 'Doliprane')\n"
+                   " • Utilisez une partie du nom")
+        
+        # Build grouped response
+        output = [f"## 🔍 Résultats pour \"{search_term}\""]
+        output.append(f"*{total_count} résultat{'s' if total_count > 1 else ''} trouvé{'s' if total_count > 1 else ''}*\n")
+        
+        # --- 📦 PRODUCTS SECTION ---
+        if all_results["products"]:
+            output.append(f"### 📦 PRODUITS ({len(all_results['products'])})\n")
+            for p in all_results["products"][:5]:
+                rx_emoji = "🔒" if p.is_prescription_only else "🔓"
+                stock_emoji = "✅" if p.stock >= 20 else ("🟡" if p.stock >= 10 else "🔴")
+                
+                output.append(f"**{p.name}**")
+                output.append(f"   • Stock : {stock_emoji} **{p.stock} unités**")
+                output.append(f"   • Prix : **{p.price:.2f} €** | Type : {rx_emoji}")
+                output.append(f"   • Compo : {p.active_ingredient} ({p.dosage})")
+                output.append("")
+        
+        # --- 👤 CLIENTS SECTION ---
+        if all_results["clients"]:
+            output.append(f"### 👤 CLIENTS ({len(all_results['clients'])})\n")
+            for c in all_results["clients"][:3]:
+                full_name = f"{c.first_name} {c.last_name}".upper()
+                output.append(f"**{full_name}**")
+                output.append(f"   • 📞 Tél : `{c.phone or 'Non renseigné'}`")
+                output.append(f"   • 📧 Email : {c.email or 'Non renseigné'}")
+                if hasattr(c, 'address') and c.address:
+                    output.append(f"   • 📍 Adresse : {c.address}")
+                output.append("")
+        
+        # --- ⚕️ DOCTORS SECTION ---
+        if all_results["doctors"]:
+            output.append(f"### ⚕️ MÉDECINS ({len(all_results['doctors'])})\n")
+            for d in all_results["doctors"][:3]:
+                full_name = f"Dr. {d.first_name} {d.last_name}".upper()
+                output.append(f"**{full_name}**")
+                output.append(f"   • 🩺 Spécialité : {d.specialty or 'Généraliste'}")
+                output.append(f"   • 📞 Tél : `{d.phone or 'Non renseigné'}`")
+                output.append(f"   • 📧 Email : {d.email or 'Non renseigné'}")
+                if hasattr(d, 'address') and d.address:
+                    output.append(f"   • 📍 Adresse : {d.address}")
+                output.append("")
+        
+        # Footer tip
+        if total_count > 1:
+            output.append("---")
+            output.append("💡 *Précisez votre recherche avec 'stock', 'prix','Dr' ou'contact' pour plus de détails*")
+        
+        return "\n".join(output)
 
-        return self._format_results(results, detected_intent, main_entity)
+    # ==================== DATABASE UTILITIES ====================
 
     def _search_database(self, model, search_term: str) -> list:
         """Executes fuzzy search using ILIKE."""
@@ -437,84 +468,40 @@ class ChatBotEngine:
             return []
         
         term = search_term.lower().strip()
-        for p in ['dr', 'doc', 'docteur', 'doctor','m', 'mr', 'mme', 'mlle']:
+        for p in ['dr', 'doc', 'docteur', 'doctor', 'm', 'mr', 'mme', 'mlle']:
             if term.startswith(p + " "):
-                term = term[len(p)+1 :].strip()
+                term = term[len(p)+1:].strip()
 
         if model == ProductModel:
-            # Search in name AND active_ingredient
             condition = or_(
                 model.name.ilike(f"%{term}%"),
                 model.active_ingredient.ilike(f"%{term}%")
             )
         else:
-            # For Person models (Client, Doctor) - search in ALL name fields
             condition = or_(
                 model.last_name.ilike(f"%{term}%"),
                 model.first_name.ilike(f"%{term}%")
             )
             
-            # Also search in full name combination
             if " " in term:
                 parts = term.split()
                 condition = or_(
-                condition,
-                (model.first_name.ilike(f"%{parts[0]}%") & model.last_name.ilike(f"%{parts[1]}%")),
-                (model.first_name.ilike(f"%{parts[1]}%") & model.last_name.ilike(f"%{parts[0]}%"))
-            )
+                    condition,
+                    (model.first_name.ilike(f"%{parts[0]}%") & model.last_name.ilike(f"%{parts[1]}%")),
+                    (model.first_name.ilike(f"%{parts[1]}%") & model.last_name.ilike(f"%{parts[0]}%"))
+                )
         
         query = db.select(model).where(condition).limit(5)
         return db.session.execute(query).scalars().all()
-
-    def _format_results(self, records: list, intent: str, search_term: str) -> str:
-        """Converts SQLAlchemy records to clean Markdown tables and cards."""
-        if not records:
-            return (f"❌ **Aucun résultat pour '{search_term}'.**\n\n"
-                "**Suggestions :**\n"
-                " • Vérifiez l'orthographe\n"
-                " • Essayez un nom plus court (ex: 'Doli' au lieu de 'Doliprane')")
-
-        category_map = {
-            "get_product": ("📦 PRODUITS", ["Produit", "Stock", "Prix", "Type"]),
-            "get_client": ("👤 CLIENTS", ["Nom", "Téléphone", "Email"]),
-            "get_doctor": ("⚕️ MÉDECINS", ["Nom", "Spécialité", "Ville"])
-        }
-    
-        title, headers = category_map.get(intent, ("📋 RÉSULTATS", ["Détails"]))
-        output = [f"## {title}\n"]
-
-        if intent == "get_product":
-            for p in records[:5]:
-                rx_status = "🔒 Sur ordonnance" if p.is_prescription_only else "🔓 Vente libre"
-                stock_emoji = "✅" if p.stock >= 20 else "⚠️"
-                
-                output.append(f"### 💊 {p.name.upper()}")
-                output.append(f"• **Stock :** {stock_emoji} {p.stock} unités")
-                output.append(f"• **Prix :** {p.price:.2f} €")
-                output.append(f"• **Statut :** {rx_status}")
-                output.append(f"• **Compo :** {p.active_ingredient} ({p.dosage})")
-                output.append("---")
-
-        elif intent in ["get_client", "get_doctor"]:
-            # Cards for persons
-            for person in records[:3]:
-                name = f"{person.first_name} {person.last_name}".upper()
-                output.append(f"### 🔹 {name}")
-                output.append(f"📞 **Tel :** `{person.phone or 'N/A'}`")
-                if intent == "get_client":
-                    output.append(f"📧 **Email :** {person.email or 'N/A'}")
-                    output.append(f"📍 **Adresse :** {getattr(person, 'address', 'N/A')}")
-                else:
-                    output.append(f"🩺 **Spécialité :** {getattr(person, 'specialty', 'Généraliste')}")
-                    output.append(f"📍 **Adresse :** {getattr(person, 'address', 'N/A')}")
-                output.append("---")
-
-        return "\n".join(output)
 
     def _generate_help_message(self) -> str:
         """Help message when no entity detected."""
         return """
 ## 💡 Comment utiliser le Chatbot
+
+**Recherche universelle :**
+• "Aspirine" → Trouve produits, clients ET docteurs nommés Aspirine
+• "Dupont" → Affiche tous les Dupont (clients et médecins)
 
 **Recherche de produits :**
 • "Stock Doliprane" → Vérifier l'inventaire
@@ -524,15 +511,14 @@ class ChatBotEngine:
 **Sécurité médicamenteuse :**
 • "Aspirine et Ibuprofène compatibles ?"
 • "Doliprane avec Advil danger ?"
-• "Puis-je mélanger Warfarine et Plavix ?"
 
 **Analyses :**
 • "Ventes du jour" → Résumé des ventes
 • "Produits en rupture" → Alertes stock
 
-**Recherche personnes :**
-• "Trouve Lefevre" → Trouve automatiquement
-• "Client Dupont" → Trouver un client
+**Coordonnées :**
+• "Contact Dr Martin" → Coordonnées du médecin
+• "Téléphone client Lefevre" → Numéro de téléphone
 
 Essayez un de ces exemples !
 """
