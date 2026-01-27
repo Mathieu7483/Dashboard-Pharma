@@ -106,7 +106,7 @@ async function fetchUsers() {
         const users = await response.json();
         console.log('✅ Users loaded:', users);
         
-        window.allUsers = users; // Store globally for filtering
+        window.allUsers = users;
         renderUserTable(users, isAdmin);
         updateStats(users);
         
@@ -130,7 +130,6 @@ function renderUserTable(users, isAdmin) {
         return;
     }
 
-    // Update count badge
     const countBadge = document.getElementById('users-count');
     if (countBadge) countBadge.textContent = users.length;
     
@@ -302,6 +301,8 @@ function setupEventListeners() {
             const password = document.getElementById('edit-password').value?.trim();
             if (password) payload.password = password;
             
+            console.log('📤 Updating user:', userId, payload);
+            
             try {
                 const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
                     method: 'PUT',
@@ -318,31 +319,51 @@ function setupEventListeners() {
                     alert('Utilisateur modifié avec succès');
                 } else {
                     const error = await response.json();
+                    console.error('❌ Update error:', error);
                     alert(error.message || 'Update failed');
                 }
             } catch (error) {
-                console.error('Update error:', error);
+                console.error('❌ Network error:', error);
                 alert('Network error');
             }
         };
     }
     
-    // Create Form
+    // 🆕 FIXED: Create Form with better error handling
     if (createForm) {
         createForm.onsubmit = async (e) => {
             e.preventDefault();
             const { token } = getAuthInfo();
             
-            const formData = new FormData(createForm);
+            // Direct value extraction (more reliable than FormData)
+            const username = document.getElementById('create-username').value.trim();
+            const email = document.getElementById('create-email').value.trim();
+            const password = document.getElementById('create-password').value.trim();
+            const firstName = document.getElementById('create-first-name').value.trim();
+            const lastName = document.getElementById('create-last-name').value.trim();
+            const isAdmin = document.getElementById('create-is-admin').checked;
+            
+            // Validation
+            if (!username || !email || !password) {
+                alert('⚠️ Username, email, and password are required!');
+                return;
+            }
+            
+            if (password.length < 6) {
+                alert('⚠️ Password must be at least 6 characters!');
+                return;
+            }
             
             const payload = {
-                username: formData.get('username').trim(),
-                email: formData.get('email').trim(),
-                password: formData.get('password').trim(),
-                first_name: formData.get('first_name')?.trim() || null,
-                last_name: formData.get('last_name')?.trim() || null,
-                is_admin: document.getElementById('create-is-admin').checked
+                username: username,
+                email: email,
+                password: password,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                is_admin: isAdmin
             };
+            
+            console.log('📤 Creating user:', payload);
             
             try {
                 const response = await fetch('http://127.0.0.1:5000/users/', {
@@ -354,17 +375,20 @@ function setupEventListeners() {
                     body: JSON.stringify(payload)
                 });
                 
+                console.log('📡 Create response status:', response.status);
+                
                 if (response.ok) {
                     closeCreateModal();
                     await fetchUsers();
-                    alert('Utilisateur créé avec succès');
+                    alert('✅ Utilisateur créé avec succès');
                 } else {
                     const error = await response.json();
-                    alert(error.message || 'Creation failed');
+                    console.error('❌ Creation error:', error);
+                    alert(`❌ Erreur: ${error.message || JSON.stringify(error)}`);
                 }
             } catch (error) {
-                console.error('Create error:', error);
-                alert('Network error');
+                console.error('❌ Network error:', error);
+                alert('❌ Erreur réseau. Vérifiez la console.');
             }
         };
     }
@@ -459,7 +483,6 @@ function loadNavbar() {
                 placeholder.innerHTML = html;
                 highlightActiveLink();
                 
-                // Setup user profile avatar
                 const firstName = localStorage.getItem('first_name') || "A";
                 const avatar = document.getElementById('user-avatar');
                 if (avatar) {
