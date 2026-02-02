@@ -282,7 +282,7 @@ class DashboardManager {
         this.lists.meds.querySelectorAll('.order-btn').forEach(btn => {
             btn.onclick = () => {
                 const productId = btn.dataset.id;
-                window.location.href = `products.html?id=${productId}`;
+                window.location.href = `inventory.html?id=${productId}`;
             };
         });
     }
