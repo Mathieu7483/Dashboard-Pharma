@@ -1,111 +1,46 @@
 #!/bin/bash
+API_BASE_URL="http://127.0.0.1:5000"
+LOGIN_URL="$API_BASE_URL/login"
+API_URL="$API_BASE_URL/chatbot/"
 
-API_URL="http://127.0.0.1:5000/chatbot/"
-
-echo "=== Test 1: Greeting ==="
-curl -X POST $API_URL \
+TOKEN=$(curl -s -X POST "$LOGIN_URL" \
   -H "Content-Type: application/json" \
-  -d '{"message": "Hello"}' \
-  -w "\n\n"
+  -d '{"username": "Mathieu", "password": "Admin@1234"}' | jq -r '.access_token')
 
-echo "=== Test 2: Help Request ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Help"}' \
-  -w "\n\n"
+if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+    echo "Auth Failed"
+    exit 1
+fi
 
-echo "=== Test 3: Product Search ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find product aspirin"}' \
-  -w "\n\n"
+do_test() {
+    echo "=== $1 ==="
+    curl -s -X POST "$API_URL" \
+         -H "Authorization: Bearer $TOKEN" \
+         -H "Content-Type: application/json" \
+         -d "{\"message\": \"$2\"}" \
+         -w "\n\n"
+}
 
-echo "=== Test 4: Client Search ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Search for client"}' \
-  -w "\n\n"
+do_test "Test 1: Greeting" "Hello"
+do_test "Test 2: Help Request" "Help"
+do_test "Test 3: Product Search" "Find product aspirin"
+do_test "Test 4: Client Search" "Search for client"
+do_test "Test 5: Doctor Search" "Find doctor"
+do_test "Test 6: Global Search" "John"
+do_test "Test 7: Empty Message" ""
+do_test "Test 8: Invalid Input" "Find email example@example.com"
 
-echo "=== Test 5: Doctor Search ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find doctor"}' \
-  -w "\n\n"
+LARGE_MSG=$(head -c 1000 < /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 100 | head -n 1)
+do_test "Test 9: Large Input" "$LARGE_MSG"
 
-echo "=== Test 6: Global Search ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "John"}' \
-  -w "\n\n"
-
-echo "=== Test 7: Empty Message ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": ""}' \
-  -w "\n\n"
-
-echo "=== Test 8: Invalid Input ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find email example@example.com"}'
-
-echo "=== Test 9: Large Input ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "'"$(head -c 10000 < /dev/urandom | tr -dc 'a-zA-Z0-9 ' | fold -w 100 | head -n 1)"'"}' \
-  -w "\n\n"
-
-echo "=== Test 10: Special Characters ==="
-curl -s -X POST $API_URL \
-     -H "Content-Type: application/json" \
-     -d "{\"message\": \"!@#$%^&*()_+{}[]|:;<>?,./'\"}"
-echo -e "\n"
-
-echo "=== Test 11: Mixed Case Input ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "fInD PrOdUcT AsPiRiN"}' \
-  -w "\n\n" 
-
-echo "=== Test 12: Numeric Input ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find product 12345"}' \
-  -w "\n\n"
-
-echo "=== Test 13: SQL Injection Attempt ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find product 1; DROP TABLE users;"}' \
-  -w "\n\n"
-
-echo "=== Test 14: Cross-Site Scripting Attempt ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "<script>alert(\"XSS\")</script>"}' \
-  -w "\n\n"
-
-echo "=== Test 15: Valid Product Search ==="
-curl -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find product paracetamol 500mg"}'
-
-echo "=== Test 16: Valid Client Search ==="
-curl -s -X POST $API_URL \
-     -H "Content-Type: application/json" \
-     -d '{"message": "search client"}'
-echo -e "\n"
-
-echo "=== Test 17: Valid Doctor Search ==="
-curl -s -X POST $API_URL\
-     -H "Content-Type: application/json" \
-     -d '{"message": "find doctor"}'
-echo -e "\n"
-
-
-echo "=== Test 18: General Inquiry ==="
-curl -v -X POST $API_URL \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Find all products"}'
+do_test "Test 10: Special Characters" "!@#$%^&*()_+{}[]|:;<>?,./"
+do_test "Test 11: Mixed Case" "fInD PrOdUcT AsPiRiN"
+do_test "Test 12: Numeric" "12345"
+do_test "Test 13: SQL Injection" "1; DROP TABLE users;"
+do_test "Test 14: XSS Attempt" "<script>alert('XSS')</script>"
+do_test "Test 15: Valid Product" "paracetamol 500mg"
+do_test "Test 16: Valid Client" "search client"
+do_test "Test 17: Valid Doctor" "find doctor"
+do_test "Test 18: General Inquiry" "Find all products"
 
 echo "=== All tests completed ==="
