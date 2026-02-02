@@ -1140,3 +1140,89 @@ label.item-entry input[type="checkbox"] {
 }
 
 .fw-bold { font-weight: bold; }
+
+/* ========================================================================== 
+   15. Button for delete notes in Team Notifications
+   ========================================================================== */
+.del-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.del-note:hover {
+    background: rgba(231, 76, 60, 0.15);
+    transform: scale(1.1);
+}
+
+.del-note:active {
+    transform: scale(0.95);
+}
+
+.del-note:hover::after {
+    content: " Delete";
+    font-size: 0.75rem;
+    margin-left: 6px;
+    color: #e74c3c;
+}
+
+/* ========================================================================== 
+   16. Button for order when inventory is low
+   ========================================================================== */
+.order-btn {
+    position: relative;
+    background: #3498db;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.order-btn:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+/* Urgent style for out-of-stock */
+.order-btn.urgent {
+    background: #e74c3c;
+}
+
+.order-btn.urgent:hover {
+    background: #c0392b;
+}
+
+/* Tooltip for order button */
+.order-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.order-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
