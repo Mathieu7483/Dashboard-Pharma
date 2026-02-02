@@ -18,6 +18,20 @@ const HEADERS = {
     'Content-Type': 'application/json' 
 };
 
+// --- Module: Dynamical identification of User ---
+const refreshUserUI = () => {
+    const user = localStorage.getItem('username') || "Operator";
+    
+    // Sidebar update with full name
+    const sidebarName = document.querySelector('.sidebar-footer strong');
+    if (sidebarName) sidebarName.textContent = user;
+
+    // Avatar update with initial
+    const avatar = document.querySelector('.user-profile .avatar');
+    if (avatar) avatar.textContent = user.charAt(0).toUpperCase();
+};
+
+
 // --- MODULE: ANALYTICS (CHARTS) ---
 class PharmaCharts {
     constructor() {
@@ -291,6 +305,7 @@ const logoutUser = () => {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!AUTH_TOKEN) { window.location.href = 'auth.html'; return; }
+    refreshUserUI();
     document.getElementById('logout-btn')?.addEventListener('click', logoutUser);
     new PharmaCharts();
     new PharmaChat();
