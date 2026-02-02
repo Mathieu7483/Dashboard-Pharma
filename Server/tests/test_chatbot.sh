@@ -1,16 +1,33 @@
 #!/bin/bash
 API_BASE_URL="http://127.0.0.1:5000"
-LOGIN_URL="$API_BASE_URL/login"
-API_URL="$API_BASE_URL/chatbot/"
+LOGIN_URL="$API_BASE_URL/auth/login"
+API_URL="$API_BASE_URL/chatbot/" 
 
-TOKEN=$(curl -s -X POST "$LOGIN_URL" \
+RESPONSE=$(curl -s -X POST "$LOGIN_URL" \
   -H "Content-Type: application/json" \
-  -d '{"username": "Mathieu", "password": "Admin@1234"}' | jq -r '.access_token')
+  -d '{"username": "Mathieu", "password": "Admin@1234"}')
 
-if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-    echo "Auth Failed"
+echo "Raw login response:"
+echo "$RESPONSE"
+echo ""
+
+if ! echo "$RESPONSE" | jq empty 2>/dev/null; then
+    echo "Error: Response is not valid JSON"
+    echo "Response received: $RESPONSE"
     exit 1
 fi
+
+TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+
+if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+    echo "Auth Failed - Token is null or empty"
+    echo "Full response: $RESPONSE"
+    exit 1
+fi
+
+echo "Authentication successful!"
+echo "Token: ${TOKEN:0:20}..."
+echo ""
 
 do_test() {
     echo "=== $1 ==="
