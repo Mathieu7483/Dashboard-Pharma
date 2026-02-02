@@ -154,27 +154,21 @@ def _seed_medical_interactions():
     if InteractionModel.query.first():
         return
 
-    # IMPORTANT: Use the EXACT names from your CSV 'active_ingredient' column
     conflicts = [
-        {
-            "a": "Ibuprofène", 
-            "b": "Acide Acétylsalicylique", # Corrected for your CSV
-            "sev": "High", 
-            "desc": "Risque accru d'ulcère et d'hémorragie gastrique."
-        },
-        {
-            "a": "Warfarine", 
-            "b": "Acide Acétylsalicylique", 
-            "sev": "Critical", 
-            "desc": "Risque majeur d'hémorragie interne (Anticoagulant + Antiagrégant)."
-        },
-        {
-            "a": "Furosémide", 
-            "b": "Ibuprofène", 
-            "sev": "Moderate", 
-            "desc": "Réduction de l'effet diurétique et risque pour la fonction rénale."
-        }
-    ]
+    # Niveau CRITICAL
+    {"a": "Warfarine", "b": "Acide Acétylsalicylique", "sev": "Critical", "desc": "Risque majeur d'hémorragie interne."},
+    {"a": "Warfarine", "b": "Rivaroxaban", "sev": "Critical", "desc": "Cumul d'anticoagulants : risque hémorragique vital."},
+    {"a": "Amiodarone", "b": "Levofloxacine", "sev": "Critical", "desc": "Risque d'arythmie cardiaque grave (QT)."},
+    
+    # Niveau HIGH
+    {"a": "Ibuprofène", "b": "Acide Acétylsalicylique", "sev": "High", "desc": "Risque accru d'ulcères gastriques."},
+    {"a": "Furosémide", "b": "Ibuprofène", "sev": "High", "desc": "Risque d'insuffisance rénale aiguë."},
+    {"a": "Ibuprofène", "b": "Prednisone", "sev": "High", "desc": "Risque élevé d'hémorragie (AINS + Corticoïde)."},
+    
+    # Niveau MODERATE
+    {"a": "Oméprazole", "b": "Clopidogrel", "sev": "Moderate", "desc": "Réduction de l'efficacité du Clopidogrel."},
+    {"a": "Metformine", "b": "Prednisone", "sev": "Moderate", "desc": "Hausse de glycémie (le corticoïde s'oppose à l'antidiabétique)."}
+]
 
     for c in conflicts:
         db.session.add(InteractionModel(
