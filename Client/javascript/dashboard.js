@@ -311,15 +311,28 @@ class DashboardManager {
     }
 
     renderDetailedList(container, data, type) {
-        if (!container) return;
-        container.innerHTML = data.map(item => `
-            <div class="item-entry">
+    if (!container) return;
+    container.innerHTML = data.map(item => {
+        // On prépare les données pour éviter les erreurs si un champ est nul
+        const name = item.last_name ? item.last_name.toUpperCase() : 'INCONNU';
+        const firstName = item.first_name ? item.first_name : '';
+        const email = item.email || 'Pas d\'email';
+        const phone = item.phone || 'N/A';
+        const address = item.address || 'Adresse non renseignée';
+        const specialty = item.specialty || '';
+
+        return `
+            <div class="item-entry" style="padding: 10px; border-bottom: 1px solid #eee;">
                 <div class="info">
-                    <strong>${type === 'doctor' ? 'DR. ' : ''}${item.last_name.toUpperCase()}</strong><br>
-                    <small>📧 ${item.email || 'N/A'}</small>
+                    <strong>${type === 'doctor' ? 'DR. ' : ''}${name} ${firstName}</strong><br>
+                    <small>📧 ${email}</small>
+                    <small>📞 ${phone}</small>
+                    <small>🏠 ${address}</small>
+                    ${type === 'doctor' && specialty ? `<small>💼 Specialty: ${specialty}</small>` : ''}
                 </div>
-            </div>`).join('');
-    }
+            </div>`;
+    }).join('');
+}
 
     async loadTeam() {
         if (!this.lists.team) return;
