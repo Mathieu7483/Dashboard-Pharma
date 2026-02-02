@@ -1,7 +1,7 @@
 /**
  * inventory.js
  * Comprehensive Inventory & Sales Management
- * Professional version with English documentation and RESTx compliance.
+ * Professional version with JWT session handling and dynamic UI updates.
  */
 
 const CookieManager = {
@@ -21,13 +21,17 @@ const CookieManager = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for authentication token before initialization
+    // 1. Initial Authentication Check
     const token = CookieManager.get('access_token');
     if (!token) {
         window.location.href = 'auth.html';
         return;
     }
-    
+
+    // 2. Immediate UI Update (for static elements like Top Bar)
+    updateDynamicUserUI();
+
+    // 3. Load Async Components & Data
     loadNavbar();
     fetchInventory();
     setupEventListeners();
@@ -55,7 +59,7 @@ function getAuthInfo() {
 // ==========================================
 
 /**
- * Fetches products from the inventory namespace.
+ * Fetches products from the inventory API.
  */
 async function fetchInventory() {
     const { token, isAdmin } = getAuthInfo();
@@ -75,8 +79,7 @@ async function fetchInventory() {
 }
 
 /**
- * Injects product rows into the DOM.
- * Includes the specific column for quick sales.
+ * Renders the product table with role-based action buttons.
  */
 function renderTable(products, isAdmin) {
     const tbody = document.getElementById('inventory-body');
@@ -118,12 +121,11 @@ function renderTable(products, isAdmin) {
 }
 
 // ==========================================
-// SALES TRANSACTIONS (RESTx COMPLIANT)
+// SALES TRANSACTIONS
 // ==========================================
 
 /**
- * Executes a sale transaction.
- * Must comply with the nested 'SaleInput' model: { client_id: str, items: [{product_id, quantity}] }
+ * Handles product sales and inventory updates.
  */
 window.sellProduct = async (productId) => {
     const { token } = getAuthInfo();
@@ -136,7 +138,6 @@ window.sellProduct = async (productId) => {
     }
 
     try {
-        // Step 1: Retrieve a valid client ID (required by backend logic)
         const clientRes = await fetch('http://127.0.0.1:5000/clients/', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -147,15 +148,9 @@ window.sellProduct = async (productId) => {
             return;
         }
 
-        // Step 2: Construct the nested payload for the Sales Namespace
         const salePayload = {
-            client_id: clients[0].id, // Defaulting to the first available client for testing
-            items: [
-                {
-                    product_id: productId,
-                    quantity: quantity
-                }
-            ]
+            client_id: clients[0].id,
+            items: [{ product_id: productId, quantity: quantity }]
         };
 
         const response = await fetch('http://127.0.0.1:5000/sales/', {
@@ -168,11 +163,11 @@ window.sellProduct = async (productId) => {
         });
 
         if (response.ok) {
-            qtyInput.style.backgroundColor = "#d4edda"; // Success feedback
+            qtyInput.style.backgroundColor = "#d4edda";
             setTimeout(() => { fetchInventory(); }, 300);
         } else {
             const err = await response.json();
-            alert(`Transaction Error (400): ${err.message}`);
+            alert(`Error: ${err.message}`);
         }
     } catch (err) {
         console.error("Sale Processing Failure:", err);
@@ -187,14 +182,20 @@ function setupEventListeners() {
     const modal = document.getElementById('product-modal');
     const form = document.getElementById('product-form');
 
+    // Add product button logic
     document.getElementById('add-product-btn').onclick = () => {
         form.reset();
         form.removeAttribute('data-product-id'); 
         modal.style.display = 'block';
     };
 
+    // Modal close logic
     document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; };
 
+    // Top-bar Logout button
+    document.querySelector('.btn-logout-top')?.addEventListener('click', logoutUser);
+
+    // Form submission (Create/Update)
     form.onsubmit = async (e) => {
         e.preventDefault();
         const { token } = getAuthInfo();
@@ -253,14 +254,20 @@ window.deleteProduct = async (id) => {
 };
 
 // ==========================================
-// UI UTILITIES
+// UI UTILITIES & SESSION
 // ==========================================
 
+/**
+ * Updates stock counters in the UI.
+ */
 function updateStats(products) {
     document.getElementById('total-count').textContent = products.length;
     document.getElementById('low-stock-count').textContent = products.filter(p => p.stock < 10).length;
 }
 
+/**
+ * Real-time table filtering.
+ */
 function setupSearch() {
     const searchInput = document.getElementById('inventory-search');
     if (!searchInput) return;
@@ -272,9 +279,52 @@ function setupSearch() {
     });
 }
 
+/**
+ * Loads the navbar and initializes its dynamic components upon completion.
+ */
 function loadNavbar() {
     const placeholder = document.getElementById('navbar-placeholder');
     if (placeholder) {
-        fetch('navbar.html').then(res => res.text()).then(html => placeholder.innerHTML = html);
+        fetch('navbar.html')
+            .then(res => res.text())
+            .then(html => {
+                placeholder.innerHTML = html;
+                // Update Sidebar UI elements after HTML injection
+                updateDynamicUserUI(); 
+                // Attach event listener to the newly injected logout button
+                document.getElementById('logout-btn')?.addEventListener('click', logoutUser);
+            })
+            .catch(err => console.error("Navbar loading failed:", err));
     }
+}
+
+/**
+ * Synchronizes user data with UI elements (Avatars & Name labels).
+ */
+function updateDynamicUserUI() {
+    const user = localStorage.getItem('username') || "Operator";
+    const initial = user.charAt(0).toUpperCase();
+
+    // 1. Static Top Bar Avatar
+    const topAvatar = document.querySelector('.top-bar-right .avatar');
+    if (topAvatar) topAvatar.textContent = initial;
+
+    // 2. Dynamic Sidebar Elements
+    const sidebarName = document.querySelector('.sidebar-footer strong');
+    if (sidebarName) sidebarName.textContent = user;
+    
+    const sidebarAvatar = document.querySelector('.user-profile .avatar');
+    if (sidebarAvatar) sidebarAvatar.textContent = initial;
+}
+
+/**
+ * Clears session cookies/storage and redirects to the authentication page.
+ */
+function logoutUser() {
+    // Expire the access token cookie
+    document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    // Wipe local storage data
+    localStorage.clear();
+    // Redirect
+    window.location.href = 'auth.html';
 }
