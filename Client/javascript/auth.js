@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 CookieManager.set('access_token', data.access_token, 1);
+                localStorage.setItem('username', document.getElementById('login-username').value);
                 showMessage("Login successful! Redirecting...", false);
                 setTimeout(() => window.location.href = 'index.html', 1200);
             } else {
