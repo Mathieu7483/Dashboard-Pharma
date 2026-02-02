@@ -289,16 +289,19 @@ function setupEventListeners() {
             const { token } = getAuthInfo();
             
             const userId = document.getElementById('edit-user-id').value;
-            const formData = new FormData(editForm);
+            const email = document.getElementById('edit-email').value.trim();
+            const firstName = document.getElementById('edit-first-name').value.trim();
+            const lastName = document.getElementById('edit-last-name').value.trim();
+            const password = document.getElementById('edit-password').value.trim();
+            const isAdmin = document.getElementById('edit-is-admin').checked;
             
             const payload = {
-                email: formData.get('email')?.trim() || null,
-                first_name: formData.get('first_name')?.trim() || null,
-                last_name: formData.get('last_name')?.trim() || null,
-                is_admin: document.getElementById('edit-is-admin').checked
+                email: email || null,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                is_admin: isAdmin
             };
             
-            const password = document.getElementById('edit-password').value?.trim();
             if (password) payload.password = password;
             
             console.log('📤 Updating user:', userId, payload);
