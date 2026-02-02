@@ -105,7 +105,7 @@ function renderTable(products, isAdmin) {
             <td style="text-align:center;">
                 <div style="display: flex; gap: 5px; justify-content: center;">
                     <input type="number" id="qty-${p.id}" value="1" min="1" max="${p.stock}" class="qty-input">
-                    <button class="btn-sell" onclick="sellProduct('${p.id}')" title="Record sale">💰sold</button>
+                    <button class="btn-sell" onclick="sellProduct('${p.id}')" title="Record sale">sold</button>
                 </div>
             </td>
 
@@ -113,7 +113,7 @@ function renderTable(products, isAdmin) {
                 ${isAdmin ? `
                     <button class="btn-edit" onclick="editProduct('${p.id}')">✏️ Update</button>
                     <button class="btn-delete" onclick="deleteProduct('${p.id}')">🗑️ Delete</button>
-                ` : '<span class="text-muted">No Permissions</span>'}
+                ` : '-'}
             </td>
         `;
         tbody.appendChild(row);
