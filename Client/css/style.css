@@ -1187,6 +1187,7 @@ label.item-entry input[type="checkbox"] {
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .order-btn:hover {
@@ -1205,24 +1206,39 @@ label.item-entry input[type="checkbox"] {
 
 /* Tooltip for order button */
 .order-btn::after {
-    content: attr(data-tooltip);
     position: absolute;
-    bottom: 120%;
-    left: 50%;
+    bottom: 120%; 
+    right : 0;
     transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    background: rgba(0,0,0,0.8);
-    color: #fff;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
+    transition: opacity 0.3s ease, transform 0.3s ease;
     pointer-events: none;
-    transition: all 0.2s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s;
 }
 
 .order-btn:hover::after {
     opacity: 1;
     visibility: visible;
+    transform: translateX(-50%) translateY(-5px);
 }
+
+.item-entry {
+ display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.item-entry .info {
+    flex: 1;
+    margin-right: 10px;
+}   
