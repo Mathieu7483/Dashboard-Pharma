@@ -361,6 +361,48 @@ class DashboardManager {
     }
 }
 
+        // FUNCTION TO SETUP TICKETING SYSTEM
+        function setupTicketing() {
+            const modal = document.getElementById('ticket-modal');
+            const btn = document.getElementById('open-ticket-btn');
+            const span = document.getElementById('close-ticket-modal');
+            const form = document.getElementById('ticket-form');
+
+            if (!btn) return;
+
+            btn.onclick = () => modal.style.display = "block";
+            span.onclick = () => modal.style.display = "none";
+
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+
+                const formData = new FormData(form);
+                const payload = {
+                    subject: formData.get('subject'),
+                    priority: formData.get('priority'),
+                    description: formData.get('description')
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/tickets/`, {
+                        method: 'POST',
+                        headers: HEADERS,
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        alert("Ticket sent successfully!");
+                        modal.style.display = "none";
+                        form.reset();
+                    }
+                } catch (error) {
+                    console.error("Error sending ticket:", error);
+                }
+            };
+        }
+
+        setupTicketing();
+
 // --- GLOBAL INIT ---
 document.addEventListener('DOMContentLoaded', () => {
     if (!AUTH_TOKEN) { window.location.href = 'auth.html'; return; }
