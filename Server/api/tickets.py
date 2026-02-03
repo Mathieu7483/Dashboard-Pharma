@@ -8,8 +8,9 @@ tickets_ns = Namespace('tickets', description="Support ticket management (User a
 # --- DATA MODELS (WITH STRICT VALIDATION) ---
 # Model for creating a new ticket (Input)
 ticket_input_model = tickets_ns.model('TicketInput', {
-    'subject': fields.String(required=True, description='Subject of the support ticket', max_length=100),
-    'description': fields.String(required=True, description='Detailed description of the issue')
+    'subject': fields.String(required=True, description='Subject', max_length=100),
+    'description': fields.String(required=True, description='Detailed description'),
+    'priority': fields.String(description='Priority level', enum=['low', 'medium', 'high'], default='medium')
 })
 # Model for serialization and output of ticket data (Output)
 ticket_output_model = tickets_ns.model('TicketOutput', {
@@ -21,6 +22,11 @@ ticket_output_model = tickets_ns.model('TicketOutput', {
     'user_id': fields.Integer(description='ID of the user who created the ticket'),
     'created_at': fields.DateTime(description='Timestamp when the ticket was created'),
     'admin_note': fields.String(description='Notes added by admin to the ticket', nullable=True)
+})
+# Model for admin updating ticket (Input)
+ticket_admin_update_model = tickets_ns.model('TicketAdminUpdate', {
+    'status': fields.String(description='Status', enum=['open', 'in_progress', 'closed']),
+    'admin_note': fields.String(description='Note from admin')
 })
 # --- SECURE RESOURCE 1: Ticket List (GET, POST) ---
 @tickets_ns.route('/')
@@ -44,7 +50,13 @@ class TicketList(Resource):
         """Create a new support ticket"""
         user_id = get_jwt_identity()
         data = tickets_ns.payload
-        return facade.create_ticket(user_id=user_id, subject=data['subject'], description=data['description']), 201
+        
+        return facade.create_ticket(
+            user_id=user_id, 
+            subject=data['subject'], 
+            description=data['description'],
+            priority=data.get('priority', 'medium')
+        ), 201
 # --- SECURE RESOURCE 2: Single Ticket (GET, PUT, DELETE) ---
 @tickets_ns.route('/<int:ticket_id>')
 @tickets_ns.param('ticket_id', 'The ticket identifier')
@@ -65,20 +77,36 @@ class TicketResource(Resource):
         return ticket
     
     @tickets_ns.doc('update_ticket')
-    @tickets_ns.expect(ticket_input_model, validate=True)
+    @tickets_ns.expect(ticket_output_model)
     @tickets_ns.marshal_with(ticket_output_model)
     @jwt_required()
     def put(self, ticket_id):
-        """Update a ticket (User can update own tickets; Admin can update all)"""
+        """Update a ticket (User: subject/desc; Admin: all fields)"""
         user_id = get_jwt_identity()
         claims = get_jwt()
+        
         ticket = facade.get_ticket_by_id(ticket_id)
         if not ticket:
             tickets_ns.abort(404, "Ticket not found.")
+        
+        # Security check: only owner or admin can update
         if ticket.user_id != user_id and not claims.get('is_admin'):
             tickets_ns.abort(403, "Access denied to update this ticket.")
+        
         data = tickets_ns.payload
-        return facade.update_ticket(ticket_id=ticket_id, subject=data['subject'], description=data['description'])
+        
+        # Security Layer: Prevent standard users from updating admin fields
+        if not claims.get('is_admin'):
+            data.pop('status', None)
+            data.pop('admin_note', None)
+            data.pop('priority', None)
+
+        updated_ticket = facade.update_ticket(ticket_id=ticket_id, data=data)
+        
+        if not updated_ticket:
+            tickets_ns.abort(400, "Update failed.")
+            
+        return updated_ticket
     
     @tickets_ns.doc('delete_ticket')
     @jwt_required()
