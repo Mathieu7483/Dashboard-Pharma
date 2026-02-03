@@ -99,3 +99,103 @@ Enalapril 10mg,Enalapril,10mg,85,9.20,True
 Warfarine 5mg,Warfarine,5mg,45,38.00,True
 Rivière 20mg,Rivaroxaban,20mg,35,45.00,True
 Amiodarone 200mg,Amiodarone,200mg,55,24.00,True
+Valsartan 80mg,Valsartan,80mg,110,14.50,True
+Amlodipine 10mg,Amlodipine,10mg,95,8.20,True
+Gaviscon Sirop,Alginate de Sodium,N/A,210,6.50,False
+Maalox comprimés,Hydroxyde d'Aluminium,N/A,180,5.80,False
+Rennie sans sucre,Carbonate de Calcium,N/A,300,4.90,False
+Smecta Vanille,Diosmectite,3g,400,7.20,False
+Spasfon Lyoc,Phloroglucinol,80mg,250,5.40,False
+Vogalib 7.5mg,Métopimazine,7.5mg,140,6.10,False
+Imodium Caps,Lopéramide,2mg,320,7.50,False
+Meteospasmyl,Alvérine,60mg,150,8.90,False
+Buscopan 10mg,Butylbromure de Scopolamine,10mg,120,9.30,False
+Bion 3 Senior,Multivitamines/Probiotiques,N/A,85,24.90,False
+Supradyn Intensia,Vitamines/Minéraux,N/A,130,12.50,False
+Berocca Sans Sucre,Vitamines B/C/Mg,N/A,160,15.20,False
+Mag 2 Sans Sucre,Magnésium,122mg,200,9.90,False
+Uvedose 100000 UI,Vitamine D3,100000 UI,50,6.80,True
+ZymaD 10000 UI/ml,Cholécaciférol,10000 UI,110,4.20,True
+Tardyferon 80mg,Fer,80mg,190,5.30,False
+Speciafoldine 5mg,Acide Folique,5mg,240,3.80,True
+Euthyrox 50mcg,Lévothyroxine,50mcg,300,4.10,True
+Lévothyrox 75mcg,Lévothyroxine,75mcg,280,4.30,True
+Lévothyrox 100mcg,Lévothyroxine,100mcg,250,4.50,True
+Januvia 100mg,Sitagliptine,100mg,65,42.00,True
+Victoza Stylo,Liraglutide,6mg/ml,20,115.00,True
+Diamicron 60mg,Gliclazide,60mg,140,12.80,True
+Stagid 700mg,Metformine,700mg,180,6.20,True
+Glucagen Kit,Glucagon,1mg,15,55.00,True
+Humalog Mix 25,Insuline Lispro,100 UI/ml,25,48.50,True
+Lantus SoloStar,Insuline Glargine,100 UI/ml,35,62.00,True
+Flector Tissu,Diclofénac,1%,120,13.40,False
+VoltarenGel 1%,Diclofénac,1%,200,8.90,False
+Synthol Liquide,Lévomenthol,N/A,150,7.80,False
+Ketum Gel,Kétoprofène,2%,80,6.50,True
+Nifluril Crème,Acide Niflumique,3%,110,5.90,False
+Arnica Gel,Arnica Montana,7%,250,6.70,False
+Hextril Collutoire,Hexétidine,0.1%,180,5.20,False
+Eludril Solution,Chlorhexidine,0.1%,220,6.30,False
+Strepsils Miel Citron,Amylmétacrésol,N/A,400,7.50,False
+Lysopaïne,Cétylpyridinium,1.5mg,350,6.90,False
+Drill Sans Sucre,Chlorhexidine,3mg,300,5.80,False
+Biafine Émulsion,Trolamine,N/A,450,9.50,False
+Cicabiafine,Glycérine,N/A,140,12.30,False
+Dexeryl Crème,Glycérol/Vaseline,N/A,500,8.50,False
+Avène Eau Thermale,Eau Thermale,300ml,300,10.20,False
+La Roche-Posay Cicaplast,Panthénol,5%,180,11.90,False
+Bioderma Atoderm,Niacinamide,500ml,150,16.50,False
+Eucerin pH5 Lotion,N/A,400ml,120,14.00,False
+Neutrogena Crème Mains,Glycérine,50ml,400,5.50,False
+Dermophil Indien,Baume Lèvres,N/A,600,4.20,False
+Homéoplasmine,Teinture de souci,N/A,280,6.40,False
+Mercurochrome,Éosine,2%,350,3.90,False
+Biseptine Spay,Chlorhexidine,N/A,220,7.30,False
+Hansaplast Sparadrap,Tissu,5mx2.5cm,500,4.10,False
+Compeed Ampoules,Hydrocolloïde,Mix,150,9.20,False
+Urgostérile,Pansement Stérile,5x7cm,400,8.10,False
+Tegaderm Film,Polyuréthane,10x12cm,100,22.50,False
+Bétadine Dermique,Povidone iodée,10%,210,5.70,False
+Dakins Cooper,Hypochlorite de Sodium,0.5%,180,4.90,False
+Eau Oxygénée,Peroxyde d'Hydrogène,10 volumes,300,2.80,False
+Alcool 70% Modifié,Éthanol,250ml,400,3.50,False
+Vismed Collyre,Hyaluronate de Sodium,0.18%,150,14.80,False
+HyloVis,Hyaluronate de Sodium,0.1%,200,13.20,False
+Optone Yeux Secs,N/A,10ml,180,11.50,False
+Désomedine,Isethionate d'Hexamidine,0.1%,130,5.90,False
+Naabak 3.3%,Acide N-acétyl aspartyl,3.3%,90,9.10,True
+Zovirax Crème,Aciclovir,5%,140,8.70,False
+Activivir,Aciclovir,5%,160,7.20,False
+Onyster Kit,Urée,40%,40,28.50,False
+Excilor Traitement,Acide Acétique,N/A,70,19.90,False
+Urgo Verrues,Cryothérapie,38ml,55,17.50,False
+Frontline Combo Chat,Fipronil,N/A,120,22.00,False
+Advantix Chien Moyen,Imidaclopride,N/A,85,34.50,False
+Milbemax Chat,Milbémycine,N/A,200,12.50,False
+Drontal Chien,Praziquantel,N/A,150,15.80,False
+Feliway Diffuseur,Phéromones,N/A,40,29.90,False
+Nutribén 1er Âge,Lait Infantile,800g,60,19.50,False
+Gallia Calisma 2,Lait Infantile,800g,80,18.20,False
+Guigoz Pelargon 1,Lait Infantile,800g,50,21.00,False
+Physiomer Spray,Eau de mer,135ml,300,8.40,False
+Sterimar Hygiène Nez,Eau de mer,100ml,320,7.90,False
+Prorhinel Spray,Bromure de Benzododécinium,N/A,280,6.50,False
+Doliprane 1000mg,Paracétamol,1g,600,2.90,False
+Efferalgan 500mg,Paracétamol,500mg,550,2.60,False
+Dafalgan Codeiné,Paracétamol/Codéine,500/30mg,150,4.80,True
+Lamaline Gélules,Paracétamol/Opium/Caféine,N/A,100,7.50,True
+Ixprim 37.5mg,Paracétamol/Tramadol,37.5/325mg,120,6.90,True
+Kétoprofène 100mg,Kétoprofène,100mg,95,5.20,True
+Naproxène 250mg,Naproxène,250mg,110,8.40,True
+Celebrex 200mg,Célécoxib,200mg,60,35.00,True
+Colchicine 1mg,Colchicine,1mg,80,14.20,True
+Allopurinol 300mg,Allopurinol,300mg,140,7.10,True
+Inexium 40mg,Ésoméprazole,40mg,160,11.50,True
+Lanzor 30mg,Lansoprazole,30mg,130,13.80,True
+Xanax 0.25mg,Alprazolam,0.25mg,200,4.50,True
+Lexomil Baguette,Bromazépam,6mg,180,5.10,True
+Seresta 10mg,Oxazépam,10mg,150,4.80,True
+Valium 5mg,Diazépam,5mg,120,3.90,True
+Stilnox 10mg,Zolpidem,10mg,90,12.50,True
+Imovane 7.5mg,Zopiclone,7.5mg,100,11.80,True
+Tercian 25mg,Cyamémazine,25mg,70,18.50,True
