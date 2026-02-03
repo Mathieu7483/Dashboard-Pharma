@@ -5,6 +5,7 @@ from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from models.ticket import Ticket
 from datetime import datetime, UTC
 
 class FacadeService:
@@ -303,3 +304,63 @@ class FacadeService:
     def delete_doctor(self, doctor_id):
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
+    
+    # --- TICKET CRUD METHODS ---
+    def get_all_tickets(self, user_id=None):
+        """
+        Fetch tickets. If user_id is provided, only fetch tickets for that user.
+        If None, fetch all (for Admin).
+        """
+        stmt = db.select(Ticket).order_by(Ticket.created_at.desc())
+        if user_id:
+            stmt = stmt.filter(Ticket.user_id == user_id)
+        return db.session.execute(stmt).scalars().all()
+
+    def get_ticket_by_id(self, ticket_id):
+        return db.session.get(Ticket, ticket_id)
+       
+    def create_ticket(self, user_id, subject, description, priority='medium'):
+        try:
+            new_ticket = Ticket(
+                user_id=user_id,
+                subject=subject,
+                description=description,
+                priority=priority
+            )
+            db.session.add(new_ticket)
+            db.session.commit()
+            return new_ticket
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error creating ticket: {e}")
+            return None
+
+    def update_ticket(self, ticket_id, data):
+        """
+        Generic update for tickets. Handles both User updates (subject/desc)
+        and Admin updates (status/admin_note).
+        """
+        ticket = self.get_ticket_by_id(ticket_id)
+        if ticket:
+            for key, value in data.items():
+                if hasattr(ticket, key):
+                    setattr(ticket, key, value)
+            try:
+                db.session.commit()
+                return ticket
+            except Exception as e:
+                db.session.rollback()
+                return None
+        return None
+    
+    def delete_ticket(self, ticket_id):
+        ticket = self.get_ticket_by_id(ticket_id)
+        if ticket:
+            try:
+                db.session.delete(ticket)
+                db.session.commit()
+                return True
+            except Exception as e:
+                db.session.rollback()
+                return False
+        return False
