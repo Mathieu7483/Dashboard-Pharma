@@ -141,7 +141,8 @@ class DashboardManager {
             clients: document.getElementById('client-search-result'),
             doctors: document.getElementById('doctor-search-result'),
             team: document.getElementById('team-list'),
-            notifs: document.getElementById('team-notif-list')
+            notifs: document.getElementById('team-notif-list'),
+            tickets: document.getElementById('tickets-list')
         };
         this.kpis = {
             efficiency: document.getElementById('stock-efficiency'),
