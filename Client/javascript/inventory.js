@@ -1,7 +1,6 @@
 /**
  * inventory.js
- * Comprehensive Inventory & Sales Management
- * Professional version with JWT session handling and dynamic UI updates.
+ * Comprehensive Inventory & Sales Management Script
  */
 
 const CookieManager = {
@@ -28,12 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 2. Immediate UI Update (for static elements like Top Bar)
+    // 2. Immediate UI Update
     updateDynamicUserUI();
 
     // 3. Load Async Components & Data
     loadNavbar();
-    fetchInventory();
+    fetchInventory(); // Data fetching will trigger the scroll logic once finished
     setupEventListeners();
     setupSearch();
 });
@@ -59,7 +58,7 @@ function getAuthInfo() {
 // ==========================================
 
 /**
- * Fetches products from the inventory API.
+ * Fetches products from the inventory API and handles deep-linking scroll.
  */
 async function fetchInventory() {
     const { token, isAdmin } = getAuthInfo();
@@ -71,15 +70,25 @@ async function fetchInventory() {
         if (!response.ok) throw new Error("Could not retrieve inventory data");
         
         const products = await response.json();
+        
+        // Render the table first
         renderTable(products, isAdmin);
         updateStats(products);
+
+        // Check for product ID in URL for auto-scrolling
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        if (productId) {
+            handleDeepLinking(productId);
+        }
+
     } catch (error) {
         console.error("Inventory Fetch Error:", error);
     }
 }
 
 /**
- * Renders the product table with role-based action buttons.
+ * Renders the product table with data-id attributes for targeting.
  */
 function renderTable(products, isAdmin) {
     const tbody = document.getElementById('inventory-body');
@@ -93,6 +102,8 @@ function renderTable(products, isAdmin) {
 
     products.forEach(p => {
         const row = document.createElement('tr');
+        row.setAttribute('data-id', p.id); // Critical for the scroll-to functionality
+        
         if (p.stock < 10) row.classList.add('low-stock-row');
 
         row.innerHTML = `
@@ -120,13 +131,33 @@ function renderTable(products, isAdmin) {
     });
 }
 
+/**
+ * Handles scrolling to and highlighting a specific product row.
+ */
+function handleDeepLinking(productId) {
+    // Delay slightly to ensure browser has rendered the appended rows
+    setTimeout(() => {
+        const targetRow = document.querySelector(`tr[data-id="${productId}"]`);
+        if (targetRow) {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Visual feedback
+            targetRow.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
+            targetRow.style.outline = "2px solid #ffc107";
+            
+            // Clean up visual feedback after a few seconds
+            setTimeout(() => {
+                targetRow.style.backgroundColor = "";
+                targetRow.style.outline = "";
+            }, 3000);
+        }
+    }, 150);
+}
+
 // ==========================================
 // SALES TRANSACTIONS
 // ==========================================
 
-/**
- * Handles product sales and inventory updates.
- */
 window.sellProduct = async (productId) => {
     const { token } = getAuthInfo();
     const qtyInput = document.getElementById(`qty-${productId}`);
@@ -182,20 +213,15 @@ function setupEventListeners() {
     const modal = document.getElementById('product-modal');
     const form = document.getElementById('product-form');
 
-    // Add product button logic
     document.getElementById('add-product-btn').onclick = () => {
         form.reset();
         form.removeAttribute('data-product-id'); 
         modal.style.display = 'block';
     };
 
-    // Modal close logic
     document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; };
-
-    // Top-bar Logout button
     document.querySelector('.btn-logout-top')?.addEventListener('click', logoutUser);
 
-    // Form submission (Create/Update)
     form.onsubmit = async (e) => {
         e.preventDefault();
         const { token } = getAuthInfo();
@@ -257,17 +283,13 @@ window.deleteProduct = async (id) => {
 // UI UTILITIES & SESSION
 // ==========================================
 
-/**
- * Updates stock counters in the UI.
- */
 function updateStats(products) {
-    document.getElementById('total-count').textContent = products.length;
-    document.getElementById('low-stock-count').textContent = products.filter(p => p.stock < 10).length;
+    const totalCount = document.getElementById('total-count');
+    const lowStockCount = document.getElementById('low-stock-count');
+    if (totalCount) totalCount.textContent = products.length;
+    if (lowStockCount) lowStockCount.textContent = products.filter(p => p.stock < 10).length;
 }
 
-/**
- * Real-time table filtering.
- */
 function setupSearch() {
     const searchInput = document.getElementById('inventory-search');
     if (!searchInput) return;
@@ -279,9 +301,6 @@ function setupSearch() {
     });
 }
 
-/**
- * Loads the navbar and initializes its dynamic components upon completion.
- */
 function loadNavbar() {
     const placeholder = document.getElementById('navbar-placeholder');
     if (placeholder) {
@@ -289,27 +308,20 @@ function loadNavbar() {
             .then(res => res.text())
             .then(html => {
                 placeholder.innerHTML = html;
-                // Update Sidebar UI elements after HTML injection
                 updateDynamicUserUI(); 
-                // Attach event listener to the newly injected logout button
                 document.getElementById('logout-btn')?.addEventListener('click', logoutUser);
             })
             .catch(err => console.error("Navbar loading failed:", err));
     }
 }
 
-/**
- * Synchronizes user data with UI elements (Avatars & Name labels).
- */
 function updateDynamicUserUI() {
     const user = localStorage.getItem('username') || "Operator";
     const initial = user.charAt(0).toUpperCase();
 
-    // 1. Static Top Bar Avatar
     const topAvatar = document.querySelector('.top-bar-right .avatar');
     if (topAvatar) topAvatar.textContent = initial;
 
-    // 2. Dynamic Sidebar Elements
     const sidebarName = document.querySelector('.sidebar-footer strong');
     if (sidebarName) sidebarName.textContent = user;
     
@@ -317,14 +329,8 @@ function updateDynamicUserUI() {
     if (sidebarAvatar) sidebarAvatar.textContent = initial;
 }
 
-/**
- * Clears session cookies/storage and redirects to the authentication page.
- */
 function logoutUser() {
-    // Expire the access token cookie
     document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    // Wipe local storage data
     localStorage.clear();
-    // Redirect
     window.location.href = 'auth.html';
 }
