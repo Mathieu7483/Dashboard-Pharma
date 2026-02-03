@@ -1,8 +1,3 @@
-"""
-Server/models/product_alias.py
-Maps commercial names to active ingredients for chatbot flexibility
-"""
-
 from database.data_manager import db
 
 class ProductAliasModel(db.Model):
