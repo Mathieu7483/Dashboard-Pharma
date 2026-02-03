@@ -56,6 +56,7 @@ def create_app(config_class=DevelopmentConfig):
     from api.analytics import analytics_ns
     from api.chatbot import ns as chatbot_ns
     from api.inventory import inventory_ns
+    from api.tickets import tickets_ns
 
     api.add_namespace(auth_ns, path='/auth')
     api.add_namespace(products_ns, path='/products')
@@ -66,6 +67,8 @@ def create_app(config_class=DevelopmentConfig):
     api.add_namespace(analytics_ns, path='/analytics')
     api.add_namespace(chatbot_ns, path='/chatbot')
     api.add_namespace(inventory_ns, path='/inventory')
+    api.add_namespace(tickets_ns, path='/tickets')
+
 
     # --- Models Import pour SQLAlchemy ---
     with app.app_context():
