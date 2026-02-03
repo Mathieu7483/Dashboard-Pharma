@@ -1179,7 +1179,7 @@ label.item-entry input[type="checkbox"] {
    ========================================================================== */
 .order-btn {
     position: relative;
-    background: #3498db;
+    background: #dbdb34;
     color: #fff;
     border: none;
     padding: 6px 12px;
@@ -1188,10 +1188,11 @@ label.item-entry input[type="checkbox"] {
     font-size: 0.85rem;
     transition: all 0.2s ease;
     white-space: nowrap;
+    border-radius: 30px;
 }
 
 .order-btn:hover {
-    background: #2980b9;
+    background: #b9b929;
     transform: translateY(-1px);
 }
 
