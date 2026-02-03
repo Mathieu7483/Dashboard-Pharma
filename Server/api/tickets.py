@@ -19,7 +19,7 @@ ticket_output_model = tickets_ns.model('TicketOutput', {
     'description': fields.String(description='Detailed description of the issue'),
     'priority': fields.String(description='Priority level of the ticket', enum=['low', 'medium', 'high']),
     'status': fields.String(description='Current status of the ticket', enum=['open', 'in_progress', 'closed']),
-    'user_id': fields.Integer(description='ID of the user who created the ticket'),
+    'user_id': fields.String(description='UUID of the user who created the ticket'), 
     'created_at': fields.DateTime(description='Timestamp when the ticket was created'),
     'admin_note': fields.String(description='Notes added by admin to the ticket', nullable=True)
 })
