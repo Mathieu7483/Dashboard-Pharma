@@ -40,9 +40,10 @@
                     <span class="tab-icon">📅</span>
                     <span class="tab-label">Schedules</span>
                 </button>
-                <button class="tab-btn" data-target="security-mgmt">
-                    <span class="tab-icon">🔐</span>
-                    <span class="tab-label">Security</span>
+                <button class="tab-btn" data-target="ticketing-mgmt">
+                    <span class="tab-icon">🎫</span>
+                    <span class="tab-label">Ticketing</span>
+                    <span class="tab-count" id="tickets-count">0</span>
                 </button>
                 <button class="tab-btn" data-target="analytics-mgmt">
                     <span class="tab-icon">📊</span>
@@ -109,14 +110,50 @@
                 </div>
             </section>
 
-            <section id="security-mgmt" class="tab-content">
+            <section id="ticketing-mgmt" class="tab-content">
                 <div class="section-header">
-                    <h3>Security Logs</h3>
+                    <div>
+                        <h3>Support & Maintenance Tickets</h3>
+                        <p class="section-subtitle">Manage internal requests and technical issues</p>
+                    </div>
+                    <button class="btn-primary" onclick="openCreateTicketModal()">
+                        <span>📩</span> New Ticket
+                    </button>
                 </div>
-                <div class="placeholder-content">
-                    <div class="placeholder-icon">🔐</div>
-                    <h3>Authentication Logs</h3>
-                    <p>Connection history will be available soon</p>
+
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <select id="ticket-status-filter" class="filter-select">
+                            <option value="all">All Status</option>
+                            <option value="open">🟢 Open</option>
+                            <option value="pending">🟡 Pending</option>
+                            <option value="closed">⚪ Closed</option>
+                        </select>
+                        <select id="ticket-priority-filter" class="filter-select">
+                            <option value="all">All Priorities</option>
+                            <option value="high">🔴 High</option>
+                            <option value="medium">🟠 Medium</option>
+                            <option value="low">🔵 Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Subject</th>
+                                <th>Requested By</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticket-table-body">
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -149,7 +186,7 @@
                     <div class="stat-card">
                         <div class="stat-icon">⚠️</div>
                         <div class="stat-info">
-                            <h4>Security Alerts</h4>
+                            <h4>Ticketting</h4>
                             <p class="stat-value">0</p>
                         </div>
                     </div>
