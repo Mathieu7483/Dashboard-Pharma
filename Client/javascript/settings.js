@@ -1,5 +1,6 @@
 /**
  * settings.js - Admin Panel Management
+ * Complete version with integrated ticketing system
  */
 
 // ============================================
@@ -7,6 +8,11 @@
 // ============================================
 
 const CookieManager = {
+    /**
+     * Get cookie value by name
+     * @param {string} name - Cookie name
+     * @returns {string|null} Cookie value or null if not found
+     */
     get: (name) => {
         const nameEQ = name + "=";
         const ca = document.cookie.split(';');
@@ -17,6 +23,11 @@ const CookieManager = {
         }
         return null;
     },
+    
+    /**
+     * Delete a cookie by setting expiration to past date
+     * @param {string} name - Cookie name to delete
+     */
     erase: (name) => {
         document.cookie = name + '=; Max-Age=-99999999; path=/;';
     }
@@ -26,11 +37,16 @@ const CookieManager = {
 // 2. AUTH HELPER
 // ============================================
 
+/**
+ * Extract and decode authentication information from JWT token
+ * @returns {Object} Object containing token and admin status
+ */
 function getAuthInfo() {
     const token = CookieManager.get('access_token');
     if (!token) return { token: null, isAdmin: false };
     
     try {
+        // Decode JWT payload (base64)
         const payload = JSON.parse(atob(token.split('.')[1]));
         const isAdmin = payload.is_admin === true;
         console.log('🔐 Auth Info:', { isAdmin, userId: payload.sub });
@@ -48,6 +64,7 @@ function getAuthInfo() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Settings page initializing...');
     
+    // Check authentication
     const auth = getAuthInfo();
     if (!auth.token) {
         alert('You must be logged in to access this page');
@@ -55,23 +72,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
+    // Check admin privileges
     if (!auth.isAdmin) {
         alert('Admin access required');
         window.location.href = 'index.html';
         return;
     }
     
+    // Initialize all modules
     loadNavbar();
     fetchUsers();
+    fetchTickets();           // Load tickets on page load
     setupEventListeners();
     initTabSystem();
     initFilters();
+    initTicketFilters();      // Initialize ticket filtering system
 });
 
 // ============================================
 // 4. FETCH USERS
 // ============================================
 
+/**
+ * Fetch all users from the API
+ * Requires admin authentication
+ */
 async function fetchUsers() {
     const { token, isAdmin } = getAuthInfo();
     if (!token) return;
@@ -106,6 +131,7 @@ async function fetchUsers() {
         const users = await response.json();
         console.log('✅ Users loaded:', users);
         
+        // Store globally for filtering
         window.allUsers = users;
         renderUserTable(users, isAdmin);
         updateStats(users);
@@ -117,9 +143,14 @@ async function fetchUsers() {
 }
 
 // ============================================
-// 5. RENDER TABLE
+// 5. RENDER USER TABLE
 // ============================================
 
+/**
+ * Render users in the table
+ * @param {Array} users - Array of user objects
+ * @param {boolean} isAdmin - Whether current user is admin
+ */
 function renderUserTable(users, isAdmin) {
     const tbody = document.getElementById('user-table-body');
     const emptyState = document.getElementById('empty-state');
@@ -130,9 +161,11 @@ function renderUserTable(users, isAdmin) {
         return;
     }
 
+    // Update user count badge
     const countBadge = document.getElementById('users-count');
     if (countBadge) countBadge.textContent = users.length;
     
+    // Handle empty state
     if (!users || users.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found</td></tr>';
         if (emptyState) emptyState.style.display = 'block';
@@ -141,6 +174,7 @@ function renderUserTable(users, isAdmin) {
     
     if (emptyState) emptyState.style.display = 'none';
     
+    // Generate table rows
     tbody.innerHTML = users.map(user => {
         const initials = (user.first_name?.[0] || user.username[0]).toUpperCase();
         const isCurrentUser = user.id === currentUserId;
@@ -190,6 +224,10 @@ function renderUserTable(users, isAdmin) {
 // 6. UPDATE STATS
 // ============================================
 
+/**
+ * Update dashboard statistics
+ * @param {Array} users - Array of user objects
+ */
 function updateStats(users) {
     const totalUsers = users.length;
     const admins = users.filter(u => u.is_admin).length;
@@ -202,9 +240,13 @@ function updateStats(users) {
 }
 
 // ============================================
-// 7. MODAL MANAGEMENT
+// 7. USER MODAL MANAGEMENT
 // ============================================
 
+/**
+ * Open edit modal for a specific user
+ * @param {string} userId - UUID of the user to edit
+ */
 window.openEditModal = async (userId) => {
     const { token } = getAuthInfo();
     
@@ -221,6 +263,7 @@ window.openEditModal = async (userId) => {
 
         const user = await response.json();
         
+        // Populate form fields
         document.getElementById('edit-user-id').value = user.id;
         document.getElementById('edit-username').value = user.username;
         document.getElementById('edit-email').value = user.email || '';
@@ -229,6 +272,7 @@ window.openEditModal = async (userId) => {
         document.getElementById('edit-is-admin').checked = user.is_admin;
         document.getElementById('edit-password').value = '';
         
+        // Show modal
         document.getElementById('edit-modal').classList.add('active');
         
     } catch (error) {
@@ -237,19 +281,32 @@ window.openEditModal = async (userId) => {
     }
 };
 
+/**
+ * Close the edit user modal
+ */
 window.closeEditModal = () => {
     document.getElementById('edit-modal').classList.remove('active');
 };
 
+/**
+ * Open the create user modal
+ */
 window.openCreateModal = () => {
     document.getElementById('create-user-form').reset();
     document.getElementById('create-modal').classList.add('active');
 };
 
+/**
+ * Close the create user modal
+ */
 window.closeCreateModal = () => {
     document.getElementById('create-modal').classList.remove('active');
 };
 
+/**
+ * Delete a user by ID
+ * @param {string} userId - UUID of the user to delete
+ */
 window.deleteUser = async (userId) => {
     if (!confirm("⚠️ Confirmer la suppression ?\nCette action est irréversible.")) return;
     
@@ -278,11 +335,16 @@ window.deleteUser = async (userId) => {
 // 8. EVENT LISTENERS & FORMS
 // ============================================
 
+/**
+ * Setup all form event listeners
+ */
 function setupEventListeners() {
     const editForm = document.getElementById('edit-user-form');
     const createForm = document.getElementById('create-user-form');
     
-    // Edit Form
+    // ==========================================
+    // EDIT USER FORM HANDLER
+    // ==========================================
     if (editForm) {
         editForm.onsubmit = async (e) => {
             e.preventDefault();
@@ -295,6 +357,7 @@ function setupEventListeners() {
             const password = document.getElementById('edit-password').value.trim();
             const isAdmin = document.getElementById('edit-is-admin').checked;
             
+            // Build payload
             const payload = {
                 email: email || null,
                 first_name: firstName || null,
@@ -302,6 +365,7 @@ function setupEventListeners() {
                 is_admin: isAdmin
             };
             
+            // Only include password if provided
             if (password) payload.password = password;
             
             console.log('📤 Updating user:', userId, payload);
@@ -332,13 +396,15 @@ function setupEventListeners() {
         };
     }
     
-    // 🆕 FIXED: Create Form with better error handling
+    // ==========================================
+    // CREATE USER FORM HANDLER
+    // ==========================================
     if (createForm) {
         createForm.onsubmit = async (e) => {
             e.preventDefault();
             const { token } = getAuthInfo();
             
-            // Direct value extraction (more reliable than FormData)
+            // Extract form values directly (more reliable than FormData)
             const username = document.getElementById('create-username').value.trim();
             const email = document.getElementById('create-email').value.trim();
             const password = document.getElementById('create-password').value.trim();
@@ -357,6 +423,7 @@ function setupEventListeners() {
                 return;
             }
             
+            // Build payload
             const payload = {
                 username: username,
                 email: email,
@@ -396,7 +463,9 @@ function setupEventListeners() {
         };
     }
     
-    // Logout
+    // ==========================================
+    // LOGOUT BUTTON HANDLER
+    // ==========================================
     const logoutBtn = document.querySelector('.btn-logout-top');
     if (logoutBtn) {
         logoutBtn.onclick = () => {
@@ -411,6 +480,9 @@ function setupEventListeners() {
 // 9. TAB SYSTEM
 // ============================================
 
+/**
+ * Initialize tab switching functionality
+ */
 function initTabSystem() {
     const tabs = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
@@ -419,9 +491,11 @@ function initTabSystem() {
         tab.addEventListener('click', () => {
             const target = tab.dataset.target;
             
+            // Remove active class from all tabs and contents
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
+            // Show target content
             contents.forEach(content => {
                 content.classList.remove('active');
                 if (content.id === target) {
@@ -433,9 +507,12 @@ function initTabSystem() {
 }
 
 // ============================================
-// 10. FILTERS
+// 10. USER FILTERS
 // ============================================
 
+/**
+ * Initialize search and role filtering for users
+ */
 function initFilters() {
     const searchInput = document.getElementById('user-search');
     const roleFilter = document.getElementById('role-filter');
@@ -447,6 +524,7 @@ function initFilters() {
             
             if (!window.allUsers) return;
             
+            // Apply both search and role filters
             const filtered = window.allUsers.filter(user => {
                 const matchesSearch = !query || 
                     user.username.toLowerCase().includes(query) ||
@@ -467,6 +545,7 @@ function initFilters() {
     if (roleFilter) {
         roleFilter.addEventListener('change', () => {
             if (searchInput) {
+                // Trigger search input to reapply filters
                 searchInput.dispatchEvent(new Event('input'));
             }
         });
@@ -474,9 +553,363 @@ function initFilters() {
 }
 
 // ============================================
-// 11. NAVBAR
+// 11. TICKETING SYSTEM
 // ============================================
 
+/**
+ * Fetch all tickets from the API
+ * Only accessible to admin users
+ */
+async function fetchTickets() {
+    const { token, isAdmin } = getAuthInfo();
+    if (!token) return;
+
+    console.log('🎫 Loading tickets...');
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/tickets/', {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('📡 Tickets response status:', response.status);
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                alert('Session expired. Please login again.');
+                window.location.href = 'auth.html';
+                return;
+            }
+            if (response.status === 403) {
+                console.log('⚠️ Admin access required for tickets');
+                return;
+            }
+            throw new Error(`Fetch failed: ${response.status}`);
+        }
+
+        const tickets = await response.json();
+        console.log('✅ Tickets loaded:', tickets);
+        
+        // Store globally for filtering
+        window.allTickets = tickets;
+        renderTicketTable(tickets);
+        updateTicketStats(tickets);
+        
+    } catch (error) {
+        console.error("❌ Ticket Fetch Error:", error);
+        alert('Error loading tickets. Check console for details.');
+    }
+}
+
+/**
+ * Render tickets in the table
+ * @param {Array} tickets - Array of ticket objects
+ */
+function renderTicketTable(tickets) {
+    const tbody = document.getElementById('ticket-table-body');
+    
+    if (!tbody) {
+        console.error('❌ Ticket table body not found!');
+        return;
+    }
+
+    // Update ticket count badge
+    const countBadge = document.getElementById('tickets-count');
+    if (countBadge) countBadge.textContent = tickets.length;
+    
+    // Handle empty state
+    if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No tickets found</td></tr>';
+        return;
+    }
+    
+    // Priority badge styles
+    const priorityBadges = {
+        'high': '<span class="badge" style="background:#ef4444; color:white; padding:4px 8px; border-radius:4px;">🔴 High</span>',
+        'medium': '<span class="badge" style="background:#f59e0b; color:white; padding:4px 8px; border-radius:4px;">🟠 Medium</span>',
+        'low': '<span class="badge" style="background:#3b82f6; color:white; padding:4px 8px; border-radius:4px;">🔵 Low</span>'
+    };
+    
+    // Status badge styles
+    const statusBadges = {
+        'open': '<span class="status-badge" style="background:#10b981; color:white; padding:4px 8px; border-radius:4px;">🟢 Open</span>',
+        'in_progress': '<span class="status-badge" style="background:#f59e0b; color:white; padding:4px 8px; border-radius:4px;">🟡 In Progress</span>',
+        'closed': '<span class="status-badge" style="background:#6b7280; color:white; padding:4px 8px; border-radius:4px;">⚪ Closed</span>',
+        'pending': '<span class="status-badge" style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:4px;">🟣 Pending</span>'
+    };
+    
+    // Generate table rows
+    tbody.innerHTML = tickets.map(ticket => {
+        // Format creation date
+        const date = new Date(ticket.created_at).toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        
+        // Truncate description for preview
+        const description = ticket.description.length > 60 
+            ? ticket.description.substring(0, 60) + '...'
+            : ticket.description;
+        
+        return `
+            <tr>
+                <td><strong>#${ticket.id}</strong></td>
+                <td>
+                    <div style="max-width: 250px;">
+                        <strong>${ticket.subject}</strong><br>
+                        <small style="color: #6b7280;">${description}</small>
+                    </div>
+                </td>
+                <td>
+                    <small style="color: #6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small>
+                </td>
+                <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
+                <td>${statusBadges[ticket.status] || statusBadges['open']}</td>
+                <td><small>${date}</small></td>
+                <td>
+                    <div class="action-group">
+                        <button class="btn-action" onclick="viewTicket(${ticket.id})" title="View details">
+                            👁️ View
+                        </button>
+                        <button class="btn-action" onclick="editTicketModal(${ticket.id})" title="Edit status">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn-danger" onclick="deleteTicket(${ticket.id})" title="Delete ticket">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Update ticket statistics
+ * @param {Array} tickets - Array of ticket objects
+ */
+function updateTicketStats(tickets) {
+    const openTickets = tickets.filter(t => t.status === 'open').length;
+    const highPriority = tickets.filter(t => t.priority === 'high').length;
+    const inProgress = tickets.filter(t => t.status === 'in_progress').length;
+    
+    console.log(`📊 Ticket Stats: ${openTickets} open, ${inProgress} in progress, ${highPriority} high priority`);
+    
+    // You can update UI stats here if you have stat cards
+    // Example:
+    // document.getElementById('stat-open-tickets').textContent = openTickets;
+}
+
+/**
+ * View full ticket details
+ * @param {number} ticketId - ID of the ticket to view
+ */
+window.viewTicket = async (ticketId) => {
+    const { token } = getAuthInfo();
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            alert('Failed to load ticket details');
+            return;
+        }
+
+        const ticket = await response.json();
+        
+        // Format the ticket details for display
+        const createdAt = new Date(ticket.created_at).toLocaleString('fr-FR');
+        const adminNoteSection = ticket.admin_note 
+            ? `\n\n━━━━━━━━━━━━━━━━\nAdmin Note:\n${ticket.admin_note}`
+            : '';
+        
+        // Display in alert (you can create a better modal later)
+        alert(`
+🎫 Ticket #${ticket.id}
+━━━━━━━━━━━━━━━━
+Subject: ${ticket.subject}
+Priority: ${ticket.priority.toUpperCase()}
+Status: ${ticket.status.toUpperCase()}
+Created: ${createdAt}
+
+Description:
+${ticket.description}${adminNoteSection}
+        `);
+        
+    } catch (error) {
+        console.error('❌ Error loading ticket:', error);
+        alert('Network error while loading ticket');
+    }
+};
+
+/**
+ * Open edit modal for ticket (simple prompt version)
+ * @param {number} ticketId - ID of the ticket to edit
+ */
+window.editTicketModal = async (ticketId) => {
+    const { token } = getAuthInfo();
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            alert('Failed to load ticket');
+            return;
+        }
+
+        const ticket = await response.json();
+        
+        // Simple prompts for editing (you can create a proper modal later)
+        const newStatus = prompt(
+            `Change status for Ticket #${ticket.id}:\nCurrent: ${ticket.status}\n\nEnter: open, in_progress, pending, or closed`,
+            ticket.status
+        );
+        
+        if (!newStatus) return; // User cancelled
+        
+        // Validate status
+        const validStatuses = ['open', 'in_progress', 'pending', 'closed'];
+        if (!validStatuses.includes(newStatus)) {
+            alert('❌ Invalid status! Use: open, in_progress, pending, or closed');
+            return;
+        }
+        
+        const adminNote = prompt('Add admin note (optional):', ticket.admin_note || '');
+        
+        // Update ticket
+        await updateTicketStatus(ticketId, newStatus, adminNote);
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Network error');
+    }
+};
+
+/**
+ * Update ticket status and admin note
+ * @param {number} ticketId - ID of the ticket to update
+ * @param {string} status - New status value
+ * @param {string|null} adminNote - Admin note to add
+ */
+async function updateTicketStatus(ticketId, status, adminNote) {
+    const { token } = getAuthInfo();
+    
+    // Build payload
+    const payload = { status };
+    if (adminNote && adminNote.trim()) {
+        payload.admin_note = adminNote.trim();
+    }
+    
+    console.log('📤 Updating ticket:', ticketId, payload);
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            await fetchTickets(); // Refresh ticket list
+            alert('✅ Ticket updated successfully');
+        } else {
+            const error = await response.json();
+            console.error('❌ Update error:', error);
+            alert(`❌ Error: ${error.message || 'Update failed'}`);
+        }
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        alert('❌ Network error');
+    }
+}
+
+/**
+ * Delete a ticket by ID
+ * @param {number} ticketId - ID of the ticket to delete
+ */
+window.deleteTicket = async (ticketId) => {
+    if (!confirm('⚠️ Delete this ticket?\nThis action is irreversible.')) return;
+    
+    const { token } = getAuthInfo();
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            await fetchTickets(); // Refresh ticket list
+            alert('✅ Ticket deleted successfully');
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Delete failed');
+        }
+    } catch (error) {
+        console.error('❌ Delete Error:', error);
+        alert('Network error during deletion');
+    }
+};
+
+/**
+ * Initialize ticket filtering system
+ */
+function initTicketFilters() {
+    const statusFilter = document.getElementById('ticket-status-filter');
+    const priorityFilter = document.getElementById('ticket-priority-filter');
+    
+    /**
+     * Apply all active filters to ticket list
+     */
+    const applyFilters = () => {
+        if (!window.allTickets) return;
+        
+        const statusValue = statusFilter ? statusFilter.value : 'all';
+        const priorityValue = priorityFilter ? priorityFilter.value : 'all';
+        
+        console.log('🔍 Applying filters:', { status: statusValue, priority: priorityValue });
+        
+        // Filter tickets based on selected criteria
+        const filtered = window.allTickets.filter(ticket => {
+            const matchesStatus = statusValue === 'all' || ticket.status === statusValue;
+            const matchesPriority = priorityValue === 'all' || ticket.priority === priorityValue;
+            return matchesStatus && matchesPriority;
+        });
+        
+        console.log(`✅ Filtered: ${filtered.length} of ${window.allTickets.length} tickets`);
+        renderTicketTable(filtered);
+    };
+    
+    // Attach event listeners to filter controls
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+    }
+    
+    if (priorityFilter) {
+        priorityFilter.addEventListener('change', applyFilters);
+    }
+}
+
+// ============================================
+// 12. NAVBAR LOADING
+// ============================================
+
+/**
+ * Load navbar from external HTML file
+ */
 function loadNavbar() {
     fetch('navbar.html')
         .then(res => res.text())
@@ -486,6 +919,7 @@ function loadNavbar() {
                 placeholder.innerHTML = html;
                 highlightActiveLink();
                 
+                // Update user avatar with first initial
                 const firstName = localStorage.getItem('first_name') || "A";
                 const avatar = document.getElementById('user-avatar');
                 if (avatar) {
@@ -496,6 +930,9 @@ function loadNavbar() {
         .catch(err => console.error("Navbar Error:", err));
 }
 
+/**
+ * Highlight the active navigation link based on current page
+ */
 function highlightActiveLink() {
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
     const navLinks = {
