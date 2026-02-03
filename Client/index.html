@@ -24,6 +24,9 @@
                     <li><a href="clients.html" class="nav-link">👥 Clients</a></li>
                     <li><a href="doctors.html" class="nav-link">👨‍⚕️ Doctors</a></li>
                     <li><a href="settings.html" class="nav-link">⚙️ Settings</a></li>
+                    <button id="open-ticket-btn" class="btn-primary">
+                        <i class="fas fa-ticket-alt"></i> Report an Issue
+                    </button>
                 </ul>
             </nav>
             
@@ -154,6 +157,31 @@
         </main>
         
     </div>
+    <div id="ticket-modal" class="modal">
+    <div class="modal-content">
+        <span id="close-ticket-modal" class="close">&times;</span>
+        <h2>Support Ticket</h2>
+        <form id="ticket-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" required placeholder="e.g., Printer Error">
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select name="priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" required rows="4" placeholder="Describe your issue..."></textarea>
+            </div>
+            <button type="submit" class="btn-save">Send Ticket</button>
+        </form>
+    </div>
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="javascript/dashboard.js"></script>
