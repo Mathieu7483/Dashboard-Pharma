@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTabSystem();
     initFilters();
     initTicketFilters();      // Initialize ticket filtering system
+    
 });
 
 // ============================================
@@ -667,9 +668,9 @@ function renderTicketTable(tickets) {
                             data-current-status="${ticket.status}"
                             onchange="handleStatusChange(${ticket.id}, this.value)">
                         <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
-                        <option value="in_progress" ${ticket.status === 'in_progress' ? 'selected' : ''}>🟡 In Progress</option>
-                        <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟣 Pending</option>
-                        <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>⚪ Closed</option>
+
+                        <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟡 Pending</option>
+                        <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>🟣 Closed</option>
                     </select>
                 </td>
                 <td><small>${date}</small></td>
