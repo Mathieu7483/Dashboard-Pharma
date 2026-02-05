@@ -9,16 +9,22 @@
     <link rel="stylesheet" href="css/admin-panel.css">
 </head>
 <body>
+    <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
     </div>
 
+    <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Main Application Wrapper -->
     <div class="app-wrapper">
+        <!-- Dynamic Navbar -->
         <div id="navbar-placeholder"></div>
 
+        <!-- Main Content Area -->
         <main class="content-area">
+            <!-- Top Bar -->
             <header class="top-bar">
                 <div class="page-info">
                     <h2>🛡️ Administration Panel</h2>
@@ -30,6 +36,7 @@
                 </div>
             </header>
 
+            <!-- Admin Tabs Navigation -->
             <div class="admin-tabs">
                 <button class="tab-btn active" data-target="users-mgmt">
                     <span class="tab-icon">👥</span>
@@ -51,16 +58,21 @@
                 </button>
             </div>
 
+            <!-- ============================================
+                 TAB 1: USERS MANAGEMENT
+                 ============================================ -->
             <section id="users-mgmt" class="tab-content active">
                 <div class="section-header">
                     <div>
                         <h3>Employees Control Panel</h3>
                         <p class="section-subtitle">Manage user accounts and permissions</p>
                     </div>
-                    <button class="btn-primary" onclick="openCreateModal()">➕  Add New Employee
+                    <button class="btn-primary" onclick="openCreateModal()">
+                        ➕ Add New Employee
                     </button>
                 </div>
 
+                <!-- Filter Bar -->
                 <div class="filter-bar">
                     <div class="search-box">
                         <input type="text" id="user-search" placeholder="🔍 Search by name or email..." />
@@ -74,6 +86,7 @@
                     </div>
                 </div>
 
+                <!-- Users Table -->
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -87,10 +100,12 @@
                             </tr>
                         </thead>
                         <tbody id="user-table-body">
-                            </tbody>
+                            <!-- Dynamic content populated by JavaScript -->
+                        </tbody>
                     </table>
                 </div>
 
+                <!-- Empty State -->
                 <div id="empty-state" class="empty-state" style="display: none;">
                     <div class="empty-icon">👤</div>
                     <h3>No users found</h3>
@@ -98,15 +113,23 @@
                 </div>
             </section>
 
+            <!-- ============================================
+                 TAB 2: PLANNING MANAGEMENT
+                 ============================================ -->
             <section id="planning-mgmt" class="tab-content">
                 <div class="section-header">
                     <h3>Schedule Management</h3>
                 </div>
                 <div class="placeholder-content">
                     <div class="placeholder-icon">📅</div>
+                    <h3>Coming Soon</h3>
+                    <p>Schedule management features will be available here</p>
                 </div>
             </section>
 
+            <!-- ============================================
+                 TAB 3: TICKETING SYSTEM
+                 ============================================ -->
             <section id="ticketing-mgmt" class="tab-content">
                 <div class="section-header">
                     <div>
@@ -115,6 +138,7 @@
                     </div>
                 </div>
 
+                <!-- Filter Bar -->
                 <div class="filter-bar">
                     <div class="filter-group">
                         <select id="ticket-status-filter" class="filter-select">
@@ -132,6 +156,7 @@
                     </div>
                 </div>
 
+                <!-- Tickets Table -->
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -146,11 +171,15 @@
                             </tr>
                         </thead>
                         <tbody id="ticket-table-body">
+                            <!-- Dynamic content populated by JavaScript -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
+            <!-- ============================================
+                 TAB 4: ANALYTICS & STATISTICS
+                 ============================================ -->
             <section id="analytics-mgmt" class="tab-content">
                 <div class="section-header">
                     <h3>Admin Statistics</h3>
@@ -180,7 +209,7 @@
                     <div class="stat-card">
                         <div class="stat-icon">🎫</div>
                         <div class="stat-info">
-                            <h4>Ticketting</h4>
+                            <h4>Ticketing</h4>
                             <p class="stat-value" id="stat-tickets">-</p>
                         </div>
                     </div>
@@ -189,6 +218,9 @@
         </main>
     </div>
 
+    <!-- ============================================
+         MODAL: EDIT USER
+         ============================================ -->
     <div id="edit-modal" class="modal">
         <div class="modal-overlay" onclick="closeEditModal()"></div>
         <div class="modal-content">
@@ -248,6 +280,9 @@
         </div>
     </div>
 
+    <!-- ============================================
+         MODAL: CREATE USER
+         ============================================ -->
     <div id="create-modal" class="modal">
         <div class="modal-overlay" onclick="closeCreateModal()"></div>
         <div class="modal-content">
