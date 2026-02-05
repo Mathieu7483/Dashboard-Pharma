@@ -1,6 +1,6 @@
 /**
  * admin-panel.css
- * Styles spécifiques au panel d'administration
+ * Specific styles for the administration panel
  */
 
 /* ============================================
@@ -537,40 +537,6 @@
 }
 
 /* ============================================
-   BUTTONS
-   ============================================ */
-
-.btn-primary {
-    padding: 10px 20px;
-    background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-    color: white;
-    border: none;
-    border-radius: 50px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary:hover {
-    background: #1d4ed8;
-}
-
-.btn-secondary {
-    padding: 10px 20px;
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background: #f9fafb;
-}
-
-/* ============================================
    EMPTY STATES
    ============================================ */
 
@@ -665,29 +631,6 @@
 }
 
 /* ============================================
-   RESPONSIVE
-   ============================================ */
-
-@media (max-width: 768px) {
-    .admin-tabs {
-        overflow-x: auto;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr !important;
-    }
-    
-    .filter-bar {
-        flex-direction: column;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-/* ============================================
    STATUS SELECT DROPDOWN STYLES
    ============================================ */
 
@@ -736,8 +679,27 @@
     background: #f9fafb;
 }
 
-/* Mobile responsiveness */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 768px) {
+    .admin-tabs {
+        overflow-x: auto;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .filter-bar {
+        flex-direction: column;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
     .status-select {
         min-width: 120px;
         font-size: 12px;
