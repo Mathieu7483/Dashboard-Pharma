@@ -341,8 +341,8 @@ class DashboardManager {
             const res = await fetch(`${API_BASE_URL}/users/`, { headers: HEADERS });
             const users = await res.json();
             this.lists.team.innerHTML = users.map(u => `
-                <li class="item-entry"><strong>${u.username}</strong> (${u.role || 'Staff'})</li>`).join('');
-        } catch (e) { this.lists.team.innerHTML = "<li>Error loading staff</li>"; }
+                <li class="item-entry"><strong>${u.username}</strong> (${u.is_admin ? 'Admin' :'Employee'})</li>`).join('');
+        } catch (e) { this.lists.team.innerHTML = "<li>Error loading staff member</li>"; }
     }
 
     initSearchFilters() {
