@@ -685,3 +685,62 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* ============================================
+   STATUS SELECT DROPDOWN STYLES
+   ============================================ */
+
+.status-select {
+    padding: 6px 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 140px;
+    color: #374151;
+}
+
+.status-select:hover {
+    border-color: #3b82f6;
+    background: #f9fafb;
+}
+
+.status-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Style the select based on current status */
+.status-select[data-current-status="open"] {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.status-select[data-current-status="in_progress"] {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.status-select[data-current-status="pending"] {
+    border-color: #8b5cf6;
+    background: #faf5ff;
+}
+
+.status-select[data-current-status="closed"] {
+    border-color: #6b7280;
+    background: #f9fafb;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .status-select {
+        min-width: 120px;
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+}
