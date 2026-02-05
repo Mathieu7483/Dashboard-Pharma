@@ -1,6 +1,5 @@
 /**
  * settings.js - Admin Panel Management
- * Complete version with integrated ticketing system
  */
 
 // ============================================
@@ -225,19 +224,21 @@ function renderUserTable(users, isAdmin) {
 // ============================================
 
 /**
- * Update dashboard statistics
- * @param {Array} users - Array of user objects
+ * updateStats - Update dashboard statistics
+ * @param {Array} users - list of users (retrieved via API)
+ * @param {Array} tickets - List of tickets (optional, for ticketing stats)
  */
-function updateStats(users) {
-    const totalUsers = users.length;
-    const admins = users.filter(u => u.is_admin).length;
-    
+
+function updateStats(users = [], tickets = []) {
     const statActiveUsers = document.getElementById('stat-active-users');
     const statAdmins = document.getElementById('stat-admins');
+    const statTickets = document.getElementById('stat-tickets');
     
-    if (statActiveUsers) statActiveUsers.textContent = totalUsers;
-    if (statAdmins) statAdmins.textContent = admins;
+    if (statActiveUsers) statActiveUsers.textContent = users.length;
+    if (statAdmins) statAdmins.textContent = users.filter(u => u.is_admin).length;
+    if (statTickets) statTickets.textContent = tickets.length;
 }
+
 
 // ============================================
 // 7. USER MODAL MANAGEMENT
@@ -591,13 +592,13 @@ async function fetchTickets() {
         }
 
         const tickets = await response.json();
-        console.log('✅ Tickets loaded:', tickets);
         
         // Store globally for filtering
         window.allTickets = tickets;
         renderTicketTable(tickets);
         updateTicketStats(tickets);
         
+        return tickets;
     } catch (error) {
         console.error("❌ Ticket Fetch Error:", error);
         alert('Error loading tickets. Check console for details.');
@@ -633,14 +634,6 @@ function renderTicketTable(tickets) {
         'low': '<span class="badge" style="background:#3b82f6; color:white; padding:4px 8px; border-radius:4px;">🔵 Low</span>'
     };
     
-    // Status badge styles
-    const statusBadges = {
-        'open': '<span class="status-badge" style="background:#10b981; color:white; padding:4px 8px; border-radius:4px;">🟢 Open</span>',
-        'in_progress': '<span class="status-badge" style="background:#f59e0b; color:white; padding:4px 8px; border-radius:4px;">🟡 In Progress</span>',
-        'closed': '<span class="status-badge" style="background:#6b7280; color:white; padding:4px 8px; border-radius:4px;">⚪ Closed</span>',
-        'pending': '<span class="status-badge" style="background:#8b5cf6; color:white; padding:4px 8px; border-radius:4px;">🟣 Pending</span>'
-    };
-    
     // Generate table rows
     tbody.innerHTML = tickets.map(ticket => {
         // Format creation date
@@ -668,15 +661,25 @@ function renderTicketTable(tickets) {
                     <small style="color: #6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small>
                 </td>
                 <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
-                <td>${statusBadges[ticket.status] || statusBadges['open']}</td>
+                <td>
+                    <select class="status-select" 
+                            data-ticket-id="${ticket.id}" 
+                            data-current-status="${ticket.status}"
+                            onchange="handleStatusChange(${ticket.id}, this.value)">
+                        <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
+                        <option value="in_progress" ${ticket.status === 'in_progress' ? 'selected' : ''}>🟡 In Progress</option>
+                        <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟣 Pending</option>
+                        <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>⚪ Closed</option>
+                    </select>
+                </td>
                 <td><small>${date}</small></td>
                 <td>
                     <div class="action-group">
                         <button class="btn-action" onclick="viewTicket(${ticket.id})" title="View details">
                             👁️ View
                         </button>
-                        <button class="btn-action" onclick="editTicketModal(${ticket.id})" title="Edit status">
-                            ✏️ Edit
+                        <button class="btn-action" onclick="openAdminNoteModal(${ticket.id})" title="Edit admin note">
+                            📝 Note
                         </button>
                         <button class="btn-danger" onclick="deleteTicket(${ticket.id})" title="Delete ticket">
                             🗑️ Delete
@@ -689,6 +692,105 @@ function renderTicketTable(tickets) {
 }
 
 /**
+ * Handle status change from dropdown
+ * @param {number} ticketId - ID of the ticket
+ * @param {string} newStatus - New status value
+ */
+window.handleStatusChange = async (ticketId, newStatus) => {
+    const selectElement = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
+    const previousStatus = selectElement.dataset.currentStatus;
+    
+    // Confirm the change
+    if (!confirm(`Change ticket #${ticketId} status to "${newStatus}"?`)) {
+        // Revert to previous value if cancelled
+        selectElement.value = previousStatus;
+        return;
+    }
+    
+    const { token } = getAuthInfo();
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (response.ok) {
+            console.log(`✅ Ticket ${ticketId} updated to ${newStatus}`);
+            selectElement.dataset.currentStatus = newStatus;
+            
+            // Optional: Ask if they want to add a note
+            if (confirm('Status updated! Would you like to add an admin note?')) {
+                openAdminNoteModal(ticketId);
+            } else {
+                fetchTickets(); // Refresh the table
+            }
+        } else {
+            alert('Failed to update status');
+            selectElement.value = previousStatus;
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Network error');
+        selectElement.value = previousStatus;
+    }
+};
+
+/**
+ * Open modal to add/edit admin note
+ * @param {number} ticketId - ID of the ticket
+ */
+window.openAdminNoteModal = async (ticketId) => {
+    const { token } = getAuthInfo();
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            alert('Failed to load ticket');
+            return;
+        }
+
+        const ticket = await response.json();
+        
+        const adminNote = prompt(
+            `Admin Note for Ticket #${ticket.id}\nCurrent note: ${ticket.admin_note || '(none)'}\n\nEnter new admin note:`,
+            ticket.admin_note || ''
+        );
+        
+        if (adminNote === null) return; // User cancelled
+        
+        // Update ticket with new admin note
+        const updateResponse = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ admin_note: adminNote })
+        });
+        
+        if (updateResponse.ok) {
+            alert('✅ Admin note updated successfully');
+            fetchTickets();
+        } else {
+            alert('Failed to update admin note');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Network error');
+    }
+};
+
+/**
  * Update ticket statistics
  * @param {Array} tickets - Array of ticket objects
  */
@@ -698,10 +800,6 @@ function updateTicketStats(tickets) {
     const inProgress = tickets.filter(t => t.status === 'in_progress').length;
     
     console.log(`📊 Ticket Stats: ${openTickets} open, ${inProgress} in progress, ${highPriority} high priority`);
-    
-    // You can update UI stats here if you have stat cards
-    // Example:
-    // document.getElementById('stat-open-tickets').textContent = openTickets;
 }
 
 /**
@@ -748,93 +846,6 @@ ${ticket.description}${adminNoteSection}
         alert('Network error while loading ticket');
     }
 };
-
-/**
- * Open edit modal for ticket (simple prompt version)
- * @param {number} ticketId - ID of the ticket to edit
- */
-window.editTicketModal = async (ticketId) => {
-    const { token } = getAuthInfo();
-    
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-            alert('Failed to load ticket');
-            return;
-        }
-
-        const ticket = await response.json();
-        
-        // Simple prompts for editing (you can create a proper modal later)
-        const newStatus = prompt(
-            `Change status for Ticket #${ticket.id}:\nCurrent: ${ticket.status}\n\nEnter: open, in_progress, pending, or closed`,
-            ticket.status
-        );
-        
-        if (!newStatus) return; // User cancelled
-        
-        // Validate status
-        const validStatuses = ['open', 'in_progress', 'pending', 'closed'];
-        if (!validStatuses.includes(newStatus)) {
-            alert('❌ Invalid status! Use: open, in_progress, pending, or closed');
-            return;
-        }
-        
-        const adminNote = prompt('Add admin note (optional):', ticket.admin_note || '');
-        
-        // Update ticket
-        await updateTicketStatus(ticketId, newStatus, adminNote);
-        
-    } catch (error) {
-        console.error('❌ Error:', error);
-        alert('Network error');
-    }
-};
-
-/**
- * Update ticket status and admin note
- * @param {number} ticketId - ID of the ticket to update
- * @param {string} status - New status value
- * @param {string|null} adminNote - Admin note to add
- */
-async function updateTicketStatus(ticketId, status, adminNote) {
-    const { token } = getAuthInfo();
-    
-    // Build payload
-    const payload = { status };
-    if (adminNote && adminNote.trim()) {
-        payload.admin_note = adminNote.trim();
-    }
-    
-    console.log('📤 Updating ticket:', ticketId, payload);
-    
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'PUT',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-            await fetchTickets(); // Refresh ticket list
-            alert('✅ Ticket updated successfully');
-        } else {
-            const error = await response.json();
-            console.error('❌ Update error:', error);
-            alert(`❌ Error: ${error.message || 'Update failed'}`);
-        }
-    } catch (error) {
-        console.error('❌ Network error:', error);
-        alert('❌ Network error');
-    }
-}
 
 /**
  * Delete a ticket by ID
