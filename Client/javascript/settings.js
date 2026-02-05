@@ -134,7 +134,9 @@ async function fetchUsers() {
         // Store globally for filtering
         window.allUsers = users;
         renderUserTable(users, isAdmin);
-        updateStats(users);
+        
+        // Update stats with both users and tickets
+        updateStats(users, window.allTickets || []);
         
     } catch (error) {
         console.error("❌ User Fetch Error:", error);
@@ -194,12 +196,12 @@ function renderUserTable(users, isAdmin) {
                     </div>
                 </td>
                 <td>
-                    <div>${user.email || 'Non renseigné'}</div>
+                    <div>${user.email || 'Not specified'}</div>
                     <small style="color: #6b7280;">ID: ${user.id.slice(0, 8)}...</small>
                 </td>
                 <td>${roleBadge}</td>
                 <td>
-                    <span class="status-badge status-active">Actif</span>
+                    <span class="status-badge status-active">Active</span>
                 </td>
                 <td>
                     <small style="color: #6b7280;">N/A</small>
@@ -207,11 +209,11 @@ function renderUserTable(users, isAdmin) {
                 <td>
                     <div class="action-group">
                         <button class="btn-action" onclick="openEditModal('${user.id}')">
-                            ✏️ Modifier
+                            ✏️ Edit
                         </button>
                         ${!isCurrentUser ? 
-                            `<button class="btn-danger" onclick="deleteUser('${user.id}')">🗑️ Supprimer</button>` :
-                            '<span class="self-tag">Vous</span>'
+                            `<button class="btn-danger" onclick="deleteUser('${user.id}')">🗑️ Delete</button>` :
+                            '<span class="self-tag">You</span>'
                         }
                     </div>
                 </td>
@@ -225,11 +227,10 @@ function renderUserTable(users, isAdmin) {
 // ============================================
 
 /**
- * updateStats - Update dashboard statistics
- * @param {Array} users - list of users (retrieved via API)
+ * Update dashboard statistics
+ * @param {Array} users - List of users (retrieved via API)
  * @param {Array} tickets - List of tickets (optional, for ticketing stats)
  */
-
 function updateStats(users = [], tickets = []) {
     const statActiveUsers = document.getElementById('stat-active-users');
     const statAdmins = document.getElementById('stat-admins');
@@ -239,7 +240,6 @@ function updateStats(users = [], tickets = []) {
     if (statAdmins) statAdmins.textContent = users.filter(u => u.is_admin).length;
     if (statTickets) statTickets.textContent = tickets.length;
 }
-
 
 // ============================================
 // 7. USER MODAL MANAGEMENT
@@ -310,7 +310,7 @@ window.closeCreateModal = () => {
  * @param {string} userId - UUID of the user to delete
  */
 window.deleteUser = async (userId) => {
-    if (!confirm("⚠️ Confirmer la suppression ?\nCette action est irréversible.")) return;
+    if (!confirm("⚠️ Confirm deletion?\nThis action is irreversible.")) return;
     
     const { token } = getAuthInfo();
     
@@ -322,7 +322,7 @@ window.deleteUser = async (userId) => {
         
         if (response.ok) {
             await fetchUsers();
-            alert('Utilisateur supprimé avec succès');
+            alert('User deleted successfully');
         } else {
             const error = await response.json();
             alert(error.message || 'Delete failed');
@@ -385,7 +385,7 @@ function setupEventListeners() {
                 if (response.ok) {
                     closeEditModal();
                     await fetchUsers();
-                    alert('Utilisateur modifié avec succès');
+                    alert('User updated successfully');
                 } else {
                     const error = await response.json();
                     console.error('❌ Update error:', error);
@@ -452,15 +452,15 @@ function setupEventListeners() {
                 if (response.ok) {
                     closeCreateModal();
                     await fetchUsers();
-                    alert('✅ Utilisateur créé avec succès');
+                    alert('✅ User created successfully');
                 } else {
                     const error = await response.json();
                     console.error('❌ Creation error:', error);
-                    alert(`❌ Erreur: ${error.message || JSON.stringify(error)}`);
+                    alert(`❌ Error: ${error.message || JSON.stringify(error)}`);
                 }
             } catch (error) {
                 console.error('❌ Network error:', error);
-                alert('❌ Erreur réseau. Vérifiez la console.');
+                alert('❌ Network error. Check console.');
             }
         };
     }
@@ -593,11 +593,14 @@ async function fetchTickets() {
         }
 
         const tickets = await response.json();
+        console.log('✅ Tickets loaded:', tickets);
         
         // Store globally for filtering
         window.allTickets = tickets;
         renderTicketTable(tickets);
-        updateTicketStats(tickets);
+        
+        // Update stats with both users and tickets
+        updateStats(window.allUsers || [], tickets);
         
         return tickets;
     } catch (error) {
@@ -638,7 +641,7 @@ function renderTicketTable(tickets) {
     // Generate table rows
     tbody.innerHTML = tickets.map(ticket => {
         // Format creation date
-        const date = new Date(ticket.created_at).toLocaleDateString('fr-FR', {
+        const date = new Date(ticket.created_at).toLocaleDateString('en-US', {
             day: '2-digit',
             month: 'short',
             year: 'numeric'
@@ -668,7 +671,6 @@ function renderTicketTable(tickets) {
                             data-current-status="${ticket.status}"
                             onchange="handleStatusChange(${ticket.id}, this.value)">
                         <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
-
                         <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟡 Pending</option>
                         <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>🟣 Closed</option>
                     </select>
@@ -792,18 +794,6 @@ window.openAdminNoteModal = async (ticketId) => {
 };
 
 /**
- * Update ticket statistics
- * @param {Array} tickets - Array of ticket objects
- */
-function updateTicketStats(tickets) {
-    const openTickets = tickets.filter(t => t.status === 'open').length;
-    const highPriority = tickets.filter(t => t.priority === 'high').length;
-    const inProgress = tickets.filter(t => t.status === 'in_progress').length;
-    
-    console.log(`📊 Ticket Stats: ${openTickets} open, ${inProgress} in progress, ${highPriority} high priority`);
-}
-
-/**
  * View full ticket details
  * @param {number} ticketId - ID of the ticket to view
  */
@@ -824,7 +814,7 @@ window.viewTicket = async (ticketId) => {
         const ticket = await response.json();
         
         // Format the ticket details for display
-        const createdAt = new Date(ticket.created_at).toLocaleString('fr-FR');
+        const createdAt = new Date(ticket.created_at).toLocaleString('en-US');
         const adminNoteSection = ticket.admin_note 
             ? `\n\n━━━━━━━━━━━━━━━━\nAdmin Note:\n${ticket.admin_note}`
             : '';
