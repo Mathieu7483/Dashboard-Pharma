@@ -28,7 +28,8 @@ doctor_output_model = doctors_ns.model('doctorOutput', {
     'email': fields.String(),
     'address': fields.String(),
     'specialty': fields.String(),
-    'phone': fields.String()
+    'phone': fields.String(),
+    'created_at': fields.DateTime(dt_format='iso8601')
 })
 
 # --- ROUTES ---
