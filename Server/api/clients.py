@@ -23,18 +23,38 @@ client_output_model = clients_ns.model('clientOutput', {
     'last_name': fields.String(),
     'email': fields.String(),
     'phone': fields.String(),
-    'address': fields.String()
+    'address': fields.String(),
+    'created_at': fields.DateTime(dt_format='iso8601')
 })
 
 # --- ROUTES ---
 
 @clients_ns.route('/')
+@clients_ns.route('/')
 class ClientList(Resource):
-    @clients_ns.marshal_list_with(client_output_model)
     @jwt_required() 
     def get(self):
         """Fetch all registered clients"""
-        return facade.get_all_clients(), 200
+        clients = facade.get_all_clients()
+        
+        # 🔍 DEBUG - Vérifiez ce que renvoie SQLAlchemy
+        for c in clients[:2]:  # Juste les 2 premiers
+            print(f"DEBUG Client {c.first_name}: created_at = {c.created_at}")
+        
+        # Sérialisation manuelle temporaire
+        result = []
+        for c in clients:
+            result.append({
+                'id': c.id,
+                'first_name': c.first_name,
+                'last_name': c.last_name,
+                'email': c.email,
+                'phone': c.phone,
+                'address': c.address,
+                'created_at': c.created_at.isoformat() if c.created_at else None
+            })
+        
+        return result, 200
 
     @clients_ns.expect(client_input_model, validate=True)
     @clients_ns.marshal_with(client_output_model, code=201)
