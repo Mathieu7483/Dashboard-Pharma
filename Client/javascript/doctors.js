@@ -187,8 +187,25 @@ function setupSearch() {
 }
 
 function updateStats(doctors) {
-    const total = document.getElementById('total-doctors-count');
-    if (total) total.textContent = doctors.length;
+    const totalEl = document.getElementById('total-doctors-count');
+    const newCountEl = document.getElementById('new-doctors-count');
+
+    if (totalEl) totalEl.textContent = doctors.length;
+
+    if (newCountEl) {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const monthlyNewbies = doctors.filter(d => {
+            if (!d.created_at) return false;
+            const creationDate = new Date(d.created_at);
+            return creationDate.getMonth() === currentMonth && 
+                   creationDate.getFullYear() === currentYear;
+        }).length;
+
+        newCountEl.textContent = monthlyNewbies;
+    }
 }
 
 function loadNavbar() {
