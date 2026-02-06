@@ -726,12 +726,6 @@ window.handleStatusChange = async (ticketId, newStatus) => {
             console.log(`✅ Ticket ${ticketId} updated to ${newStatus}`);
             selectElement.dataset.currentStatus = newStatus;
             
-            // Optional: Ask if they want to add a note
-            if (confirm('Status updated! Would you like to add an admin note?')) {
-                openAdminNoteModal(ticketId);
-            } else {
-                fetchTickets(); // Refresh the table
-            }
         } else {
             alert('Failed to update status');
             selectElement.value = previousStatus;
