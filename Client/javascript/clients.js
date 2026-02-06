@@ -192,8 +192,33 @@ function setupSearch() {
 }
 
 function updateStats(clients) {
-    const total = document.getElementById('total-clients-count');
-    if (total) total.textContent = clients.length;
+    const totalEl = document.getElementById('total-clients-count');
+    const newCountEl = document.getElementById('new-clients-count');
+
+    if (totalEl) totalEl.textContent = clients.length;
+
+    if (newCountEl) {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const monthlyNewbies = clients.filter(c => {
+            if (!c.created_at) {
+                console.warn("Client sans created_at:", c);
+                return false;
+            }
+            
+            const creationDate = new Date(c.created_at);
+            
+            console.log(`Client ${c.first_name}: created ${creationDate.toISOString()} - Month: ${creationDate.getMonth()}, Year: ${creationDate.getFullYear()}`);
+            
+            return creationDate.getMonth() === currentMonth && 
+                   creationDate.getFullYear() === currentYear;
+        });
+
+        console.log(`Nouveaux clients ce mois: ${monthlyNewbies.length}`);
+        newCountEl.textContent = monthlyNewbies.length;
+    }
 }
 
 function loadNavbar() {
