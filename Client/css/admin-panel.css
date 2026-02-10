@@ -4,9 +4,32 @@
  */
 
 /* ============================================
+   GLOBAL VARIABLES & THEME
+   ============================================ */
+:root {
+    --color-primary: #1E90FF;    /* DodgerBlue */
+    --color-secondary: #00FF7F;  /* SpringGreen */
+    --color-background-start: #FFFFFF;
+    --color-background-mid: #E0FFFF;
+    --color-background-end: #F0FFF0;
+    --color-text-dark: #333;
+    --color-danger: #ef4444;
+    --calendar-border: rgba(30, 144, 255, 0.2);
+    --glow-effect: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+body {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f3f4f6;
+    margin: 0;
+    color: var(--color-text-dark);
+}
+
+/* ============================================
    LOADING & TOAST SYSTEM
    ============================================ */
 
+/* Full screen loading overlay */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -17,9 +40,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 10002; /* Highest priority */
 }
 
+/* Spinner Animation */
 .spinner {
     width: 50px;
     height: 50px;
@@ -33,16 +57,18 @@
     to { transform: rotate(360deg); }
 }
 
+/* Toast Notifications Container */
 .toast-container {
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 10000;
+    z-index: 10001;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+/* Individual Toast */
 .toast {
     background: white;
     padding: 16px 20px;
@@ -62,14 +88,8 @@
 .toast.info { border-color: #3b82f6; }
 
 @keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 /* ============================================
@@ -100,13 +120,13 @@
 }
 
 .tab-btn:hover {
-    color: #2563eb;
+    color: var(--color-primary);
     background: #eff6ff;
 }
 
 .tab-btn.active {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
     background: #eff6ff;
 }
 
@@ -115,7 +135,7 @@
 }
 
 .tab-count {
-    background: #2563eb;
+    background: var(--color-primary);
     color: white;
     padding: 2px 8px;
     border-radius: 12px;
@@ -173,6 +193,7 @@
     padding: 16px;
     background: #f9fafb;
     border-radius: 8px;
+    border: 1px solid #e5e7eb;
 }
 
 .search-box {
@@ -185,6 +206,7 @@
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
+    box-sizing: border-box;
 }
 
 .filter-select {
@@ -250,7 +272,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
     color: white;
     display: flex;
     align-items: center;
@@ -309,6 +331,93 @@
 }
 
 /* ============================================
+   CALENDAR (SCHEDULES) STYLES
+   ============================================ */
+
+.calendar-wrapper {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--calendar-border);
+    overflow: hidden;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    background: var(--color-background-mid);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+.day-header {
+    padding: 12px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--color-primary);
+    border-right: 1px solid var(--calendar-border);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.time-slot-label {
+    padding: 10px 5px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--color-primary);
+    border-right: 1px solid var(--calendar-border);
+    border-bottom: 1px solid var(--calendar-border);
+    background: var(--color-background-end);
+    position: sticky;
+    left: 0;
+}
+
+.calendar-slot {
+    border-right: 1px solid var(--calendar-border);
+    border-bottom: 1px solid var(--calendar-border);
+    min-height: 60px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.calendar-slot:hover {
+    background-color: var(--color-background-mid);
+}
+
+/* Event Blocks in Calendar */
+.event-block {
+    margin: 3px;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.1s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event-rdv {
+    background: linear-gradient(135deg, var(--color-primary), #00bfff); 
+    border-left: 4px solid #1d4ed8;
+}
+
+.event-garde {
+    background: linear-gradient(135deg, #ff4b2b, #ff416c);
+    border-left: 4px solid #b91c1c;
+}
+
+/* ============================================
    ACTION BUTTONS
    ============================================ */
 
@@ -358,6 +467,7 @@
     font-weight: 600;
 }
 
+/* Primary Button Gradient Style */
 .btn-primary {
     background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
     color: white;
@@ -372,18 +482,39 @@
     box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
 }
 
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(30, 144, 255, 0.4);
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #f3f4f6;
+}
+
 /* ============================================
    MODALS
    ============================================ */
 
 .modal {
-    display: none;
+    display: none; 
     position: fixed;
-    top: 0;
+    z-index: 10000;
     left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     align-items: center;
     justify-content: center;
 }
@@ -392,52 +523,38 @@
     display: flex;
 }
 
-.modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-}
-
 .modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: var(--glow-effect);
+    animation: modalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    animation: modalSlideIn 0.3s ease;
 }
 
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
+@keyframes modalPopIn {
+    from { opacity: 0; transform: scale(0.8) translateY(30px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px 24px 16px;
+    padding-bottom: 20px;
     border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 20px;
 }
 
 .modal-header h3 {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: #111827;
+    color: var(--color-primary);
 }
 
 .modal-close {
@@ -450,14 +567,13 @@
     font-size: 20px;
     color: #6b7280;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-close:hover {
     background: #e5e7eb;
-}
-
-.modal-form {
-    padding: 24px;
 }
 
 .form-row {
@@ -483,11 +599,22 @@
     color: #374151;
 }
 
-.form-group input {
+.form-group input, 
+.form-group select, 
+.form-group textarea {
     padding: 10px 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 14px;
+    font-family: inherit;
+}
+
+.form-group input:focus, 
+.form-group select:focus, 
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.1);
 }
 
 .input-readonly {
@@ -497,43 +624,58 @@
 }
 
 .form-group-checkbox {
-    margin: 16px 0;
+    margin: 20px 0;
+    display: block;
 }
 
 .checkbox-label {
     display: flex;
-    align-items: center;
+    align-items: center; 
     gap: 12px;
     cursor: pointer;
+    position: relative;
+    user-select: none;
 }
 
 .checkbox-label input[type="checkbox"] {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 .checkbox-custom {
+    display: block;
     width: 20px;
     height: 20px;
+    min-width: 20px;
+    background: #ffffff;
     border: 2px solid #d1d5db;
     border-radius: 4px;
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+}
+
+.checkbox-label:hover .checkbox-custom {
+    border-color: var(--color-primary);
 }
 
 .checkbox-label input:checked + .checkbox-custom {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    border-color: var(--color-primary);
+    box-shadow: 0 0 8px rgba(30, 144, 255, 0.4);
 }
 
 .checkbox-label input:checked + .checkbox-custom::after {
-    content: '✓';
+    content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
 }
 
 .checkbox-text {
@@ -546,8 +688,9 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    padding: 16px 24px 24px;
+    padding-top: 20px;
     border-top: 1px solid #e5e7eb;
+    margin-top: 20px;
 }
 
 /* ============================================
@@ -587,17 +730,6 @@
     opacity: 0.4;
 }
 
-.placeholder-content h3 {
-    font-size: 20px;
-    color: #111827;
-    margin: 0 0 8px 0;
-}
-
-.placeholder-content p {
-    color: #6b7280;
-    font-size: 14px;
-}
-
 /* ============================================
    STATS GRID
    ============================================ */
@@ -622,12 +754,13 @@
 .stat-icon {
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 28px;
+    color: white;
 }
 
 .stat-info h4 {
@@ -662,17 +795,17 @@
 }
 
 .status-select:hover {
-    border-color: #3b82f6;
+    border-color: var(--color-primary);
     background: #f9fafb;
 }
 
 .status-select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.1);
 }
 
-/* Style the select based on current status */
+/* Dynamic Status Colors */
 .status-select[data-current-status="open"] {
     border-color: #10b981;
     background: #f0fdf4;
@@ -694,7 +827,7 @@
 }
 
 /* ============================================
-   RESPONSIVE
+   RESPONSIVE DESIGN
    ============================================ */
 
 @media (max-width: 768px) {
@@ -718,5 +851,11 @@
         min-width: 120px;
         font-size: 12px;
         padding: 5px 8px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
     }
 }
