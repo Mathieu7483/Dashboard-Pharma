@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin-panel.css">
+    <link rel="stylesheet" heref="css/calendar.css">
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -118,12 +119,33 @@
                  ============================================ -->
             <section id="planning-mgmt" class="tab-content">
                 <div class="section-header">
-                    <h3>Schedule Management</h3>
+                    <h3>Gestion du Planning</h3>
+                    <div class="calendar-controls">
+                         <!-- Navigation Semaine -->
+                        <button class="btn-secondary" onclick="CalendarManager.changeWeek(-1)">❮ Précédent</button>
+                        <strong id="current-week-label" style="margin: 0 15px; font-size: 1.1em;">Semaine du...</strong>
+                        <button class="btn-secondary" onclick="CalendarManager.changeWeek(1)">Suivant ❯</button>
+                    </div>
                 </div>
-                <div class="placeholder-content">
-                    <div class="placeholder-icon">📅</div>
-                    <h3>Coming Soon</h3>
-                    <p>Schedule management features will be available here</p>
+
+                <!-- Conteneur Calendrier -->
+                <div class="calendar-wrapper">
+                    <div class="calendar-container">
+                        <!-- En-têtes (Lundi -> Dimanche) -->
+                        <div class="calendar-header">
+                            <div class="time-col-header"></div> <!-- Coin vide -->
+                            <div class="day-header">Lundi</div>
+                            <div class="day-header">Mardi</div>
+                            <div class="day-header">Mercredi</div>
+                            <div class="day-header">Jeudi</div>
+                            <div class="day-header">Vendredi</div>
+                            <div class="day-header">Samedi</div>
+                            <div class="day-header">Dimanche</div>
+                        </div>
+                        
+                        <!-- Grille générée par JS -->
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
                 </div>
             </section>
 
@@ -335,6 +357,81 @@
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="closeCreateModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+        <!-- ============================================
+         MODAL: CALENDAR EVENT
+         ============================================ -->
+    <div id="event-modal" class="modal">
+        <div class="modal-overlay" onclick="CalendarManager.closeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="event-modal-title">📅 Nouveau Planning</h3>
+                <button class="modal-close" onclick="CalendarManager.closeModal()">&times;</button>
+            </div>
+            
+            <form id="event-form" class="modal-form">
+                <input type="hidden" id="event-id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type d'activité</label>
+                        <select id="event-type" class="form-input" required onchange="CalendarManager.toggleFields()">
+                            <option value="rdv">📅 Rendez-vous (RDV)</option>
+                            <option value="garde">🚨 De Garde (Urgence)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Titre / Docteur</label>
+                        <input type="text" id="event-title" class="form-input" required placeholder="Ex: Dr. House">
+                    </div>
+                </div>
+
+                <!-- Visible uniquement pour RDV -->
+                <div class="form-row" id="sales-rep-group">
+                    <div class="form-group">
+                        <label>Représentant</label>
+                        <select id="event-sales-rep" class="form-input">
+                            <option value="">-- Sélectionner --</option>
+                            <!-- Rempli par JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Début</label>
+                        <input type="time" id="event-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fin</label>
+                        <input type="time" id="event-end" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="event-notes" rows="2" placeholder="Détails..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none; margin-right:auto;" onclick="CalendarManager.deleteEvent()">Supprimer</button>
+                    <button type="button" class="btn-secondary" onclick="CalendarManager.closeModal()">Annuler</button>
+                    <button type="submit" class="btn-primary">Enregistrer</button>
                 </div>
             </form>
         </div>
