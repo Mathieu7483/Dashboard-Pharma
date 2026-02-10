@@ -62,31 +62,31 @@ function getAuthInfo() {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Settings page initializing...');
-    
-    // Check authentication
+
     const auth = getAuthInfo();
     if (!auth.token) {
         alert('You must be logged in to access this page');
         window.location.href = 'auth.html';
         return;
     }
-    
-    // Check admin privileges
     if (!auth.isAdmin) {
         alert('Admin access required');
         window.location.href = 'index.html';
         return;
     }
-    
-    // Initialize all modules
+
+    // Init all modules
     loadNavbar();
     fetchUsers();
-    fetchTickets();           // Load tickets on page load
+    fetchTickets();
     setupEventListeners();
     initTabSystem();
     initFilters();
-    initTicketFilters();      // Initialize ticket filtering system
-    
+    initTicketFilters();
+
+    setTimeout(() => {
+        CalendarManager.init();
+    }, 600);
 });
 
 // ============================================
@@ -947,14 +947,13 @@ function highlightActiveLink() {
 }
 
 // ============================================
-// 13. CALENDAR MANAGER (SCHEDULES) - FIXED
+// 13. CALENDAR MANAGER (SCHEDULES)
 // ============================================
 
 const CalendarManager = {
     currentDate: new Date(),
     events: [],
-    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-            '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00',  '07:00', ],
 
     init: () => {
         console.log('📅 Initializing Calendar...');
@@ -973,12 +972,9 @@ const CalendarManager = {
         CalendarManager.render();
     },
 
-    // Get Monday of current week
     getStartOfWeek: (date) => {
         const d = new Date(date);
         const day = d.getDay();
-        // Adjust: Sunday is 0, we want Monday to be start.
-        // If Sunday (0), go back 6 days. If Monday (1), go back 0 days.
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
     },
@@ -996,19 +992,15 @@ const CalendarManager = {
         grid.innerHTML = '';
         const startOfWeek = CalendarManager.getStartOfWeek(CalendarManager.currentDate);
         
-        // Update label
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(endOfWeek.getDate() + 6);
         label.textContent = `Semaine du ${startOfWeek.getDate()}/${startOfWeek.getMonth()+1} au ${endOfWeek.getDate()}/${endOfWeek.getMonth()+1}`;
 
-        // Update Headers (Mon -> Sun)
         const headers = document.querySelectorAll('.day-header');
         for(let i=0; i<7; i++) {
             const dayDate = new Date(startOfWeek);
             dayDate.setDate(dayDate.getDate() + i);
             const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-            // Warning: getDay() 0=Sun, 1=Mon
-            
             headers[i].textContent = `${days[dayDate.getDay()]} ${dayDate.getDate()}`;
             
             if(dayDate.toDateString() === new Date().toDateString()) {
@@ -1020,15 +1012,12 @@ const CalendarManager = {
             }
         }
 
-        // Generate Grid
         CalendarManager.hours.forEach(hour => {
-            // Time Label
             const timeLabel = document.createElement('div');
             timeLabel.className = 'time-slot-label';
             timeLabel.textContent = hour;
             grid.appendChild(timeLabel);
 
-            // 7 Days
             for (let i = 0; i < 7; i++) {
                 const currentDay = new Date(startOfWeek);
                 currentDay.setDate(currentDay.getDate() + i);
@@ -1043,14 +1032,11 @@ const CalendarManager = {
                     if(e.target === cell) CalendarManager.openModal(null, dateString, hour);
                 };
 
-                // Find Events
-                const cellEvents = CalendarManager.events.filter(e => 
-                    e.date === dateString && e.start.startsWith(hour.substring(0,2))
-                );
+                const cellEvents = CalendarManager.events.filter(e => e.date === dateString && e.start.startsWith(hour.substring(0,2)));
 
                 cellEvents.forEach(evt => {
                     const div = document.createElement('div');
-                    div.className = `event-block event-${evt.type}`; // event-rdv OR event-garde
+                    div.className = `event-block event-${evt.type}`;
                     const icon = evt.type === 'garde' ? '🚨' : '👤';
                     div.innerHTML = `<strong>${icon} ${evt.start}</strong> ${evt.title}`;
                     
@@ -1072,7 +1058,6 @@ const CalendarManager = {
         const deleteBtn = document.getElementById('btn-delete-event');
         const repSelect = document.getElementById('event-sales-rep');
 
-        // Populate Sales Reps from existing Users
         if(window.allUsers && repSelect.children.length <= 1) {
             window.allUsers.forEach(u => {
                 const opt = document.createElement('option');
@@ -1083,7 +1068,6 @@ const CalendarManager = {
         }
 
         if (id) {
-            // EDIT
             const evt = CalendarManager.events.find(e => e.id == id);
             if(!evt) return;
             document.getElementById('event-modal-title').textContent = 'Modifier';
@@ -1097,7 +1081,6 @@ const CalendarManager = {
             document.getElementById('event-sales-rep').value = evt.salesRep || '';
             deleteBtn.style.display = 'block';
         } else {
-            // NEW
             form.reset();
             document.getElementById('event-modal-title').textContent = 'Nouveau';
             document.getElementById('event-id').value = '';
@@ -1113,9 +1096,7 @@ const CalendarManager = {
         modal.classList.add('active');
     },
 
-    closeModal: () => {
-        document.getElementById('event-modal').classList.remove('active');
-    },
+    closeModal: () => document.getElementById('event-modal').classList.remove('active'),
 
     toggleFields: () => {
         const type = document.getElementById('event-type').value;
@@ -1154,7 +1135,7 @@ const CalendarManager = {
 
     deleteEvent: () => {
         const id = document.getElementById('event-id').value;
-        if(!id || !confirm('Supprimer ?')) return;
+        if(!id || !confirm('Delete ?')) return;
         CalendarManager.events = CalendarManager.events.filter(e => e.id != id);
         CalendarManager.saveEvents();
         CalendarManager.closeModal();
