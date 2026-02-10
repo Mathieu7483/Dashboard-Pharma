@@ -945,3 +945,218 @@ function highlightActiveLink() {
         if (activeLink) activeLink.classList.add('active');
     }
 }
+
+// ============================================
+// 13. CALENDAR MANAGER (SCHEDULES) - FIXED
+// ============================================
+
+const CalendarManager = {
+    currentDate: new Date(),
+    events: [],
+    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+            '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+
+    init: () => {
+        console.log('📅 Initializing Calendar...');
+        CalendarManager.loadEvents();
+        CalendarManager.render();
+        CalendarManager.setupListeners();
+    },
+
+    loadEvents: () => {
+        const stored = localStorage.getItem('pharma_events');
+        CalendarManager.events = stored ? JSON.parse(stored) : [];
+    },
+
+    saveEvents: () => {
+        localStorage.setItem('pharma_events', JSON.stringify(CalendarManager.events));
+        CalendarManager.render();
+    },
+
+    // Get Monday of current week
+    getStartOfWeek: (date) => {
+        const d = new Date(date);
+        const day = d.getDay();
+        // Adjust: Sunday is 0, we want Monday to be start.
+        // If Sunday (0), go back 6 days. If Monday (1), go back 0 days.
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
+    },
+
+    changeWeek: (direction) => {
+        CalendarManager.currentDate.setDate(CalendarManager.currentDate.getDate() + (direction * 7));
+        CalendarManager.render();
+    },
+
+    render: () => {
+        const grid = document.getElementById('calendar-grid');
+        const label = document.getElementById('current-week-label');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        const startOfWeek = CalendarManager.getStartOfWeek(CalendarManager.currentDate);
+        
+        // Update label
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        label.textContent = `Semaine du ${startOfWeek.getDate()}/${startOfWeek.getMonth()+1} au ${endOfWeek.getDate()}/${endOfWeek.getMonth()+1}`;
+
+        // Update Headers (Mon -> Sun)
+        const headers = document.querySelectorAll('.day-header');
+        for(let i=0; i<7; i++) {
+            const dayDate = new Date(startOfWeek);
+            dayDate.setDate(dayDate.getDate() + i);
+            const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            // Warning: getDay() 0=Sun, 1=Mon
+            
+            headers[i].textContent = `${days[dayDate.getDay()]} ${dayDate.getDate()}`;
+            
+            if(dayDate.toDateString() === new Date().toDateString()) {
+                headers[i].style.color = '#2563eb';
+                headers[i].style.background = '#eff6ff';
+            } else {
+                headers[i].style.color = '';
+                headers[i].style.background = '';
+            }
+        }
+
+        // Generate Grid
+        CalendarManager.hours.forEach(hour => {
+            // Time Label
+            const timeLabel = document.createElement('div');
+            timeLabel.className = 'time-slot-label';
+            timeLabel.textContent = hour;
+            grid.appendChild(timeLabel);
+
+            // 7 Days
+            for (let i = 0; i < 7; i++) {
+                const currentDay = new Date(startOfWeek);
+                currentDay.setDate(currentDay.getDate() + i);
+                const dateString = currentDay.toISOString().split('T')[0];
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-slot';
+                cell.dataset.date = dateString;
+                cell.dataset.time = hour;
+                
+                cell.onclick = (e) => {
+                    if(e.target === cell) CalendarManager.openModal(null, dateString, hour);
+                };
+
+                // Find Events
+                const cellEvents = CalendarManager.events.filter(e => 
+                    e.date === dateString && e.start.startsWith(hour.substring(0,2))
+                );
+
+                cellEvents.forEach(evt => {
+                    const div = document.createElement('div');
+                    div.className = `event-block event-${evt.type}`; // event-rdv OR event-garde
+                    const icon = evt.type === 'garde' ? '🚨' : '👤';
+                    div.innerHTML = `<strong>${icon} ${evt.start}</strong> ${evt.title}`;
+                    
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        CalendarManager.openModal(evt.id);
+                    };
+                    cell.appendChild(div);
+                });
+
+                grid.appendChild(cell);
+            }
+        });
+    },
+
+    openModal: (id = null, date = null, time = null) => {
+        const modal = document.getElementById('event-modal');
+        const form = document.getElementById('event-form');
+        const deleteBtn = document.getElementById('btn-delete-event');
+        const repSelect = document.getElementById('event-sales-rep');
+
+        // Populate Sales Reps from existing Users
+        if(window.allUsers && repSelect.children.length <= 1) {
+            window.allUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.username;
+                repSelect.appendChild(opt);
+            });
+        }
+
+        if (id) {
+            // EDIT
+            const evt = CalendarManager.events.find(e => e.id == id);
+            if(!evt) return;
+            document.getElementById('event-modal-title').textContent = 'Modifier';
+            document.getElementById('event-id').value = evt.id;
+            document.getElementById('event-type').value = evt.type;
+            document.getElementById('event-title').value = evt.title;
+            document.getElementById('event-date').value = evt.date;
+            document.getElementById('event-start').value = evt.start;
+            document.getElementById('event-end').value = evt.end;
+            document.getElementById('event-notes').value = evt.notes || '';
+            document.getElementById('event-sales-rep').value = evt.salesRep || '';
+            deleteBtn.style.display = 'block';
+        } else {
+            // NEW
+            form.reset();
+            document.getElementById('event-modal-title').textContent = 'Nouveau';
+            document.getElementById('event-id').value = '';
+            document.getElementById('event-date').value = date || new Date().toISOString().split('T')[0];
+            if(time) {
+                document.getElementById('event-start').value = time;
+                let h = parseInt(time.split(':')[0]) + 1;
+                document.getElementById('event-end').value = h.toString().padStart(2,'0') + ':00';
+            }
+            deleteBtn.style.display = 'none';
+        }
+        CalendarManager.toggleFields();
+        modal.classList.add('active');
+    },
+
+    closeModal: () => {
+        document.getElementById('event-modal').classList.remove('active');
+    },
+
+    toggleFields: () => {
+        const type = document.getElementById('event-type').value;
+        const group = document.getElementById('sales-rep-group');
+        group.style.display = (type === 'garde') ? 'none' : 'block';
+    },
+
+    setupListeners: () => {
+        const form = document.getElementById('event-form');
+        if(form) {
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const id = document.getElementById('event-id').value;
+                const newEvent = {
+                    id: id ? parseInt(id) : Date.now(),
+                    type: document.getElementById('event-type').value,
+                    title: document.getElementById('event-title').value,
+                    salesRep: document.getElementById('event-sales-rep').value,
+                    date: document.getElementById('event-date').value,
+                    start: document.getElementById('event-start').value,
+                    end: document.getElementById('event-end').value,
+                    notes: document.getElementById('event-notes').value
+                };
+
+                if(id) {
+                    const idx = CalendarManager.events.findIndex(e => e.id == id);
+                    if(idx !== -1) CalendarManager.events[idx] = newEvent;
+                } else {
+                    CalendarManager.events.push(newEvent);
+                }
+                CalendarManager.saveEvents();
+                CalendarManager.closeModal();
+            };
+        }
+    },
+
+    deleteEvent: () => {
+        const id = document.getElementById('event-id').value;
+        if(!id || !confirm('Supprimer ?')) return;
+        CalendarManager.events = CalendarManager.events.filter(e => e.id != id);
+        CalendarManager.saveEvents();
+        CalendarManager.closeModal();
+    }
+};
