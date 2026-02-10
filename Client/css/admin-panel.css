@@ -358,6 +358,20 @@
     font-weight: 600;
 }
 
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
+}
+
 /* ============================================
    MODALS
    ============================================ */
