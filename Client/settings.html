@@ -59,9 +59,7 @@
                 </button>
             </div>
 
-            <!-- ============================================
-                 TAB 1: USERS MANAGEMENT
-                 ============================================ -->
+            <!-- TAB 1: USERS MANAGEMENT -->
             <section id="users-mgmt" class="tab-content active">
                 <div class="section-header">
                     <div>
@@ -73,7 +71,6 @@
                     </button>
                 </div>
 
-                <!-- Filter Bar -->
                 <div class="filter-bar">
                     <div class="search-box">
                         <input type="text" id="user-search" placeholder="🔍 Search by name or email..." />
@@ -87,7 +84,6 @@
                     </div>
                 </div>
 
-                <!-- Users Table -->
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -100,13 +96,10 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="user-table-body">
-                            <!-- Dynamic content populated by JavaScript -->
-                        </tbody>
+                        <tbody id="user-table-body"></tbody>
                     </table>
                 </div>
 
-                <!-- Empty State -->
                 <div id="empty-state" class="empty-state" style="display: none;">
                     <div class="empty-icon">👤</div>
                     <h3>No users found</h3>
@@ -114,26 +107,21 @@
                 </div>
             </section>
 
-            <!-- ============================================
-                 TAB 2: PLANNING MANAGEMENT
-                 ============================================ -->
+            <!-- TAB 2: PLANNING MANAGEMENT -->
             <section id="planning-mgmt" class="tab-content">
                 <div class="section-header">
                     <h3>Gestion du Planning</h3>
                     <div class="calendar-controls">
-                         <!-- Navigation Semaine -->
                         <button class="btn-secondary" onclick="CalendarManager.changeWeek(-1)">❮ Précédent</button>
                         <strong id="current-week-label" style="margin: 0 15px; font-size: 1.1em;">Semaine du...</strong>
                         <button class="btn-secondary" onclick="CalendarManager.changeWeek(1)">Suivant ❯</button>
                     </div>
                 </div>
 
-                <!-- Conteneur Calendrier -->
                 <div class="calendar-wrapper">
                     <div class="calendar-container">
-                        <!-- En-têtes (Lundi -> Dimanche) -->
                         <div class="calendar-header">
-                            <div class="time-col-header"></div> <!-- Coin vide -->
+                            <div class="time-col-header"></div>
                             <div class="day-header">Lundi</div>
                             <div class="day-header">Mardi</div>
                             <div class="day-header">Mercredi</div>
@@ -143,15 +131,12 @@
                             <div class="day-header">Dimanche</div>
                         </div>
                         
-                        <!-- Grille générée par JS -->
                         <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- ============================================
-                 TAB 3: TICKETING SYSTEM
-                 ============================================ -->
+            <!-- TAB 3: TICKETING SYSTEM -->
             <section id="ticketing-mgmt" class="tab-content">
                 <div class="section-header">
                     <div>
@@ -160,7 +145,6 @@
                     </div>
                 </div>
 
-                <!-- Filter Bar -->
                 <div class="filter-bar">
                     <div class="filter-group">
                         <select id="ticket-status-filter" class="filter-select">
@@ -178,7 +162,6 @@
                     </div>
                 </div>
 
-                <!-- Tickets Table -->
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -192,16 +175,12 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="ticket-table-body">
-                            <!-- Dynamic content populated by JavaScript -->
-                        </tbody>
+                        <tbody id="ticket-table-body"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- ============================================
-                 TAB 4: ANALYTICS & STATISTICS
-                 ============================================ -->
+            <!-- TAB 4: ANALYTICS & STATISTICS -->
             <section id="analytics-mgmt" class="tab-content">
                 <div class="section-header">
                     <h3>Admin Statistics</h3>
@@ -240,9 +219,7 @@
         </main>
     </div>
 
-    <!-- ============================================
-         MODAL: EDIT USER
-         ============================================ -->
+    <!-- MODAL: EDIT USER -->
     <div id="edit-modal" class="modal">
         <div class="modal-overlay" onclick="closeEditModal()"></div>
         <div class="modal-content">
@@ -302,9 +279,7 @@
         </div>
     </div>
 
-    <!-- ============================================
-         MODAL: CREATE USER
-         ============================================ -->
+    <!-- MODAL: CREATE USER -->
     <div id="create-modal" class="modal">
         <div class="modal-overlay" onclick="closeCreateModal()"></div>
         <div class="modal-content">
@@ -361,9 +336,8 @@
             </form>
         </div>
     </div>
-        <!-- ============================================
-         MODAL: CALENDAR EVENT
-         ============================================ -->
+
+    <!-- MODAL: CALENDAR EVENT - VERSION CORRIGÉE -->
     <div id="event-modal" class="modal">
         <div class="modal-overlay" onclick="CalendarManager.closeModal()"></div>
         <div class="modal-content">
@@ -375,9 +349,10 @@
             <form id="event-form" class="modal-form">
                 <input type="hidden" id="event-id">
                 
+                <!-- TYPE D'ACTIVITÉ -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Type d'activité</label>
+                        <label>Type d'activité *</label>
                         <select id="event-type" class="form-input" required onchange="CalendarManager.toggleFields()">
                             <option value="rdv">📅 Rendez-vous (RDV)</option>
                             <option value="garde">🚨 De Garde (Urgence)</option>
@@ -385,53 +360,74 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Titre / Docteur</label>
-                        <input type="text" id="event-title" class="form-input" required placeholder="Ex: Dr. House">
+                <!-- GROUPE RDV : Titre + Commercial -->
+                <div id="group-rdv">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nom de la personne / Titre *</label>
+                            <input type="text" id="event-title" class="form-input" placeholder="Ex: Dr. House">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>RDV avec (Commercial)</label>
+                            <select id="event-sales-rep" class="form-input">
+                                <option value="">-- Aucun --</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Visible uniquement pour RDV -->
-                <div class="form-row" id="sales-rep-group">
-                    <div class="form-group">
-                        <label>Représentant</label>
-                        <select id="event-sales-rep" class="form-input">
-                            <option value="">-- Sélectionner --</option>
-                            <!-- Rempli par JS -->
-                        </select>
+                <!-- GROUPE GARDE : Utilisateur Interne -->
+                <div id="group-garde" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Personnel de Garde *</label>
+                            <select id="event-assigned-user" class="form-input">
+                                <option value="">-- Sélectionner un employé --</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
+                <!-- DATES - TOUJOURS VISIBLES -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" id="event-date" required>
+                        <label>📅 Date de début *</label>
+                        <input type="date" id="event-start-date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>📅 Date de fin <small>(même jour si vide)</small></label>
+                        <input type="date" id="event-end-date" class="form-input">
                     </div>
                 </div>
 
+                <!-- HEURES - TOUJOURS VISIBLES -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Début</label>
-                        <input type="time" id="event-start" required>
+                        <label>🕐 Heure de début *</label>
+                        <input type="time" id="event-start-time" class="form-input" required>
                     </div>
                     <div class="form-group">
-                        <label>Fin</label>
-                        <input type="time" id="event-end" required>
+                        <label>🕐 Heure de fin *</label>
+                        <input type="time" id="event-end-time" class="form-input" required>
                     </div>
                 </div>
 
+                <!-- NOTES -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="event-notes" rows="2" placeholder="Détails..."></textarea>
+                        <label>📝 Notes / Détails</label>
+                        <textarea id="event-notes" class="form-input" rows="2" placeholder="Informations complémentaires..."></textarea>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none; margin-right:auto;" onclick="CalendarManager.deleteEvent()">Supprimer</button>
+                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none; margin-right:auto;" onclick="CalendarManager.deleteEvent()">
+                        🗑️ Supprimer
+                    </button>
                     <button type="button" class="btn-secondary" onclick="CalendarManager.closeModal()">Annuler</button>
-                    <button type="submit" class="btn-primary">Enregistrer</button>
+                    <button type="submit" class="btn-primary">💾 Enregistrer</button>
                 </div>
             </form>
         </div>
