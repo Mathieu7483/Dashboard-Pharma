@@ -950,10 +950,14 @@ function highlightActiveLink() {
 // 13. CALENDAR MANAGER (SCHEDULES)
 // ============================================
 
+// ============================================
+// 13. CALENDAR MANAGER - IMPROVED VERSION
+// ============================================
+
 const CalendarManager = {
     currentDate: new Date(),
     events: [],
-    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00',  '07:00', ],
+    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00'],
 
     init: () => {
         console.log('📅 Initializing Calendar...');
@@ -984,6 +988,19 @@ const CalendarManager = {
         CalendarManager.render();
     },
 
+    /**
+     * Vérifie si un événement (garde ou RDV) est actif pour une date et heure données
+     */
+    isEventActiveAt: (event, dateString, hour) => {
+        const eventStart = new Date(event.startDate + 'T' + event.startTime);
+        const eventEnd = new Date((event.endDate || event.startDate) + 'T' + event.endTime);
+        
+        // Construire la datetime du slot
+        const slotTime = new Date(dateString + 'T' + hour);
+        
+        return slotTime >= eventStart && slotTime < eventEnd;
+    },
+
     render: () => {
         const grid = document.getElementById('calendar-grid');
         const label = document.getElementById('current-week-label');
@@ -996,6 +1013,7 @@ const CalendarManager = {
         endOfWeek.setDate(endOfWeek.getDate() + 6);
         label.textContent = `Semaine du ${startOfWeek.getDate()}/${startOfWeek.getMonth()+1} au ${endOfWeek.getDate()}/${endOfWeek.getMonth()+1}`;
 
+        // Mise à jour des en-têtes (Jours)
         const headers = document.querySelectorAll('.day-header');
         for(let i=0; i<7; i++) {
             const dayDate = new Date(startOfWeek);
@@ -1013,6 +1031,7 @@ const CalendarManager = {
         }
 
         CalendarManager.hours.forEach(hour => {
+            // Label Heure
             const timeLabel = document.createElement('div');
             timeLabel.className = 'time-slot-label';
             timeLabel.textContent = hour;
@@ -1032,13 +1051,29 @@ const CalendarManager = {
                     if(e.target === cell) CalendarManager.openModal(null, dateString, hour);
                 };
 
-                const cellEvents = CalendarManager.events.filter(e => e.date === dateString && e.start.startsWith(hour.substring(0,2)));
+                // NOUVELLE LOGIQUE : Afficher tous les événements actifs à ce moment
+                const cellEvents = CalendarManager.events.filter(evt => 
+                    CalendarManager.isEventActiveAt(evt, dateString, hour)
+                );
 
                 cellEvents.forEach(evt => {
                     const div = document.createElement('div');
                     div.className = `event-block event-${evt.type}`;
-                    const icon = evt.type === 'garde' ? '🚨' : '👤';
-                    div.innerHTML = `<strong>${icon} ${evt.start}</strong> ${evt.title}`;
+                    
+                    if(evt.type === 'garde') {
+                        let userName = "Utilisateur inconnu";
+                        if(window.allUsers) {
+                            const u = window.allUsers.find(user => user.id === evt.assignedUser);
+                            if(u) userName = u.username;
+                        }
+                        
+                        // Afficher les heures de la garde
+                        div.innerHTML = `<strong>🚨 GARDE</strong><br>${userName}<br><small>${evt.startTime} - ${evt.endTime}</small>`;
+                        div.title = `Garde du ${evt.startDate} ${evt.startTime} au ${evt.endDate} ${evt.endTime}`;
+                    } else {
+                        // RDV
+                        div.innerHTML = `<strong>📅 ${evt.startTime}</strong> ${evt.title}`;
+                    }
                     
                     div.onclick = (e) => {
                         e.stopPropagation();
@@ -1056,52 +1091,95 @@ const CalendarManager = {
         const modal = document.getElementById('event-modal');
         const form = document.getElementById('event-form');
         const deleteBtn = document.getElementById('btn-delete-event');
-        const repSelect = document.getElementById('event-sales-rep');
-
-        if(window.allUsers && repSelect.children.length <= 1) {
-            window.allUsers.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = u.username;
-                repSelect.appendChild(opt);
-            });
-        }
+        
+        CalendarManager.populateUserSelects();
 
         if (id) {
             const evt = CalendarManager.events.find(e => e.id == id);
             if(!evt) return;
-            document.getElementById('event-modal-title').textContent = 'Modifier';
+
+            document.getElementById('event-modal-title').textContent = 'Modifier l\'événement';
             document.getElementById('event-id').value = evt.id;
             document.getElementById('event-type').value = evt.type;
-            document.getElementById('event-title').value = evt.title;
-            document.getElementById('event-date').value = evt.date;
-            document.getElementById('event-start').value = evt.start;
-            document.getElementById('event-end').value = evt.end;
             document.getElementById('event-notes').value = evt.notes || '';
-            document.getElementById('event-sales-rep').value = evt.salesRep || '';
+            document.getElementById('event-start-date').value = evt.startDate;
+            document.getElementById('event-end-date').value = evt.endDate || evt.startDate;
+            document.getElementById('event-start-time').value = evt.startTime;
+            document.getElementById('event-end-time').value = evt.endTime;
+            
+            if(evt.type === 'rdv') {
+                document.getElementById('event-title').value = evt.title;
+                document.getElementById('event-sales-rep').value = evt.salesRep || '';
+            } else {
+                document.getElementById('event-assigned-user').value = evt.assignedUser || '';
+            }
+            
             deleteBtn.style.display = 'block';
         } else {
             form.reset();
-            document.getElementById('event-modal-title').textContent = 'Nouveau';
+            document.getElementById('event-modal-title').textContent = 'Nouveau Planning';
             document.getElementById('event-id').value = '';
-            document.getElementById('event-date').value = date || new Date().toISOString().split('T')[0];
+            document.getElementById('event-start-date').value = date || new Date().toISOString().split('T')[0];
+            document.getElementById('event-end-date').value = date || new Date().toISOString().split('T')[0];
+            
             if(time) {
-                document.getElementById('event-start').value = time;
+                document.getElementById('event-start-time').value = time;
                 let h = parseInt(time.split(':')[0]) + 1;
-                document.getElementById('event-end').value = h.toString().padStart(2,'0') + ':00';
+                document.getElementById('event-end-time').value = h.toString().padStart(2,'0') + ':00';
+            } else {
+                document.getElementById('event-start-time').value = '09:00';
+                document.getElementById('event-end-time').value = '10:00';
             }
             deleteBtn.style.display = 'none';
         }
+
         CalendarManager.toggleFields();
         modal.classList.add('active');
     },
 
-    closeModal: () => document.getElementById('event-modal').classList.remove('active'),
+    closeModal: () => {
+        document.getElementById('event-modal').classList.remove('active');
+    },
+
+    populateUserSelects: () => {
+        const repSelect = document.getElementById('event-sales-rep');
+        const userSelect = document.getElementById('event-assigned-user');
+        
+        if(!window.allUsers) return;
+
+        const createOptions = (selectElement) => {
+            if(selectElement.children.length <= 1) {
+                window.allUsers.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = `${u.username} (${u.first_name || ''} ${u.last_name || ''})`;
+                    selectElement.appendChild(opt);
+                });
+            }
+        };
+
+        createOptions(repSelect);
+        createOptions(userSelect);
+    },
 
     toggleFields: () => {
         const type = document.getElementById('event-type').value;
-        const group = document.getElementById('sales-rep-group');
-        group.style.display = (type === 'garde') ? 'none' : 'block';
+        const groupRdv = document.getElementById('group-rdv');
+        const groupGarde = document.getElementById('group-garde');
+        
+        if(type === 'garde') {
+            groupRdv.style.display = 'none';
+            groupGarde.style.display = 'block';
+            
+            document.getElementById('event-title').required = false;
+            document.getElementById('event-assigned-user').required = true;
+        } else {
+            groupRdv.style.display = 'block';
+            groupGarde.style.display = 'none';
+            
+            document.getElementById('event-title').required = true;
+            document.getElementById('event-assigned-user').required = false;
+        }
     },
 
     setupListeners: () => {
@@ -1110,16 +1188,41 @@ const CalendarManager = {
             form.onsubmit = (e) => {
                 e.preventDefault();
                 const id = document.getElementById('event-id').value;
-                const newEvent = {
+                const type = document.getElementById('event-type').value;
+                const startDate = document.getElementById('event-start-date').value;
+                const endDate = document.getElementById('event-end-date').value || startDate;
+                const startTime = document.getElementById('event-start-time').value;
+                const endTime = document.getElementById('event-end-time').value;
+                
+                let newEvent = {
                     id: id ? parseInt(id) : Date.now(),
-                    type: document.getElementById('event-type').value,
-                    title: document.getElementById('event-title').value,
-                    salesRep: document.getElementById('event-sales-rep').value,
-                    date: document.getElementById('event-date').value,
-                    start: document.getElementById('event-start').value,
-                    end: document.getElementById('event-end').value,
+                    type: type,
+                    startDate: startDate,
+                    endDate: endDate,
+                    startTime: startTime,
+                    endTime: endTime,
                     notes: document.getElementById('event-notes').value
                 };
+
+                if(type === 'rdv') {
+                    newEvent.title = document.getElementById('event-title').value;
+                    newEvent.salesRep = document.getElementById('event-sales-rep').value;
+                } else {
+                    newEvent.assignedUser = document.getElementById('event-assigned-user').value;
+                    newEvent.title = "Garde";
+                }
+
+                // Validation
+                if(endDate < startDate) {
+                    alert("La date de fin ne peut pas être avant la date de début !");
+                    return;
+                }
+                
+                // Validation des heures si même jour
+                if(startDate === endDate && endTime <= startTime) {
+                    alert("L'heure de fin doit être après l'heure de début !");
+                    return;
+                }
 
                 if(id) {
                     const idx = CalendarManager.events.findIndex(e => e.id == id);
@@ -1127,17 +1230,26 @@ const CalendarManager = {
                 } else {
                     CalendarManager.events.push(newEvent);
                 }
+                
                 CalendarManager.saveEvents();
                 CalendarManager.closeModal();
+                alert('✅ Événement enregistré !');
             };
+        }
+        
+        // Listener pour le changement de type
+        const typeSelect = document.getElementById('event-type');
+        if(typeSelect) {
+            typeSelect.addEventListener('change', () => CalendarManager.toggleFields());
         }
     },
 
     deleteEvent: () => {
         const id = document.getElementById('event-id').value;
-        if(!id || !confirm('Delete ?')) return;
+        if(!id || !confirm('Supprimer cet événement ?')) return;
         CalendarManager.events = CalendarManager.events.filter(e => e.id != id);
         CalendarManager.saveEvents();
         CalendarManager.closeModal();
+        alert('✅ Événement supprimé');
     }
 };
