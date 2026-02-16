@@ -1,17 +1,14 @@
 /**
  * settings.js - Admin Panel Management
+ * Calendar events stored in BACKEND API
  */
+
+const API_BASE = 'http://127.0.0.1:5000';
 
 // ============================================
 // 1. COOKIE MANAGER
 // ============================================
-
 const CookieManager = {
-    /**
-     * Get cookie value by name
-     * @param {string} name - Cookie name
-     * @returns {string|null} Cookie value or null if not found
-     */
     get: (name) => {
         const nameEQ = name + "=";
         const ca = document.cookie.split(';');
@@ -22,11 +19,6 @@ const CookieManager = {
         }
         return null;
     },
-    
-    /**
-     * Delete a cookie by setting expiration to past date
-     * @param {string} name - Cookie name to delete
-     */
     erase: (name) => {
         document.cookie = name + '=; Max-Age=-99999999; path=/;';
     }
@@ -35,20 +27,12 @@ const CookieManager = {
 // ============================================
 // 2. AUTH HELPER
 // ============================================
-
-/**
- * Extract and decode authentication information from JWT token
- * @returns {Object} Object containing token and admin status
- */
 function getAuthInfo() {
     const token = CookieManager.get('access_token');
     if (!token) return { token: null, isAdmin: false };
-    
     try {
-        // Decode JWT payload (base64)
         const payload = JSON.parse(atob(token.split('.')[1]));
         const isAdmin = payload.is_admin === true;
-        console.log('🔐 Auth Info:', { isAdmin, userId: payload.sub });
         return { token, isAdmin };
     } catch (e) {
         console.error('Token decode error:', e);
@@ -56,10 +40,16 @@ function getAuthInfo() {
     }
 }
 
+function authHeaders(token) {
+    return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+}
+
 // ============================================
 // 3. INITIALIZATION
 // ============================================
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Settings page initializing...');
 
@@ -75,28 +65,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Init all modules
     loadNavbar();
     fetchUsers();
     fetchTickets();
+    fetchTodayStats(); // ← STATS DEPUIS LE BACKEND
     setupEventListeners();
     initTabSystem();
     initFilters();
     initTicketFilters();
 
+    // Calendar init après chargement des users
     setTimeout(() => {
         CalendarManager.init();
     }, 600);
 });
 
 // ============================================
-// 4. FETCH USERS
+// 4. TODAY STATS FROM BACKEND
 // ============================================
+async function fetchTodayStats() {
+    const { token } = getAuthInfo();
+    if (!token) return;
 
-/**
- * Fetch all users from the API
- * Requires admin authentication
- */
+    console.log('📊 Fetching today stats from backend...');
+
+    try {
+        const response = await fetch(`${API_BASE}/calendar/events/stats/today`, {
+            method: 'GET',
+            headers: authHeaders(token)
+        });
+
+        if (!response.ok) {
+            console.log('⚠️ Stats endpoint error:', response.status);
+            return;
+        }
+
+        const stats = await response.json();
+        console.log('✅ Today stats:', stats);
+
+        const rdvEl = document.getElementById('stat-today-rdv');
+        const gardeEl = document.getElementById('stat-today-garde');
+        const totalEl = document.getElementById('stat-total-events');
+
+        if (rdvEl) rdvEl.textContent = stats.rdv_count;
+        if (gardeEl) gardeEl.textContent = stats.garde_count;
+        if (totalEl) totalEl.textContent = stats.total_all;
+
+    } catch (error) {
+        console.error("❌ Stats Fetch Error:", error);
+    }
+}
+
+// ============================================
+// 5. FETCH USERS
+// ============================================
 async function fetchUsers() {
     const { token, isAdmin } = getAuthInfo();
     if (!token) return;
@@ -104,15 +126,10 @@ async function fetchUsers() {
     console.log('📋 Loading users...');
 
     try {
-        const response = await fetch('http://127.0.0.1:5000/users/', {
+        const response = await fetch(`${API_BASE}/users/`, {
             method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+            headers: authHeaders(token)
         });
-
-        console.log('📡 Response status:', response.status);
 
         if (!response.ok) {
             if (response.status === 401) {
@@ -129,61 +146,42 @@ async function fetchUsers() {
         }
 
         const users = await response.json();
-        console.log('✅ Users loaded:', users);
-        
-        // Store globally for filtering
+        console.log('✅ Users loaded:', users.length);
         window.allUsers = users;
         renderUserTable(users, isAdmin);
-        
-        // Update stats with both users and tickets
         updateStats(users, window.allTickets || []);
-        
     } catch (error) {
         console.error("❌ User Fetch Error:", error);
-        alert('Error loading users. Check console for details.');
     }
 }
 
 // ============================================
-// 5. RENDER USER TABLE
+// 6. RENDER USER TABLE
 // ============================================
-
-/**
- * Render users in the table
- * @param {Array} users - Array of user objects
- * @param {boolean} isAdmin - Whether current user is admin
- */
 function renderUserTable(users, isAdmin) {
     const tbody = document.getElementById('user-table-body');
     const emptyState = document.getElementById('empty-state');
     const currentUserId = localStorage.getItem('user_id');
-    
-    if (!tbody) {
-        console.error('Table body not found!');
-        return;
-    }
 
-    // Update user count badge
+    if (!tbody) return;
+
     const countBadge = document.getElementById('users-count');
     if (countBadge) countBadge.textContent = users.length;
-    
-    // Handle empty state
+
     if (!users || users.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No users found</td></tr>';
         if (emptyState) emptyState.style.display = 'block';
         return;
     }
-    
     if (emptyState) emptyState.style.display = 'none';
-    
-    // Generate table rows
+
     tbody.innerHTML = users.map(user => {
         const initials = (user.first_name?.[0] || user.username[0]).toUpperCase();
         const isCurrentUser = user.id === currentUserId;
-        const roleBadge = user.is_admin ? 
+        const roleBadge = user.is_admin ?
             '<span class="badge badge-admin">Admin</span>' :
             '<span class="badge badge-staff">Personnel</span>';
-        
+
         return `
             <tr>
                 <td>
@@ -200,72 +198,44 @@ function renderUserTable(users, isAdmin) {
                     <small style="color: #6b7280;">ID: ${user.id.slice(0, 8)}...</small>
                 </td>
                 <td>${roleBadge}</td>
-                <td>
-                    <span class="status-badge status-active">Active</span>
-                </td>
-                <td>
-                    <small style="color: #6b7280;">N/A</small>
-                </td>
+                <td><span class="status-badge status-active">Active</span></td>
+                <td><small style="color: #6b7280;">N/A</small></td>
                 <td>
                     <div class="action-group">
-                        <button class="btn-action" onclick="openEditModal('${user.id}')">
-                            ✏️ Edit
-                        </button>
-                        ${!isCurrentUser ? 
+                        <button class="btn-action" onclick="openEditModal('${user.id}')">✏️ Edit</button>
+                        ${!isCurrentUser ?
                             `<button class="btn-danger" onclick="deleteUser('${user.id}')">🗑️ Delete</button>` :
-                            '<span class="self-tag">You</span>'
-                        }
+                            '<span class="self-tag">You</span>'}
                     </div>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     }).join('');
 }
 
 // ============================================
-// 6. UPDATE STATS
+// 7. UPDATE STATS
 // ============================================
-
-/**
- * Update dashboard statistics
- * @param {Array} users - List of users (retrieved via API)
- * @param {Array} tickets - List of tickets (optional, for ticketing stats)
- */
 function updateStats(users = [], tickets = []) {
-    const statActiveUsers = document.getElementById('stat-active-users');
-    const statAdmins = document.getElementById('stat-admins');
-    const statTickets = document.getElementById('stat-tickets');
-    
-    if (statActiveUsers) statActiveUsers.textContent = users.length;
-    if (statAdmins) statAdmins.textContent = users.filter(u => u.is_admin).length;
-    if (statTickets) statTickets.textContent = tickets.length;
+    const el1 = document.getElementById('stat-active-users');
+    const el2 = document.getElementById('stat-admins');
+    const el3 = document.getElementById('stat-tickets');
+    if (el1) el1.textContent = users.length;
+    if (el2) el2.textContent = users.filter(u => u.is_admin).length;
+    if (el3) el3.textContent = tickets.length;
 }
 
 // ============================================
-// 7. USER MODAL MANAGEMENT
+// 8. USER MODAL MANAGEMENT
 // ============================================
-
-/**
- * Open edit modal for a specific user
- * @param {string} userId - UUID of the user to edit
- */
 window.openEditModal = async (userId) => {
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch(`${API_BASE}/users/${userId}`, {
+            headers: authHeaders(token)
         });
-
-        if (!response.ok) {
-            alert('Failed to load user data');
-            return;
-        }
+        if (!response.ok) return alert('Failed to load user data');
 
         const user = await response.json();
-        
-        // Populate form fields
         document.getElementById('edit-user-id').value = user.id;
         document.getElementById('edit-username').value = user.username;
         document.getElementById('edit-email').value = user.email || '';
@@ -273,201 +243,86 @@ window.openEditModal = async (userId) => {
         document.getElementById('edit-last-name').value = user.last_name || '';
         document.getElementById('edit-is-admin').checked = user.is_admin;
         document.getElementById('edit-password').value = '';
-        
-        // Show modal
         document.getElementById('edit-modal').classList.add('active');
-        
     } catch (error) {
-        console.error('Edit modal error:', error);
         alert('Network error while loading user');
     }
 };
 
-/**
- * Close the edit user modal
- */
-window.closeEditModal = () => {
-    document.getElementById('edit-modal').classList.remove('active');
-};
-
-/**
- * Open the create user modal
- */
+window.closeEditModal = () => document.getElementById('edit-modal').classList.remove('active');
 window.openCreateModal = () => {
     document.getElementById('create-user-form').reset();
     document.getElementById('create-modal').classList.add('active');
 };
+window.closeCreateModal = () => document.getElementById('create-modal').classList.remove('active');
 
-/**
- * Close the create user modal
- */
-window.closeCreateModal = () => {
-    document.getElementById('create-modal').classList.remove('active');
-};
-
-/**
- * Delete a user by ID
- * @param {string} userId - UUID of the user to delete
- */
 window.deleteUser = async (userId) => {
-    if (!confirm("⚠️ Confirm deletion?\nThis action is irreversible.")) return;
-    
+    if (!confirm("⚠️ Confirm deletion?")) return;
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch(`${API_BASE}/users/${userId}`, {
+            method: 'DELETE', headers: authHeaders(token)
         });
-        
-        if (response.ok) {
-            await fetchUsers();
-            alert('User deleted successfully');
-        } else {
-            const error = await response.json();
-            alert(error.message || 'Delete failed');
-        }
-    } catch (error) {
-        console.error("Delete Error:", error);
-        alert('Network error during deletion');
-    }
+        if (response.ok) { await fetchUsers(); alert('User deleted'); }
+        else { const err = await response.json(); alert(err.message || 'Delete failed'); }
+    } catch (e) { alert('Network error'); }
 };
 
 // ============================================
-// 8. EVENT LISTENERS & FORMS
+// 9. EVENT LISTENERS & FORMS
 // ============================================
-
-/**
- * Setup all form event listeners
- */
 function setupEventListeners() {
     const editForm = document.getElementById('edit-user-form');
     const createForm = document.getElementById('create-user-form');
-    
-    // ==========================================
-    // EDIT USER FORM HANDLER
-    // ==========================================
+
     if (editForm) {
         editForm.onsubmit = async (e) => {
             e.preventDefault();
             const { token } = getAuthInfo();
-            
             const userId = document.getElementById('edit-user-id').value;
-            const email = document.getElementById('edit-email').value.trim();
-            const firstName = document.getElementById('edit-first-name').value.trim();
-            const lastName = document.getElementById('edit-last-name').value.trim();
             const password = document.getElementById('edit-password').value.trim();
-            const isAdmin = document.getElementById('edit-is-admin').checked;
-            
-            // Build payload
             const payload = {
-                email: email || null,
-                first_name: firstName || null,
-                last_name: lastName || null,
-                is_admin: isAdmin
+                email: document.getElementById('edit-email').value.trim() || null,
+                first_name: document.getElementById('edit-first-name').value.trim() || null,
+                last_name: document.getElementById('edit-last-name').value.trim() || null,
+                is_admin: document.getElementById('edit-is-admin').checked
             };
-            
-            // Only include password if provided
             if (password) payload.password = password;
-            
-            console.log('📤 Updating user:', userId, payload);
-            
             try {
-                const response = await fetch(`http://127.0.0.1:5000/users/${userId}`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
+                const response = await fetch(`${API_BASE}/users/${userId}`, {
+                    method: 'PUT', headers: authHeaders(token), body: JSON.stringify(payload)
                 });
-                
-                if (response.ok) {
-                    closeEditModal();
-                    await fetchUsers();
-                    alert('User updated successfully');
-                } else {
-                    const error = await response.json();
-                    console.error('❌ Update error:', error);
-                    alert(error.message || 'Update failed');
-                }
-            } catch (error) {
-                console.error('❌ Network error:', error);
-                alert('Network error');
-            }
+                if (response.ok) { closeEditModal(); await fetchUsers(); alert('User updated'); }
+                else { const err = await response.json(); alert(err.message || 'Update failed'); }
+            } catch (e) { alert('Network error'); }
         };
     }
-    
-    // ==========================================
-    // CREATE USER FORM HANDLER
-    // ==========================================
+
     if (createForm) {
         createForm.onsubmit = async (e) => {
             e.preventDefault();
             const { token } = getAuthInfo();
-            
-            // Extract form values directly (more reliable than FormData)
             const username = document.getElementById('create-username').value.trim();
             const email = document.getElementById('create-email').value.trim();
             const password = document.getElementById('create-password').value.trim();
-            const firstName = document.getElementById('create-first-name').value.trim();
-            const lastName = document.getElementById('create-last-name').value.trim();
-            const isAdmin = document.getElementById('create-is-admin').checked;
-            
-            // Validation
-            if (!username || !email || !password) {
-                alert('⚠️ Username, email, and password are required!');
-                return;
-            }
-            
-            if (password.length < 6) {
-                alert('⚠️ Password must be at least 6 characters!');
-                return;
-            }
-            
-            // Build payload
+            if (!username || !email || !password) return alert('⚠️ All fields required!');
+            if (password.length < 6) return alert('⚠️ Password min 6 chars!');
             const payload = {
-                username: username,
-                email: email,
-                password: password,
-                first_name: firstName || null,
-                last_name: lastName || null,
-                is_admin: isAdmin
+                username, email, password,
+                first_name: document.getElementById('create-first-name').value.trim() || null,
+                last_name: document.getElementById('create-last-name').value.trim() || null,
+                is_admin: document.getElementById('create-is-admin').checked
             };
-            
-            console.log('📤 Creating user:', payload);
-            
             try {
-                const response = await fetch('http://127.0.0.1:5000/users/', {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
+                const response = await fetch(`${API_BASE}/users/`, {
+                    method: 'POST', headers: authHeaders(token), body: JSON.stringify(payload)
                 });
-                
-                console.log('📡 Create response status:', response.status);
-                
-                if (response.ok) {
-                    closeCreateModal();
-                    await fetchUsers();
-                    alert('✅ User created successfully');
-                } else {
-                    const error = await response.json();
-                    console.error('❌ Creation error:', error);
-                    alert(`❌ Error: ${error.message || JSON.stringify(error)}`);
-                }
-            } catch (error) {
-                console.error('❌ Network error:', error);
-                alert('❌ Network error. Check console.');
-            }
+                if (response.ok) { closeCreateModal(); await fetchUsers(); alert('✅ User created'); }
+                else { const err = await response.json(); alert(`❌ ${err.message || JSON.stringify(err)}`); }
+            } catch (e) { alert('❌ Network error'); }
         };
     }
-    
-    // ==========================================
-    // LOGOUT BUTTON HANDLER
-    // ==========================================
+
     const logoutBtn = document.querySelector('.btn-logout-top');
     if (logoutBtn) {
         logoutBtn.onclick = () => {
@@ -479,197 +334,114 @@ function setupEventListeners() {
 }
 
 // ============================================
-// 9. TAB SYSTEM
+// 10. TAB SYSTEM
 // ============================================
-
-/**
- * Initialize tab switching functionality
- */
 function initTabSystem() {
     const tabs = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
-    
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.target;
-            
-            // Remove active class from all tabs and contents
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            
-            // Show target content
-            contents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === target) {
-                    content.classList.add('active');
-                }
+            contents.forEach(c => {
+                c.classList.remove('active');
+                if (c.id === target) c.classList.add('active');
             });
         });
     });
 }
 
 // ============================================
-// 10. USER FILTERS
+// 11. USER FILTERS
 // ============================================
-
-/**
- * Initialize search and role filtering for users
- */
 function initFilters() {
     const searchInput = document.getElementById('user-search');
     const roleFilter = document.getElementById('role-filter');
-    
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             const { isAdmin } = getAuthInfo();
-            
             if (!window.allUsers) return;
-            
-            // Apply both search and role filters
             const filtered = window.allUsers.filter(user => {
-                const matchesSearch = !query || 
+                const matchesSearch = !query ||
                     user.username.toLowerCase().includes(query) ||
                     (user.email && user.email.toLowerCase().includes(query));
-                
                 const role = roleFilter ? roleFilter.value : 'all';
                 const matchesRole = role === 'all' ||
                     (role === 'admin' && user.is_admin) ||
                     (role === 'staff' && !user.is_admin);
-                
                 return matchesSearch && matchesRole;
             });
-            
             renderUserTable(filtered, isAdmin);
         });
     }
-    
+
     if (roleFilter) {
         roleFilter.addEventListener('change', () => {
-            if (searchInput) {
-                // Trigger search input to reapply filters
-                searchInput.dispatchEvent(new Event('input'));
-            }
+            if (searchInput) searchInput.dispatchEvent(new Event('input'));
         });
     }
 }
 
 // ============================================
-// 11. TICKETING SYSTEM
+// 12. TICKETING SYSTEM
 // ============================================
-
-/**
- * Fetch all tickets from the API
- * Only accessible to admin users
- */
 async function fetchTickets() {
-    const { token, isAdmin } = getAuthInfo();
+    const { token } = getAuthInfo();
     if (!token) return;
 
-    console.log('🎫 Loading tickets...');
-
     try {
-        const response = await fetch('http://127.0.0.1:5000/tickets/', {
-            method: 'GET',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+        const response = await fetch(`${API_BASE}/tickets/`, {
+            method: 'GET', headers: authHeaders(token)
         });
 
-        console.log('📡 Tickets response status:', response.status);
-
         if (!response.ok) {
-            if (response.status === 401) {
-                alert('Session expired. Please login again.');
-                window.location.href = 'auth.html';
-                return;
-            }
-            if (response.status === 403) {
-                console.log('⚠️ Admin access required for tickets');
-                return;
-            }
+            if (response.status === 401) { window.location.href = 'auth.html'; return; }
+            if (response.status === 403) return;
             throw new Error(`Fetch failed: ${response.status}`);
         }
 
         const tickets = await response.json();
-        console.log('✅ Tickets loaded:', tickets);
-        
-        // Store globally for filtering
+        console.log('✅ Tickets loaded:', tickets.length);
         window.allTickets = tickets;
         renderTicketTable(tickets);
-        
-        // Update stats with both users and tickets
         updateStats(window.allUsers || [], tickets);
-        
-        return tickets;
     } catch (error) {
         console.error("❌ Ticket Fetch Error:", error);
-        alert('Error loading tickets. Check console for details.');
     }
 }
 
-/**
- * Render tickets in the table
- * @param {Array} tickets - Array of ticket objects
- */
 function renderTicketTable(tickets) {
     const tbody = document.getElementById('ticket-table-body');
-    
-    if (!tbody) {
-        console.error('❌ Ticket table body not found!');
-        return;
-    }
+    if (!tbody) return;
 
-    // Update ticket count badge
     const countBadge = document.getElementById('tickets-count');
     if (countBadge) countBadge.textContent = tickets.length;
-    
-    // Handle empty state
+
     if (!tickets || tickets.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No tickets found</td></tr>';
         return;
     }
-    
-    // Priority badge styles
+
     const priorityBadges = {
-        'high': '<span class="badge" style="background:#ef4444; color:white; padding:4px 8px; border-radius:4px;">🔴 High</span>',
-        'medium': '<span class="badge" style="background:#f59e0b; color:white; padding:4px 8px; border-radius:4px;">🟠 Medium</span>',
-        'low': '<span class="badge" style="background:#3b82f6; color:white; padding:4px 8px; border-radius:4px;">🔵 Low</span>'
+        'high': '<span class="badge" style="background:#ef4444;color:white;padding:4px 8px;border-radius:4px;">🔴 High</span>',
+        'medium': '<span class="badge" style="background:#f59e0b;color:white;padding:4px 8px;border-radius:4px;">🟠 Medium</span>',
+        'low': '<span class="badge" style="background:#3b82f6;color:white;padding:4px 8px;border-radius:4px;">🔵 Low</span>'
     };
-    
-    // Generate table rows
+
     tbody.innerHTML = tickets.map(ticket => {
-        // Format creation date
-        const date = new Date(ticket.created_at).toLocaleDateString('en-US', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-        
-        // Truncate description for preview
-        const description = ticket.description.length > 60 
-            ? ticket.description.substring(0, 60) + '...'
-            : ticket.description;
-        
+        const date = new Date(ticket.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+        const description = ticket.description.length > 60 ? ticket.description.substring(0, 60) + '...' : ticket.description;
         return `
             <tr>
                 <td><strong>#${ticket.id}</strong></td>
-                <td>
-                    <div style="max-width: 250px;">
-                        <strong>${ticket.subject}</strong><br>
-                        <small style="color: #6b7280;">${description}</small>
-                    </div>
-                </td>
-                <td>
-                    <small style="color: #6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small>
-                </td>
+                <td><div style="max-width:250px;"><strong>${ticket.subject}</strong><br><small style="color:#6b7280;">${description}</small></div></td>
+                <td><small style="color:#6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small></td>
                 <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
                 <td>
-                    <select class="status-select" 
-                            data-ticket-id="${ticket.id}" 
-                            data-current-status="${ticket.status}"
-                            onchange="handleStatusChange(${ticket.id}, this.value)">
+                    <select class="status-select" data-ticket-id="${ticket.id}" data-current-status="${ticket.status}" onchange="handleStatusChange(${ticket.id}, this.value)">
                         <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
                         <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟡 Pending</option>
                         <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>🟣 Closed</option>
@@ -678,304 +450,226 @@ function renderTicketTable(tickets) {
                 <td><small>${date}</small></td>
                 <td>
                     <div class="action-group">
-                        <button class="btn-action" onclick="viewTicket(${ticket.id})" title="View details">
-                            👁️ View
-                        </button>
-                        <button class="btn-action" onclick="openAdminNoteModal(${ticket.id})" title="Edit admin note">
-                            📝 Note
-                        </button>
-                        <button class="btn-danger" onclick="deleteTicket(${ticket.id})" title="Delete ticket">
-                            🗑️ Delete
-                        </button>
+                        <button class="btn-action" onclick="viewTicket(${ticket.id})">👁️</button>
+                        <button class="btn-action" onclick="openAdminNoteModal(${ticket.id})">📝</button>
+                        <button class="btn-danger" onclick="deleteTicket(${ticket.id})">🗑️</button>
                     </div>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     }).join('');
 }
 
-/**
- * Handle status change from dropdown
- * @param {number} ticketId - ID of the ticket
- * @param {string} newStatus - New status value
- */
 window.handleStatusChange = async (ticketId, newStatus) => {
-    const selectElement = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
-    const previousStatus = selectElement.dataset.currentStatus;
-    
-    // Confirm the change
-    if (!confirm(`Change ticket #${ticketId} status to "${newStatus}"?`)) {
-        // Revert to previous value if cancelled
-        selectElement.value = previousStatus;
-        return;
-    }
-    
+    const sel = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
+    const prev = sel.dataset.currentStatus;
+    if (!confirm(`Change ticket #${ticketId} to "${newStatus}"?`)) { sel.value = prev; return; }
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'PUT',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status: newStatus })
+        const res = await fetch(`${API_BASE}/tickets/${ticketId}`, {
+            method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ status: newStatus })
         });
-        
-        if (response.ok) {
-            console.log(`✅ Ticket ${ticketId} updated to ${newStatus}`);
-            selectElement.dataset.currentStatus = newStatus;
-            
-        } else {
-            alert('Failed to update status');
-            selectElement.value = previousStatus;
-        }
-    } catch (error) {
-        console.error('❌ Error:', error);
-        alert('Network error');
-        selectElement.value = previousStatus;
-    }
+        if (res.ok) sel.dataset.currentStatus = newStatus;
+        else { alert('Failed'); sel.value = prev; }
+    } catch (e) { alert('Network error'); sel.value = prev; }
 };
 
-/**
- * Open modal to add/edit admin note
- * @param {number} ticketId - ID of the ticket
- */
 window.openAdminNoteModal = async (ticketId) => {
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { headers: authHeaders(token) });
+        if (!res.ok) return alert('Failed');
+        const ticket = await res.json();
+        const note = prompt(`Admin Note #${ticket.id}\nCurrent: ${ticket.admin_note || '(none)'}`, ticket.admin_note || '');
+        if (note === null) return;
+        const upd = await fetch(`${API_BASE}/tickets/${ticketId}`, {
+            method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ admin_note: note })
         });
-
-        if (!response.ok) {
-            alert('Failed to load ticket');
-            return;
-        }
-
-        const ticket = await response.json();
-        
-        const adminNote = prompt(
-            `Admin Note for Ticket #${ticket.id}\nCurrent note: ${ticket.admin_note || '(none)'}\n\nEnter new admin note:`,
-            ticket.admin_note || ''
-        );
-        
-        if (adminNote === null) return; // User cancelled
-        
-        // Update ticket with new admin note
-        const updateResponse = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'PUT',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ admin_note: adminNote })
-        });
-        
-        if (updateResponse.ok) {
-            alert('✅ Admin note updated successfully');
-            fetchTickets();
-        } else {
-            alert('Failed to update admin note');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error:', error);
-        alert('Network error');
-    }
+        if (upd.ok) { alert('✅ Updated'); fetchTickets(); } else alert('Failed');
+    } catch (e) { alert('Network error'); }
 };
 
-/**
- * View full ticket details
- * @param {number} ticketId - ID of the ticket to view
- */
 window.viewTicket = async (ticketId) => {
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-            alert('Failed to load ticket details');
-            return;
-        }
-
-        const ticket = await response.json();
-        
-        // Format the ticket details for display
-        const createdAt = new Date(ticket.created_at).toLocaleString('en-US');
-        const adminNoteSection = ticket.admin_note 
-            ? `\n\n━━━━━━━━━━━━━━━━\nAdmin Note:\n${ticket.admin_note}`
-            : '';
-        
-        // Display in alert (you can create a better modal later)
-        alert(`
-🎫 Ticket #${ticket.id}
-━━━━━━━━━━━━━━━━
-Subject: ${ticket.subject}
-Priority: ${ticket.priority.toUpperCase()}
-Status: ${ticket.status.toUpperCase()}
-Created: ${createdAt}
-
-Description:
-${ticket.description}${adminNoteSection}
-        `);
-        
-    } catch (error) {
-        console.error('❌ Error loading ticket:', error);
-        alert('Network error while loading ticket');
-    }
+        const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { headers: authHeaders(token) });
+        if (!res.ok) return alert('Failed');
+        const t = await res.json();
+        const adminNote = t.admin_note ? `\n\nAdmin Note:\n${t.admin_note}` : '';
+        alert(`🎫 #${t.id}\nSubject: ${t.subject}\nPriority: ${t.priority}\nStatus: ${t.status}\n\n${t.description}${adminNote}`);
+    } catch (e) { alert('Network error'); }
 };
 
-/**
- * Delete a ticket by ID
- * @param {number} ticketId - ID of the ticket to delete
- */
 window.deleteTicket = async (ticketId) => {
-    if (!confirm('⚠️ Delete this ticket?\nThis action is irreversible.')) return;
-    
+    if (!confirm('Delete this ticket?')) return;
     const { token } = getAuthInfo();
-    
     try {
-        const response = await fetch(`http://127.0.0.1:5000/tickets/${ticketId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-            await fetchTickets(); // Refresh ticket list
-            alert('✅ Ticket deleted successfully');
-        } else {
-            const error = await response.json();
-            alert(error.message || 'Delete failed');
-        }
-    } catch (error) {
-        console.error('❌ Delete Error:', error);
-        alert('Network error during deletion');
-    }
+        const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { method: 'DELETE', headers: authHeaders(token) });
+        if (res.ok) { await fetchTickets(); alert('✅ Deleted'); }
+        else { const err = await res.json(); alert(err.message || 'Failed'); }
+    } catch (e) { alert('Network error'); }
 };
 
-/**
- * Initialize ticket filtering system
- */
 function initTicketFilters() {
     const statusFilter = document.getElementById('ticket-status-filter');
     const priorityFilter = document.getElementById('ticket-priority-filter');
-    
-    /**
-     * Apply all active filters to ticket list
-     */
-    const applyFilters = () => {
+    const apply = () => {
         if (!window.allTickets) return;
-        
-        const statusValue = statusFilter ? statusFilter.value : 'all';
-        const priorityValue = priorityFilter ? priorityFilter.value : 'all';
-        
-        console.log('🔍 Applying filters:', { status: statusValue, priority: priorityValue });
-        
-        // Filter tickets based on selected criteria
-        const filtered = window.allTickets.filter(ticket => {
-            const matchesStatus = statusValue === 'all' || ticket.status === statusValue;
-            const matchesPriority = priorityValue === 'all' || ticket.priority === priorityValue;
-            return matchesStatus && matchesPriority;
-        });
-        
-        console.log(`✅ Filtered: ${filtered.length} of ${window.allTickets.length} tickets`);
+        const sv = statusFilter ? statusFilter.value : 'all';
+        const pv = priorityFilter ? priorityFilter.value : 'all';
+        const filtered = window.allTickets.filter(t =>
+            (sv === 'all' || t.status === sv) && (pv === 'all' || t.priority === pv)
+        );
         renderTicketTable(filtered);
     };
-    
-    // Attach event listeners to filter controls
-    if (statusFilter) {
-        statusFilter.addEventListener('change', applyFilters);
-    }
-    
-    if (priorityFilter) {
-        priorityFilter.addEventListener('change', applyFilters);
-    }
+    if (statusFilter) statusFilter.addEventListener('change', apply);
+    if (priorityFilter) priorityFilter.addEventListener('change', apply);
 }
 
 // ============================================
-// 12. NAVBAR LOADING
+// 13. NAVBAR
 // ============================================
-
-/**
- * Load navbar from external HTML file
- */
 function loadNavbar() {
-    fetch('navbar.html')
-        .then(res => res.text())
-        .then(html => {
-            const placeholder = document.getElementById('navbar-placeholder');
-            if (placeholder) {
-                placeholder.innerHTML = html;
-                highlightActiveLink();
-                
-                // Update user avatar with first initial
-                const firstName = localStorage.getItem('first_name') || "A";
-                const avatar = document.getElementById('user-avatar');
-                if (avatar) {
-                    avatar.textContent = firstName.charAt(0).toUpperCase();
-                }
-            }
-        })
-        .catch(err => console.error("Navbar Error:", err));
+    fetch('navbar.html').then(r => r.text()).then(html => {
+        const el = document.getElementById('navbar-placeholder');
+        if (el) {
+            el.innerHTML = html;
+            highlightActiveLink();
+            const avatar = document.getElementById('user-avatar');
+            if (avatar) avatar.textContent = (localStorage.getItem('first_name') || 'A').charAt(0).toUpperCase();
+        }
+    }).catch(e => console.error("Navbar Error:", e));
 }
 
-/**
- * Highlight the active navigation link based on current page
- */
 function highlightActiveLink() {
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-    const navLinks = {
-        'index.html': 'nav-dashboard',
-        'inventory.html': 'nav-inventory',
-        'clients.html': 'nav-clients',
-        'doctors.html': 'nav-doctors',
-        'settings.html': 'nav-settings'
+    const page = window.location.pathname.split('/').pop() || 'index.html';
+    const map = {
+        'index.html': 'nav-dashboard', 'inventory.html': 'nav-inventory',
+        'clients.html': 'nav-clients', 'doctors.html': 'nav-doctors', 'settings.html': 'nav-settings'
     };
-    
-    const activeId = navLinks[currentPage];
-    if (activeId) {
-        const activeLink = document.getElementById(activeId);
-        if (activeLink) activeLink.classList.add('active');
-    }
+    const id = map[page];
+    if (id) { const link = document.getElementById(id); if (link) link.classList.add('active'); }
 }
 
 // ============================================
-// 13. CALENDAR MANAGER (SCHEDULES)
+// 14. CALENDAR MANAGER — BACKEND VERSION
 // ============================================
-
-// ============================================
-// 13. CALENDAR MANAGER - IMPROVED VERSION
-// ============================================
-
 const CalendarManager = {
     currentDate: new Date(),
     events: [],
-    hours: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00'],
+    hours: [
+        '08:00','09:00','10:00','11:00','12:00','13:00',
+        '14:00','15:00','16:00','17:00','18:00','19:00',
+        '20:00','21:00','22:00','23:00','00:00','01:00',
+        '02:00','03:00','04:00','05:00','06:00','07:00'
+    ],
 
-    init: () => {
-        console.log('📅 Initializing Calendar...');
-        CalendarManager.loadEvents();
+    // ─── INIT ───
+    init: async () => {
+        console.log('📅 Initializing Calendar (Backend Mode)...');
+        await CalendarManager.loadEvents();
         CalendarManager.render();
         CalendarManager.setupListeners();
     },
 
-    loadEvents: () => {
-        const stored = localStorage.getItem('pharma_events');
-        CalendarManager.events = stored ? JSON.parse(stored) : [];
+    // ─── LOAD FROM BACKEND (remplace localStorage) ───
+    loadEvents: async () => {
+        const { token } = getAuthInfo();
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/calendar/events/`, {
+                method: 'GET',
+                headers: authHeaders(token)
+            });
+
+            if (!response.ok) {
+                console.error('❌ Failed to load events:', response.status);
+                CalendarManager.events = [];
+                return;
+            }
+
+            CalendarManager.events = await response.json();
+            console.log(`✅ Loaded ${CalendarManager.events.length} events from backend`);
+
+        } catch (error) {
+            console.error('❌ Calendar load error:', error);
+            CalendarManager.events = [];
+        }
     },
 
-    saveEvents: () => {
-        localStorage.setItem('pharma_events', JSON.stringify(CalendarManager.events));
-        CalendarManager.render();
+    // ─── SAVE TO BACKEND (remplace localStorage) ───
+    saveEvent: async (eventData, existingId = null) => {
+        const { token } = getAuthInfo();
+        if (!token) return false;
+
+        const method = existingId ? 'PUT' : 'POST';
+        const url = existingId
+            ? `${API_BASE}/calendar/events/${existingId}`
+            : `${API_BASE}/calendar/events/`;
+
+        console.log(`📤 ${method} event:`, eventData);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: authHeaders(token),
+                body: JSON.stringify(eventData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                alert(`❌ Error: ${error.message || 'Save failed'}`);
+                return false;
+            }
+
+            const saved = await response.json();
+            console.log(`✅ Event ${existingId ? 'updated' : 'created'}:`, saved);
+
+            // Reload everything from backend
+            await CalendarManager.loadEvents();
+            CalendarManager.render();
+            fetchTodayStats(); // Refresh stats
+
+            return true;
+
+        } catch (error) {
+            console.error('❌ Save error:', error);
+            alert('Network error while saving event');
+            return false;
+        }
     },
 
+    // ─── DELETE FROM BACKEND ───
+    deleteEvent: async () => {
+        const id = document.getElementById('event-id').value;
+        if (!id || !confirm('Supprimer cet événement ?')) return;
+
+        const { token } = getAuthInfo();
+
+        try {
+            const response = await fetch(`${API_BASE}/calendar/events/${id}`, {
+                method: 'DELETE',
+                headers: authHeaders(token)
+            });
+
+            if (!response.ok) {
+                alert('Failed to delete event');
+                return;
+            }
+
+            CalendarManager.closeModal();
+            await CalendarManager.loadEvents();
+            CalendarManager.render();
+            fetchTodayStats();
+            alert('✅ Événement supprimé');
+
+        } catch (error) {
+            console.error('❌ Delete error:', error);
+            alert('Network error');
+        }
+    },
+
+    // ─── WEEK NAVIGATION ───
     getStartOfWeek: (date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -984,23 +678,28 @@ const CalendarManager = {
     },
 
     changeWeek: (direction) => {
-        CalendarManager.currentDate.setDate(CalendarManager.currentDate.getDate() + (direction * 7));
+        CalendarManager.currentDate.setDate(
+            CalendarManager.currentDate.getDate() + (direction * 7)
+        );
         CalendarManager.render();
     },
 
-    /**
-     * Vérifie si un événement (garde ou RDV) est actif pour une date et heure données
-     */
+    // ─── EVENT ACTIVE CHECK ───
     isEventActiveAt: (event, dateString, hour) => {
-        const eventStart = new Date(event.startDate + 'T' + event.startTime);
-        const eventEnd = new Date((event.endDate || event.startDate) + 'T' + event.endTime);
-        
-        // Construire la datetime du slot
+        // Handle both camelCase (from backend to_dict) and snake_case
+        const startDate = event.startDate || event.start_date;
+        const endDate = event.endDate || event.end_date || startDate;
+        const startTime = event.startTime || event.start_time;
+        const endTime = event.endTime || event.end_time;
+
+        const eventStart = new Date(startDate + 'T' + startTime);
+        const eventEnd = new Date(endDate + 'T' + endTime);
         const slotTime = new Date(dateString + 'T' + hour);
-        
+
         return slotTime >= eventStart && slotTime < eventEnd;
     },
 
+    // ─── RENDER CALENDAR ───
     render: () => {
         const grid = document.getElementById('calendar-grid');
         const label = document.getElementById('current-week-label');
@@ -1008,20 +707,20 @@ const CalendarManager = {
 
         grid.innerHTML = '';
         const startOfWeek = CalendarManager.getStartOfWeek(CalendarManager.currentDate);
-        
+
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(endOfWeek.getDate() + 6);
         label.textContent = `Semaine du ${startOfWeek.getDate()}/${startOfWeek.getMonth()+1} au ${endOfWeek.getDate()}/${endOfWeek.getMonth()+1}`;
 
-        // Mise à jour des en-têtes (Jours)
         const headers = document.querySelectorAll('.day-header');
-        for(let i=0; i<7; i++) {
+        const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+        for (let i = 0; i < 7; i++) {
             const dayDate = new Date(startOfWeek);
             dayDate.setDate(dayDate.getDate() + i);
-            const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
             headers[i].textContent = `${days[dayDate.getDay()]} ${dayDate.getDate()}`;
-            
-            if(dayDate.toDateString() === new Date().toDateString()) {
+
+            if (dayDate.toDateString() === new Date().toDateString()) {
                 headers[i].style.color = '#2563eb';
                 headers[i].style.background = '#eff6ff';
             } else {
@@ -1031,7 +730,6 @@ const CalendarManager = {
         }
 
         CalendarManager.hours.forEach(hour => {
-            // Label Heure
             const timeLabel = document.createElement('div');
             timeLabel.className = 'time-slot-label';
             timeLabel.textContent = hour;
@@ -1046,38 +744,39 @@ const CalendarManager = {
                 cell.className = 'calendar-slot';
                 cell.dataset.date = dateString;
                 cell.dataset.time = hour;
-                
+
                 cell.onclick = (e) => {
-                    if(e.target === cell) CalendarManager.openModal(null, dateString, hour);
+                    if (e.target === cell) CalendarManager.openModal(null, dateString, hour);
                 };
 
-                // NOUVELLE LOGIQUE : Afficher tous les événements actifs à ce moment
-                const cellEvents = CalendarManager.events.filter(evt => 
+                const cellEvents = CalendarManager.events.filter(evt =>
                     CalendarManager.isEventActiveAt(evt, dateString, hour)
                 );
 
                 cellEvents.forEach(evt => {
                     const div = document.createElement('div');
-                    div.className = `event-block event-${evt.type}`;
-                    
-                    if(evt.type === 'garde') {
-                        let userName = "Utilisateur inconnu";
-                        if(window.allUsers) {
+                    const evtType = evt.type;
+                    const evtId = evt.id;
+                    const startTime = evt.startTime || evt.start_time;
+                    const endTime = evt.endTime || evt.end_time;
+
+                    div.className = `event-block event-${evtType}`;
+
+                    if (evtType === 'garde') {
+                        // Use backend assignedUserName or fallback
+                        let userName = evt.assignedUserName || 'Inconnu';
+                        if (userName === 'Inconnu' && window.allUsers && evt.assignedUser) {
                             const u = window.allUsers.find(user => user.id === evt.assignedUser);
-                            if(u) userName = u.username;
+                            if (u) userName = u.username;
                         }
-                        
-                        // Afficher les heures de la garde
-                        div.innerHTML = `<strong>🚨 GARDE</strong><br>${userName}<br><small>${evt.startTime} - ${evt.endTime}</small>`;
-                        div.title = `Garde du ${evt.startDate} ${evt.startTime} au ${evt.endDate} ${evt.endTime}`;
+                        div.innerHTML = `<strong>🚨 GARDE</strong><br>${userName}<br><small>${startTime} - ${endTime}</small>`;
                     } else {
-                        // RDV
-                        div.innerHTML = `<strong>📅 ${evt.startTime}</strong> ${evt.title}`;
+                        div.innerHTML = `<strong>📅 ${startTime}</strong> ${evt.title}`;
                     }
-                    
+
                     div.onclick = (e) => {
                         e.stopPropagation();
-                        CalendarManager.openModal(evt.id);
+                        CalendarManager.openModal(evtId);
                     };
                     cell.appendChild(div);
                 });
@@ -1087,33 +786,34 @@ const CalendarManager = {
         });
     },
 
+    // ─── OPEN MODAL ───
     openModal: (id = null, date = null, time = null) => {
         const modal = document.getElementById('event-modal');
         const form = document.getElementById('event-form');
         const deleteBtn = document.getElementById('btn-delete-event');
-        
+
         CalendarManager.populateUserSelects();
 
         if (id) {
             const evt = CalendarManager.events.find(e => e.id == id);
-            if(!evt) return;
+            if (!evt) return;
 
             document.getElementById('event-modal-title').textContent = 'Modifier l\'événement';
             document.getElementById('event-id').value = evt.id;
             document.getElementById('event-type').value = evt.type;
             document.getElementById('event-notes').value = evt.notes || '';
-            document.getElementById('event-start-date').value = evt.startDate;
-            document.getElementById('event-end-date').value = evt.endDate || evt.startDate;
-            document.getElementById('event-start-time').value = evt.startTime;
-            document.getElementById('event-end-time').value = evt.endTime;
-            
-            if(evt.type === 'rdv') {
-                document.getElementById('event-title').value = evt.title;
+            document.getElementById('event-start-date').value = evt.startDate || evt.start_date;
+            document.getElementById('event-end-date').value = evt.endDate || evt.end_date || evt.startDate || evt.start_date;
+            document.getElementById('event-start-time').value = evt.startTime || evt.start_time;
+            document.getElementById('event-end-time').value = evt.endTime || evt.end_time;
+
+            if (evt.type === 'rdv') {
+                document.getElementById('event-title').value = evt.title || '';
                 document.getElementById('event-sales-rep').value = evt.salesRep || '';
             } else {
                 document.getElementById('event-assigned-user').value = evt.assignedUser || '';
             }
-            
+
             deleteBtn.style.display = 'block';
         } else {
             form.reset();
@@ -1121,11 +821,11 @@ const CalendarManager = {
             document.getElementById('event-id').value = '';
             document.getElementById('event-start-date').value = date || new Date().toISOString().split('T')[0];
             document.getElementById('event-end-date').value = date || new Date().toISOString().split('T')[0];
-            
-            if(time) {
+
+            if (time) {
                 document.getElementById('event-start-time').value = time;
                 let h = parseInt(time.split(':')[0]) + 1;
-                document.getElementById('event-end-time').value = h.toString().padStart(2,'0') + ':00';
+                document.getElementById('event-end-time').value = h.toString().padStart(2, '0') + ':00';
             } else {
                 document.getElementById('event-start-time').value = '09:00';
                 document.getElementById('event-end-time').value = '10:00';
@@ -1141,115 +841,104 @@ const CalendarManager = {
         document.getElementById('event-modal').classList.remove('active');
     },
 
+    // ─── POPULATE USER SELECTS ───
     populateUserSelects: () => {
         const repSelect = document.getElementById('event-sales-rep');
         const userSelect = document.getElementById('event-assigned-user');
-        
-        if(!window.allUsers) return;
+        if (!window.allUsers) return;
 
         const createOptions = (selectElement) => {
-            if(selectElement.children.length <= 1) {
-                window.allUsers.forEach(u => {
-                    const opt = document.createElement('option');
-                    opt.value = u.id;
-                    opt.textContent = `${u.username} (${u.first_name || ''} ${u.last_name || ''})`;
-                    selectElement.appendChild(opt);
-                });
+            // Clear all except first option
+            while (selectElement.children.length > 1) {
+                selectElement.removeChild(selectElement.lastChild);
             }
+            window.allUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.username} (${u.first_name || ''} ${u.last_name || ''})`;
+                selectElement.appendChild(opt);
+            });
         };
 
         createOptions(repSelect);
         createOptions(userSelect);
     },
 
+    // ─── TOGGLE FIELDS ───
     toggleFields: () => {
         const type = document.getElementById('event-type').value;
         const groupRdv = document.getElementById('group-rdv');
         const groupGarde = document.getElementById('group-garde');
-        
-        if(type === 'garde') {
+
+        if (type === 'garde') {
             groupRdv.style.display = 'none';
             groupGarde.style.display = 'block';
-            
             document.getElementById('event-title').required = false;
             document.getElementById('event-assigned-user').required = true;
         } else {
             groupRdv.style.display = 'block';
             groupGarde.style.display = 'none';
-            
             document.getElementById('event-title').required = true;
             document.getElementById('event-assigned-user').required = false;
         }
     },
 
+    // ─── FORM SUBMIT → BACKEND ───
     setupListeners: () => {
         const form = document.getElementById('event-form');
-        if(form) {
-            form.onsubmit = (e) => {
+
+        if (form) {
+            form.onsubmit = async (e) => {
                 e.preventDefault();
+
                 const id = document.getElementById('event-id').value;
                 const type = document.getElementById('event-type').value;
                 const startDate = document.getElementById('event-start-date').value;
                 const endDate = document.getElementById('event-end-date').value || startDate;
                 const startTime = document.getElementById('event-start-time').value;
                 const endTime = document.getElementById('event-end-time').value;
-                
-                let newEvent = {
-                    id: id ? parseInt(id) : Date.now(),
+
+                // Validation
+                if (endDate < startDate) {
+                    return alert("La date de fin ne peut pas être avant la date de début !");
+                }
+                if (startDate === endDate && endTime <= startTime) {
+                    return alert("L'heure de fin doit être après l'heure de début !");
+                }
+
+                // Build payload for backend
+                let payload = {
                     type: type,
                     startDate: startDate,
                     endDate: endDate,
                     startTime: startTime,
                     endTime: endTime,
-                    notes: document.getElementById('event-notes').value
+                    notes: document.getElementById('event-notes').value || null
                 };
 
-                if(type === 'rdv') {
-                    newEvent.title = document.getElementById('event-title').value;
-                    newEvent.salesRep = document.getElementById('event-sales-rep').value;
+                if (type === 'rdv') {
+                    payload.title = document.getElementById('event-title').value;
+                    payload.salesRep = document.getElementById('event-sales-rep').value || null;
+                    payload.assignedUser = null;
                 } else {
-                    newEvent.assignedUser = document.getElementById('event-assigned-user').value;
-                    newEvent.title = "Garde";
+                    payload.title = 'Garde';
+                    payload.assignedUser = document.getElementById('event-assigned-user').value;
+                    payload.salesRep = null;
                 }
 
-                // Validation
-                if(endDate < startDate) {
-                    alert("La date de fin ne peut pas être avant la date de début !");
-                    return;
-                }
-                
-                // Validation des heures si même jour
-                if(startDate === endDate && endTime <= startTime) {
-                    alert("L'heure de fin doit être après l'heure de début !");
-                    return;
-                }
+                // Save to backend (POST or PUT)
+                const success = await CalendarManager.saveEvent(payload, id || null);
 
-                if(id) {
-                    const idx = CalendarManager.events.findIndex(e => e.id == id);
-                    if(idx !== -1) CalendarManager.events[idx] = newEvent;
-                } else {
-                    CalendarManager.events.push(newEvent);
+                if (success) {
+                    CalendarManager.closeModal();
+                    alert('✅ Événement enregistré !');
                 }
-                
-                CalendarManager.saveEvents();
-                CalendarManager.closeModal();
-                alert('✅ Événement enregistré !');
             };
         }
-        
-        // Listener pour le changement de type
+
         const typeSelect = document.getElementById('event-type');
-        if(typeSelect) {
+        if (typeSelect) {
             typeSelect.addEventListener('change', () => CalendarManager.toggleFields());
         }
-    },
-
-    deleteEvent: () => {
-        const id = document.getElementById('event-id').value;
-        if(!id || !confirm('Supprimer cet événement ?')) return;
-        CalendarManager.events = CalendarManager.events.filter(e => e.id != id);
-        CalendarManager.saveEvents();
-        CalendarManager.closeModal();
-        alert('✅ Événement supprimé');
     }
 };
