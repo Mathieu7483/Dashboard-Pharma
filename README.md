@@ -53,15 +53,19 @@ Directory structure:
     │   ├── index.html
     │   ├── inventory.html
     │   ├── navbar.html
+    │   ├── settings.html
     │   ├── css/
+    │   │   ├── admin-panel.css
     │   │   ├── auth.css
+    │   │   ├── calendar.css
     │   │   └── style.css
     │   └── javascript/
     │       ├── auth.js
     │       ├── clients.js
     │       ├── dashboard.js
     │       ├── doctors.js
-    │       └── inventory.js
+    │       ├── inventory.js
+    │       └── settings.js
     └── Server/
         ├── app.py
         ├── config.py
@@ -76,6 +80,7 @@ Directory structure:
         │   ├── inventory.py
         │   ├── products.py
         │   ├── sales.py
+        │   ├── tickets.py
         │   └── users.py
         ├── core/
         │   └── chatbot/
@@ -83,15 +88,17 @@ Directory structure:
         │       └── NLUProcessor.py
         ├── database/
         │   ├── __init__.py
-        │   ├── data_manager.py
-        │   └── initial_inventory.csv
+        │   └── data_manager.py
         ├── models/
         │   ├── __init__.py
         │   ├── basemodel.py
         │   ├── client.py
         │   ├── doctor.py
+        │   ├── interaction.py
         │   ├── product.py
+        │   ├── product_alias.py
         │   ├── sale.py
+        │   ├── ticket.py
         │   └── user.py
         ├── services/
         │   ├── __init__.py
@@ -103,8 +110,11 @@ Directory structure:
             ├── __init__.py
             ├── data_seed.json
             ├── decorator.py
+            ├── initial_inventory.csv
+            ├── seed_aliases.py
             ├── seed_sales.py
             └── seeder.py
+
 
 
 ```
