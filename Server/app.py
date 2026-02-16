@@ -1,33 +1,45 @@
+import os
+from datetime import timedelta
+from dotenv import load_dotenv
 from flask import Flask
 from flask_restx import Api
 from flask_cors import CORS
+
+# Local imports
 from config import DevelopmentConfig
 from database.data_manager import db, bcrypt, jwt
 from utils.seeder import seed_all_initial_data
-import os
-from dotenv import load_dotenv
-from datetime import timedelta
 
+# Load environment variables
 load_dotenv()
-basedir = os.path.abspath(os.path.dirname(__file__))
-database = os.path.join(basedir, 'database')
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Configuration JWT
+    # --- Configuration Path & Database ---
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    database_dir = os.path.join(basedir, 'database')
+    
+    # Ensure database directory exists
+    if not os.path.exists(database_dir):
+        os.makedirs(database_dir)
+
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(database, 'database.sqlite')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+        'DATABASE_URL', 
+        'sqlite:///' + os.path.join(database_dir, 'database.sqlite')
+    )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # --- Extensions ---
+    # --- Extensions Initialization ---
     CORS(app)
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    # --- Initialization Flask-RESTX ---
+    # --- Flask-RESTX Setup ---
     authorizations = {
         'apikey': {
             'type': 'apiKey',
@@ -46,7 +58,7 @@ def create_app(config_class=DevelopmentConfig):
         security='apikey'
     )
 
-    # --- Import & Register Namespaces ---
+    # --- Register Namespaces ---
     from api.users import users_ns 
     from api.products import products_ns
     from api.sales import sales_ns
@@ -57,35 +69,45 @@ def create_app(config_class=DevelopmentConfig):
     from api.chatbot import ns as chatbot_ns
     from api.inventory import inventory_ns
     from api.tickets import tickets_ns
+    from api.calendar_events import calendar_ns
 
     api.add_namespace(auth_ns, path='/auth')
+    api.add_namespace(users_ns, path='/users')
     api.add_namespace(products_ns, path='/products')
     api.add_namespace(sales_ns, path='/sales')
-    api.add_namespace(users_ns, path='/users')
     api.add_namespace(doctors_ns, path='/doctors')
     api.add_namespace(clients_ns, path='/clients')
     api.add_namespace(analytics_ns, path='/analytics')
     api.add_namespace(chatbot_ns, path='/chatbot')
     api.add_namespace(inventory_ns, path='/inventory')
     api.add_namespace(tickets_ns, path='/tickets')
+    api.add_namespace(calendar_ns, path='/calendar')
 
-
-    # --- Models Import pour SQLAlchemy ---
+    # --- Critical Models Import for SQLAlchemy Registry ---
     with app.app_context():
-        from models import user, product, sale, client, doctor, interaction, product_alias
+        # Import all models to ensure relationships are mapped correctly
+        from models import (
+            user, product, sale, client, doctor, interaction, product_alias, calendar
+        )
 
     return app
 
-# --- EXECUTION ---
+# --- Execution Entry Point ---
 if __name__ == '__main__':
     app = create_app()
     
     with app.app_context():
-        print("--- Database Initialization ---")
+        print("\n--- 🔧 Database Initialization ---")
         db.create_all() 
-        seed_all_initial_data()
+        
+        print("--- 🌱 Global Seeding Process ---")
+        try:
+            seed_all_initial_data()
+            print("✅ Seeding completed successfully.")
+        except Exception as e:
+            print(f"❌ Seeding failed: {str(e)}")
 
-    print("\n--- Starting Pharma Server ---")
+    print("\n--- 🚀 Starting Pharma Server ---")
     print("Documentation: http://127.0.0.1:5000/docs")
     
     app.run(debug=True, port=5000)
