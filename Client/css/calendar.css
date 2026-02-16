@@ -1,4 +1,7 @@
-/* CALENDAR STYLES - ADAPTED TO AUTH THEME */
+/* ============================================================
+   CALENDAR STYLES - PHARMA DASHBOARD
+   ============================================================ */
+
 :root {
     --color-primary: #1E90FF;
     --color-secondary: #00FF7F;
@@ -7,22 +10,28 @@
     --color-background-end: #F0FFF0;
     --color-text-dark: #333;
     --calendar-border: rgba(30, 144, 255, 0.2);
+    --scrollbar-width: 8px; /* Defined to synchronize header and grid */
 }
 
+/* Main container for the calendar */
 .calendar-wrapper {
     background: white;
-    border-radius: 12px; /* Accordé à auth-container */
+    border-radius: 12px;
     border: 1px solid var(--calendar-border);
     overflow: hidden;
     margin-top: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
 }
 
+/* Header row (Days of the week) */
 .calendar-header {
     display: grid;
     grid-template-columns: 60px repeat(7, 1fr);
     background: var(--color-background-mid); 
     border-bottom: 2px solid var(--color-primary);
+    padding-right: var(--scrollbar-width); 
 }
 
 .day-header {
@@ -33,13 +42,16 @@
     border-right: 1px solid var(--calendar-border);
 }
 
+/* Scrolling grid area */
 .calendar-grid {
     display: grid;
     grid-template-columns: 60px repeat(7, 1fr);
-    max-height: 600px;
-    overflow-y: auto;
+    overflow-y: scroll; /* Changed to 'scroll' to always keep the gutter visible */
+    overflow-x: hidden;
+    max-height: 600px; /* Adjust based on your UI needs */
 }
 
+/* Time labels on the left (e.g., 08:00) */
 .time-slot-label {
     padding: 10px 5px;
     text-align: right;
@@ -51,8 +63,10 @@
     background: var(--color-background-end);
     position: sticky;
     left: 0;
+    z-index: 2;
 }
 
+/* Individual cell in the calendar */
 .calendar-slot {
     border-right: 1px solid var(--calendar-border);
     border-bottom: 1px solid var(--calendar-border);
@@ -60,12 +74,14 @@
     position: relative;
     cursor: pointer;
     transition: background 0.2s;
+    box-sizing: border-box;
 }
 
 .calendar-slot:hover {
     background-color: var(--color-background-mid);
 }
 
+/* Event cards inside slots */
 .event-block {
     margin: 3px;
     padding: 6px;
@@ -82,6 +98,7 @@
     transform: scale(1.02);
 }
 
+/* Type-specific event colors */
 .event-rdv {
     background: linear-gradient(135deg, var(--color-primary), #00bfff); 
     border-left: 4px solid var(--color-primary);
@@ -92,9 +109,9 @@
     border-left: 4px solid #b91c1c;
 }
 
-
+/* Custom scrollbar styling */
 .calendar-grid::-webkit-scrollbar {
-    width: 8px;
+    width: var(--scrollbar-width);
 }
 .calendar-grid::-webkit-scrollbar-track {
     background: var(--color-background-end);
@@ -104,9 +121,36 @@
     border-radius: 10px;
 }
 
-/* ============================================
-   MODAL STYLE (AUTH THEME ADAPTATION)
-   ============================================ */
+/* ============================================================
+   MODAL STYLES
+   ============================================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
 
 .modal-content {
     background: white;
@@ -115,15 +159,11 @@
     width: 700px; 
     max-width: 90%;
     position: relative;
-    z-index: 1001;
-    
-   
     box-shadow: 
         0 10px 30px rgba(0, 0, 0, 0.2), 
         0 0 15px var(--color-primary),
         0 0 30px var(--color-secondary);
     border: 1px solid rgba(30, 144, 255, 0.3);
-    transition: all 0.3s ease;
 }
 
 .modal-header h3 {
@@ -134,11 +174,8 @@
     font-family: 'Open Sans', sans-serif;
 }
 
-
-.modal-form input[type="text"],
-.modal-form input[type="date"],
-.modal-form input[type="time"],
-.modal-form input[type="email"],
+/* Form inputs styling */
+.modal-form input,
 .modal-form select,
 .modal-form textarea {
     width: 100%;
@@ -147,27 +184,14 @@
     margin-top: 5px;
     border: 1px solid #ccc;
     border-radius: 6px;
-    font-family: inherit;
     transition: all 0.2s;
 }
 
-
-.modal-form input:focus, 
-.modal-form select:focus, 
-.modal-form textarea:focus {
+.modal-form input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
 }
-
-.modal-form label {
-    display: block;
-    margin-top: 15px;
-    font-weight: 600;
-    color: var(--color-text-dark);
-    font-size: 0.9em;
-}
-
 
 .modal-footer {
     display: flex;
@@ -181,8 +205,8 @@
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
-    transition: opacity 0.2s, transform 0.2s;
     border: none;
+    transition: transform 0.2s;
 }
 
 .btn-primary {
@@ -201,35 +225,6 @@
 }
 
 .modal-footer button:hover {
-    opacity: 0.9;
     transform: translateY(-1px);
-}
-
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
-    z-index: 1000;
-}
-
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal.active {
-    display: flex;
+    opacity: 0.9;
 }
