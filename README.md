@@ -67,6 +67,32 @@ Directory structure:
     │       ├── inventory.js
     │       └── settings.js
     └── Server/
+        ├── app.Directory structure:
+└── mathieu7483-dashboard-pharma/
+    ├── README.md
+    ├── LICENSE
+    ├── requirements.txt
+    ├── Client/
+    │   ├── auth.html
+    │   ├── clients.html
+    │   ├── doctors.html
+    │   ├── index.html
+    │   ├── inventory.html
+    │   ├── navbar.html
+    │   ├── settings.html
+    │   ├── css/
+    │   │   ├── admin-panel.css
+    │   │   ├── auth.css
+    │   │   ├── calendar.css
+    │   │   └── style.css
+    │   └── javascript/
+    │       ├── auth.js
+    │       ├── clients.js
+    │       ├── dashboard.js
+    │       ├── doctors.js
+    │       ├── inventory.js
+    │       └── settings.js
+    └── Server/
         ├── app.py
         ├── config.py
         ├── run.py
@@ -74,6 +100,7 @@ Directory structure:
         │   ├── __init__.py
         │   ├── analytics.py
         │   ├── auth.py
+        │   ├── calendar_events.py
         │   ├── chatbot.py
         │   ├── clients.py
         │   ├── doctors.py
@@ -92,6 +119,7 @@ Directory structure:
         ├── models/
         │   ├── __init__.py
         │   ├── basemodel.py
+        │   ├── calendar.py
         │   ├── client.py
         │   ├── doctor.py
         │   ├── interaction.py
@@ -114,8 +142,6 @@ Directory structure:
             ├── seed_aliases.py
             ├── seed_sales.py
             └── seeder.py
-
-
 
 ```
 ----
