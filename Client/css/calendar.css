@@ -1,107 +1,112 @@
 /* ============================================================
-   CALENDAR STYLES - PHARMA DASHBOARD
+   1. VARIABLES & RESET
    ============================================================ */
-
 :root {
-    --color-primary: #1E90FF;
-    --color-secondary: #00FF7F;
-    --color-background-start: #FFFFFF;
-    --color-background-mid: #E0FFFF;
-    --color-background-end: #F0FFF0;
-    --color-text-dark: #333;
-    --calendar-border: rgba(30, 144, 255, 0.2);
-    --scrollbar-width: 8px; /* Defined to synchronize header and grid */
+    --primary: #1E90FF;
+    --secondary: #00FF7F;
+    --bg-white: #ffffff;
+    --bg-light: #E0FFFF;
+    --bg-soft: #F0FFF0;
+    --text-dark: #333;
+    --border-soft: rgba(30, 144, 255, 0.2);
+    --radius: 12px;
+    --scrollbar-size: 8px;
 }
 
-/* Main container for the calendar */
-.calendar-wrapper {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid var(--calendar-border);
+body.modal-open {
     overflow: hidden;
-    margin-top: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================================
+   2. CALENDAR LAYOUT
+   ============================================================ */
+.calendar-wrapper {
     display: flex;
     flex-direction: column;
+    margin-top: 15px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
-/* Header row (Days of the week) */
 .calendar-header {
     display: grid;
     grid-template-columns: 60px repeat(7, 1fr);
-    background: var(--color-background-mid); 
-    border-bottom: 2px solid var(--color-primary);
-    padding-right: var(--scrollbar-width); 
+    background: var(--bg-light);
+    border-bottom: 2px solid var(--primary);
+    padding-right: var(--scrollbar-size);
 }
 
 .day-header {
     padding: 12px;
     text-align: center;
     font-weight: 700;
-    color: var(--color-primary);
-    border-right: 1px solid var(--calendar-border);
+    color: var(--primary);
+    border-right: 1px solid var(--border-soft);
 }
 
-/* Scrolling grid area */
+/* ============================================================
+   3. GRID & SLOTS
+   ============================================================ */
 .calendar-grid {
     display: grid;
     grid-template-columns: 60px repeat(7, 1fr);
-    overflow-y: scroll; /* Changed to 'scroll' to always keep the gutter visible */
+    max-height: 600px;
+    overflow-y: scroll;
     overflow-x: hidden;
-    max-height: 600px; /* Adjust based on your UI needs */
 }
 
-/* Time labels on the left (e.g., 08:00) */
 .time-slot-label {
-    padding: 10px 5px;
-    text-align: right;
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--color-primary);
-    border-right: 1px solid var(--calendar-border);
-    border-bottom: 1px solid var(--calendar-border);
-    background: var(--color-background-end);
     position: sticky;
     left: 0;
     z-index: 2;
+    padding: 8px 5px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
 }
 
-/* Individual cell in the calendar */
 .calendar-slot {
-    border-right: 1px solid var(--calendar-border);
-    border-bottom: 1px solid var(--calendar-border);
     min-height: 60px;
     position: relative;
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
     cursor: pointer;
-    transition: background 0.2s;
-    box-sizing: border-box;
+    transition: background 0.2s ease;
 }
 
 .calendar-slot:hover {
-    background-color: var(--color-background-mid);
+    background: var(--bg-light);
 }
 
-/* Event cards inside slots */
+/* ============================================================
+   4. EVENTS
+   ============================================================ */
 .event-block {
     margin: 3px;
     padding: 6px;
-    border-radius: 6px;
     font-size: 11px;
-    color: white;
-    cursor: pointer;
     font-weight: 600;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.1s;
+    transition: transform 0.1s ease;
 }
 
 .event-block:hover {
     transform: scale(1.02);
 }
 
-/* Type-specific event colors */
 .event-rdv {
-    background: linear-gradient(135deg, var(--color-primary), #00bfff); 
-    border-left: 4px solid var(--color-primary);
+    background: linear-gradient(135deg, var(--primary), #00bfff);
+    border-left: 4px solid var(--primary);
 }
 
 .event-garde {
@@ -109,40 +114,13 @@
     border-left: 4px solid #b91c1c;
 }
 
-/* Custom scrollbar styling */
-.calendar-grid::-webkit-scrollbar {
-    width: var(--scrollbar-width);
-}
-.calendar-grid::-webkit-scrollbar-track {
-    background: var(--color-background-end);
-}
-.calendar-grid::-webkit-scrollbar-thumb {
-    background: var(--color-primary);
-    border-radius: 10px;
-}
-
 /* ============================================================
-   MODAL STYLES
+   5. MODAL SYSTEM
    ============================================================ */
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
-    z-index: 1000;
-}
-
 .modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -152,65 +130,81 @@
     display: flex;
 }
 
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1;
+}
+
 .modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    width: 700px; 
-    max-width: 90%;
     position: relative;
-    box-shadow: 
-        0 10px 30px rgba(0, 0, 0, 0.2), 
-        0 0 15px var(--color-primary),
-        0 0 30px var(--color-secondary);
-    border: 1px solid rgba(30, 144, 255, 0.3);
+    z-index: 2;
+    width: 650px;
+    max-width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(30,144,255,0.2);
+    box-shadow: 0 0 10px #1E90FF, 0 0 25px #1E90FF, 0 0 45px #00FF7F, 0 10px 30px rgba(0,0,0,0.3);
 }
 
-.modal-header h3 {
-    color: var(--color-primary);
-    text-align: center;
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    font-family: 'Open Sans', sans-serif;
+/* Modal Content Structure */
+.modal-header {
+    padding: 18px 20px 10px;
+    flex-shrink: 0;
 }
 
-/* Form inputs styling */
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0 20px 15px;
+    overflow: hidden; /* No scroll per your request */
+}
+
+.modal-form > *:not(.modal-footer) {
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   6. FORM ELEMENTS & BUTTONS
+   ============================================================ */
+.form-row {
+    margin-bottom: 6px;
+}
+
 .modal-form input,
 .modal-form select,
 .modal-form textarea {
+    padding: 8px;
+    font-size: 13px;
     width: 100%;
     box-sizing: border-box;
-    padding: 12px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.modal-form input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
 }
 
 .modal-footer {
+    margin-top: auto;
+    padding-top: 15px;
     display: flex;
-    gap: 10px;
-    margin-top: 25px;
     justify-content: flex-end;
+    gap: 10px;
 }
 
 .modal-footer button {
-    padding: 12px 20px;
-    font-weight: bold;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
     border-radius: 6px;
-    cursor: pointer;
     border: none;
-    transition: transform 0.2s;
+    cursor: pointer;
 }
 
 .btn-primary {
-    background: linear-gradient(45deg, var(--color-primary), var(--color-secondary));
+    background: linear-gradient(45deg, #1E90FF, #00FF7F);
     color: white;
 }
 
@@ -224,7 +218,23 @@
     color: white;
 }
 
-.modal-footer button:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
+/* ============================================================
+   7. SCROLLBAR CUSTOMIZATION
+   ============================================================ */
+.calendar-grid::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+}
+
+.calendar-grid::-webkit-scrollbar-track {
+    background: var(--bg-soft);
+}
+
+.calendar-grid::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+/* Hide scrollbar on modal content while keeping logic */
+.modal-content::-webkit-scrollbar {
+    display: none;
 }
