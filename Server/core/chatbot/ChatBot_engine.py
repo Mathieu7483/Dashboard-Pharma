@@ -1,9 +1,10 @@
 """
 Server/core/chatbot/ChatBot_engine.py
-🆕 Enhanced with multi-category search - shows ALL matching results
+Enhanced with multi-category search - shows ALL matching results
 """
 
 from sqlalchemy import inspect, or_, func, cast, Date
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 from database.data_manager import db
 from models.product import ProductModel
@@ -12,12 +13,15 @@ from models.doctor import DoctorModel
 from models.sale import SaleModel
 from models.interaction import InteractionModel
 from models.product_alias import ProductAliasModel
+from models.ticket import Ticket
+from models.user import UserModel
+from models.calendar import CalendarEvent 
 from core.chatbot.NLUProcessor import NLUProcessor
 
 class ChatBotEngine:
     """
     Core chatbot orchestrator with multi-category search.
-    🆕 Now shows products, clients, AND doctors in same query.
+    Shows products, clients, AND doctors in same query.
     """
 
     def __init__(self):
@@ -26,22 +30,14 @@ class ChatBotEngine:
     def process_query(self, user_text: str) -> str:
         """
         Main entry point for chatbot queries.
-        
-        Args:
-            user_text: User's natural language query
-            
-        Returns:
-            Formatted markdown response
         """
         if not user_text or not user_text.strip():
             return "❓ **Posez une question.** Exemples : 'Stock Doliprane' ou 'Ventes du jour'"
         
-        # Analyze with NLU
         analysis = self.nlu.analyze(user_text)
         intent = analysis.get("intent")
         entities = analysis.get("entity_list", [])
         
-        # Route to specialized handlers
         try:
             if intent == "check_interaction":
                 return self._handle_interaction_check(entities)
@@ -63,8 +59,15 @@ class ChatBotEngine:
             
             elif intent == "get_contact_info":
                 return self._handle_contact_search(entities)
+
+            # BUG FIX: intent names now match NLU patterns ("search ticket" and "calendar")
+            elif intent == "search ticket":
+                return self._handle_ticket_info(entities)
             
-            # 🆕 MULTI-CATEGORY SEARCH (default)
+            elif intent == "calendar":
+                return self._handle_calendar_events(entities)
+            
+            # Multi-category search fallback (covers get_product, get_doctor, get_client, list_all, etc.)
             else:
                 if not entities:
                     return self._generate_help_message()
@@ -86,7 +89,6 @@ class ChatBotEngine:
         name_clean = product_name.strip()
     
         try:
-            # 1. Search in ALIASES table (Exact match, case-insensitive)
             alias_result = db.session.execute(
                 db.select(ProductAliasModel).where(
                     ProductAliasModel.alias.ilike(f"{name_clean}")
@@ -96,7 +98,6 @@ class ChatBotEngine:
             if alias_result:
                 return (alias_result.active_ingredient, name_clean)
 
-            # 2. Search in PRODUCTS table (Fuzzy match)
             product = db.session.execute(
                 db.select(ProductModel)
                 .where(ProductModel.name.ilike(f"%{name_clean}%"))
@@ -106,7 +107,6 @@ class ChatBotEngine:
             if product:
                 return (product.active_ingredient, product.name)
 
-            # 3. Fallback : we could not resolve, return input as-is
             return (name_clean.capitalize(), name_clean.capitalize())
 
         except Exception as e:
@@ -125,7 +125,6 @@ class ChatBotEngine:
                    "   • 'Warfarine et Plavix interaction ?'\n"
                    "   • 'Puis-je mélanger Aspirine et Advil ?'")
 
-        # Step 1: Resolve all names to active ingredients
         resolved = []
         display_names = []
         
@@ -136,7 +135,6 @@ class ChatBotEngine:
         
         print(f"🔬 Resolved ingredients: {list(zip(display_names, resolved))}")
         
-        # Step 2: Query interactions (bidirectional check)
         conflicts = []
         for i in range(len(resolved)):
             for j in range(i + 1, len(resolved)):
@@ -159,7 +157,6 @@ class ChatBotEngine:
                         'name_b': display_names[j]
                     })
         
-        # Step 3: Format response
         if not conflicts:
             return (f"✅ **Aucune interaction connue** entre :\n"
                    f"   • {' + '.join(display_names)}\n\n"
@@ -379,29 +376,116 @@ class ChatBotEngine:
         
         return "\n".join(output)
 
-    # ==================== 🆕 MULTI-CATEGORY SEARCH ====================
+    # BUG FIX: these two methods are now INSIDE the class (correct indentation)
+    def _handle_ticket_info(self, entities: list) -> str:
+        """Fetches ticket details based on ID or subject keywords."""
+        if not entities:
+            return ("❓ **Quel ticket souhaitez-vous consulter ?**\n\n"
+                   "Exemples :\n"
+                   "   • 'Y a-t-il un ticket sur le Doliprane ?'\n"
+                   "   • 'Montre-moi le ticket #1234'\n")
+            
+        search_term = entities[0].strip()
+        ticket = None
+
+        if search_term.startswith("#"):
+            ticket_id = search_term[1:]
+            ticket = db.session.execute(
+                db.select(Ticket).where(Ticket.id == ticket_id)
+            ).scalar_one_or_none()
+        else:
+            ticket = db.session.execute(
+                db.select(Ticket).where(Ticket.subject.ilike(f"%{search_term}%"))
+            ).scalar_one_or_none()
+
+        if not ticket:
+            return f"❌ Aucun ticket trouvé pour '{search_term}'."
+        
+        output = [f"## 🎫 Détails du Ticket #{ticket.id[:8]}..."]
+        output.append(f"**Sujet :** {ticket.subject}")
+        output.append(f"**Description :** {ticket.description}")
+        output.append(f"**Priorité :** {ticket.priority.capitalize()}")
+        output.append(f"**Statut :** {ticket.status.capitalize()}")
+        output.append(f"**Créé le :** {ticket.created_at.strftime('%d/%m/%Y %H:%M')}")
+        # BUG FIX: Ticket model has no updated_at column
+        output.append(f"**Utilisateur associé :** {ticket.user_id[:8]}...")
+        if ticket.admin_note:
+            output.append(f"**Note admin :** {ticket.admin_note}")
+        return "\n".join(output)
+
+    def _handle_calendar_events(self, entities: list) -> str:
+        """Fetches upcoming calendar events.
+        CalendarEvent: start_date is String "YYYY-MM-DD" (not DateTime).
+        ISO strings sort correctly with >= <= comparisons.
+        """
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        week_end_str = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+
+        if not entities:
+            query = db.select(CalendarEvent).options(
+                joinedload(CalendarEvent.assigned_user)
+            ).where(
+                CalendarEvent.start_date >= today_str,
+                CalendarEvent.start_date <= week_end_str,
+            ).order_by(CalendarEvent.start_date, CalendarEvent.start_time)
+            events = db.session.execute(query).scalars().all()
+            if not events:
+                return "📅 **Aucun événement prévu** dans les 7 prochains jours."
+            output = ["## 📅 Agenda — 7 prochains jours\n"]
+            for e in events:
+                label = e.title or e.type.capitalize()
+                assigned = e.assigned_user.username if e.assigned_user else "Non assigné"
+                output.append(f"### {label}")
+                output.append(f"📆 Le **{e.start_date}** de {e.start_time} à {e.end_time}")
+                output.append(f"👤 Assigné à : {assigned}")
+                if e.notes:
+                    output.append(f"📝 {e.notes}")
+                output.append("")
+            return "\n".join(output)
+
+        search_term = entities[0].strip()
+        query = db.select(CalendarEvent).options(
+            joinedload(CalendarEvent.assigned_user)
+        ).where(
+            CalendarEvent.start_date >= today_str,
+            CalendarEvent.start_date <= week_end_str,
+            or_(
+                CalendarEvent.title.ilike(f"%{search_term}%"),
+                CalendarEvent.notes.ilike(f"%{search_term}%"),
+                CalendarEvent.type.ilike(f"%{search_term}%")
+            )
+        ).order_by(CalendarEvent.start_date, CalendarEvent.start_time)
+        events = db.session.execute(query).scalars().all()
+
+        if not events:
+            return (f"❌ Aucun événement pour **'{search_term}'** dans les 7 prochains jours.\n\n"
+                   f"*Essayez : 'rdv', 'garde', ou le nom d'un collaborateur.*")
+
+        output = [f"## 📅 Événements — '{search_term}'\n"]
+        for e in events:
+            label = e.title or e.type.capitalize()
+            assigned = e.assigned_user.username if e.assigned_user else "Non assigné"
+            output.append(f"### {label}")
+            output.append(f"📆 Le **{e.start_date}** de {e.start_time} à {e.end_time}")
+            output.append(f"👤 Assigné à : {assigned}")
+            if e.notes:
+                output.append(f"📝 {e.notes}")
+            output.append("")
+        return "\n".join(output)
+
+    # ==================== MULTI-CATEGORY SEARCH ====================
 
     def _execute_multi_category_search(self, search_term: str) -> str:
         """
-        🆕 NEW METHOD: Search in ALL categories and group results.
-        
+        Search in ALL categories and group results.
         Shows products, clients, AND doctors if they match the search term.
-        User can see all possibilities at once.
-        
-        Args:
-            search_term: User's search query
-            
-        Returns:
-            Grouped markdown response with all matches
         """
-        # Search in all 3 categories
         all_results = {
             "products": self._search_database(ProductModel, search_term),
             "clients": self._search_database(ClientModel, search_term),
             "doctors": self._search_database(DoctorModel, search_term)
         }
         
-        # Count total results
         total_count = sum(len(results) for results in all_results.values())
         
         if total_count == 0:
@@ -411,11 +495,9 @@ class ChatBotEngine:
                    " • Essayez un nom plus court (ex: 'Doli' au lieu de 'Doliprane')\n"
                    " • Utilisez une partie du nom")
         
-        # Build grouped response
         output = [f"## 🔍 Résultats pour \"{search_term}\""]
         output.append(f"*{total_count} résultat{'s' if total_count > 1 else ''} trouvé{'s' if total_count > 1 else ''}*\n")
         
-        # --- 📦 PRODUCTS SECTION ---
         if all_results["products"]:
             output.append(f"### 📦 PRODUITS ({len(all_results['products'])})\n")
             for p in all_results["products"][:5]:
@@ -428,7 +510,6 @@ class ChatBotEngine:
                 output.append(f"   • Compo : {p.active_ingredient} ({p.dosage})")
                 output.append("")
         
-        # --- 👤 CLIENTS SECTION ---
         if all_results["clients"]:
             output.append(f"### 👤 CLIENTS ({len(all_results['clients'])})\n")
             for c in all_results["clients"][:3]:
@@ -440,7 +521,6 @@ class ChatBotEngine:
                     output.append(f"   • 📍 Adresse : {c.address}")
                 output.append("")
         
-        # --- ⚕️ DOCTORS SECTION ---
         if all_results["doctors"]:
             output.append(f"### ⚕️ MÉDECINS ({len(all_results['doctors'])})\n")
             for d in all_results["doctors"][:3]:
@@ -453,10 +533,9 @@ class ChatBotEngine:
                     output.append(f"   • 📍 Adresse : {d.address}")
                 output.append("")
         
-        # Footer tip
         if total_count > 1:
             output.append("---")
-            output.append("💡 *Précisez votre recherche avec 'stock', 'prix','Dr' ou'contact' pour plus de détails*")
+            output.append("💡 *Précisez votre recherche avec 'stock', 'prix', 'Dr' ou 'contact' pour plus de détails*")
         
         return "\n".join(output)
 
