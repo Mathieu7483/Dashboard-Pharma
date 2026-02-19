@@ -436,7 +436,7 @@ function renderTicketTable(tickets) {
         const description = ticket.description.length > 60 ? ticket.description.substring(0, 60) + '...' : ticket.description;
         return `
             <tr>
-                <td><strong>#${ticket.id}</strong></td>
+                <td><strong>#${ticket.id.slice(0, 8)}...</strong></td>
                 <td><div style="max-width:250px;"><strong>${ticket.subject}</strong><br><small style="color:#6b7280;">${description}</small></div></td>
                 <td><small style="color:#6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small></td>
                 <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
