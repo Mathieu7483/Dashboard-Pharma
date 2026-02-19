@@ -10,22 +10,11 @@
     <link rel="stylesheet" href="css/calendar.css">
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay" style="display: none;">
-        <div class="spinner"></div>
-    </div>
-
-    <!-- Toast Notifications Container -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;"><div class="spinner"></div></div>
     <div id="toast-container" class="toast-container"></div>
-
-    <!-- Main Application Wrapper -->
     <div class="app-wrapper">
-        <!-- Dynamic Navbar -->
         <div id="navbar-placeholder"></div>
-
-        <!-- Main Content Area -->
         <main class="content-area">
-            <!-- Top Bar -->
             <header class="top-bar">
                 <div class="page-info">
                     <h2>🛡️ Administration Panel</h2>
@@ -36,45 +25,21 @@
                     <button class="btn-logout-top">Logout</button>
                 </div>
             </header>
-
-            <!-- Admin Tabs Navigation -->
             <div class="admin-tabs">
-                <button class="tab-btn active" data-target="users-mgmt">
-                    <span class="tab-icon">👥</span>
-                    <span class="tab-label">Users</span>
-                    <span class="tab-count" id="users-count">0</span>
-                </button>
-                <button class="tab-btn" data-target="planning-mgmt">
-                    <span class="tab-icon">📅</span>
-                    <span class="tab-label">Schedules</span>
-                </button>
-                <button class="tab-btn" data-target="ticketing-mgmt">
-                    <span class="tab-icon">🎫</span>
-                    <span class="tab-label">Ticketing</span>
-                    <span class="tab-count" id="tickets-count">-</span>
-                </button>
-                <button class="tab-btn" data-target="analytics-mgmt">
-                    <span class="tab-icon">📊</span>
-                    <span class="tab-label">Statistics</span>
-                </button>
+                <button class="tab-btn active" data-target="users-mgmt"><span class="tab-icon">👥</span><span class="tab-label">Users</span><span class="tab-count" id="users-count">0</span></button>
+                <button class="tab-btn" data-target="planning-mgmt"><span class="tab-icon">📅</span><span class="tab-label">Schedules</span></button>
+                <button class="tab-btn" data-target="ticketing-mgmt"><span class="tab-icon">🎫</span><span class="tab-label">Ticketing</span><span class="tab-count" id="tickets-count">-</span></button>
+                <button class="tab-btn" data-target="analytics-mgmt"><span class="tab-icon">📊</span><span class="tab-label">Statistics</span></button>
             </div>
 
-            <!-- TAB 1: USERS MANAGEMENT -->
+            <!-- TAB 1: USERS -->
             <section id="users-mgmt" class="tab-content active">
                 <div class="section-header">
-                    <div>
-                        <h3>Employees Control Panel</h3>
-                        <p class="section-subtitle">Manage user accounts and permissions</p>
-                    </div>
-                    <button class="btn-primary" onclick="openCreateModal()">
-                        ➕ Add New Employee
-                    </button>
+                    <div><h3>Employees Control Panel</h3><p class="section-subtitle">Manage user accounts and permissions</p></div>
+                    <button class="btn-primary" onclick="openCreateModal()">➕ Add New Employee</button>
                 </div>
-
                 <div class="filter-bar">
-                    <div class="search-box">
-                        <input type="text" id="user-search" placeholder="🔍 Search by name or email..." />
-                    </div>
+                    <div class="search-box"><input type="text" id="user-search" placeholder="🔍 Search by name or email..." /></div>
                     <div class="filter-group">
                         <select id="role-filter" class="filter-select">
                             <option value="all">All roles</option>
@@ -83,31 +48,18 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="table-container">
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Contact</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Last connection</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>User</th><th>Contact</th><th>Role</th><th>Status</th><th>Last connection</th><th>Actions</th></tr></thead>
                         <tbody id="user-table-body"></tbody>
                     </table>
                 </div>
-
                 <div id="empty-state" class="empty-state" style="display: none;">
-                    <div class="empty-icon">👤</div>
-                    <h3>No users found</h3>
-                    <p>Start by creating a new user account</p>
+                    <div class="empty-icon">👤</div><h3>No users found</h3><p>Start by creating a new user account</p>
                 </div>
             </section>
 
-            <!-- TAB 2: PLANNING MANAGEMENT -->
+            <!-- TAB 2: PLANNING -->
             <section id="planning-mgmt" class="tab-content">
                 <div class="section-header">
                     <h3>Gestion du Planning</h3>
@@ -117,34 +69,25 @@
                         <button class="btn-secondary" onclick="CalendarManager.changeWeek(1)">Suivant ❯</button>
                     </div>
                 </div>
-
                 <div class="calendar-wrapper">
                     <div class="calendar-container">
                         <div class="calendar-header">
                             <div class="time-col-header"></div>
-                            <div class="day-header">Lundi</div>
-                            <div class="day-header">Mardi</div>
-                            <div class="day-header">Mercredi</div>
-                            <div class="day-header">Jeudi</div>
-                            <div class="day-header">Vendredi</div>
-                            <div class="day-header">Samedi</div>
+                            <div class="day-header">Lundi</div><div class="day-header">Mardi</div>
+                            <div class="day-header">Mercredi</div><div class="day-header">Jeudi</div>
+                            <div class="day-header">Vendredi</div><div class="day-header">Samedi</div>
                             <div class="day-header">Dimanche</div>
                         </div>
-                        
                         <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 3: TICKETING SYSTEM -->
+            <!-- TAB 3: TICKETING -->
             <section id="ticketing-mgmt" class="tab-content">
                 <div class="section-header">
-                    <div>
-                        <h3>Support & Maintenance Tickets</h3>
-                        <p class="section-subtitle">Manage internal requests and technical issues</p>
-                    </div>
+                    <div><h3>Support & Maintenance Tickets</h3><p class="section-subtitle">Manage internal requests and technical issues</p></div>
                 </div>
-
                 <div class="filter-bar">
                     <div class="filter-group">
                         <select id="ticket-status-filter" class="filter-select">
@@ -161,59 +104,22 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="table-container">
                     <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Subject</th>
-                                <th>Requested By</th>
-                                <th>Priority</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>ID</th><th>Subject</th><th>Requested By</th><th>Priority</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
                         <tbody id="ticket-table-body"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- TAB 4: ANALYTICS & STATISTICS -->
+            <!-- TAB 4: ANALYTICS -->
             <section id="analytics-mgmt" class="tab-content">
-                <div class="section-header">
-                    <h3>Admin Statistics</h3>
-                </div>
+                <div class="section-header"><h3>Admin Statistics</h3></div>
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-info">
-                            <h4>Active Users</h4>
-                            <p class="stat-value" id="stat-active-users">-</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🛡️</div>
-                        <div class="stat-info">
-                            <h4>Administrators</h4>
-                            <p class="stat-value" id="stat-admins">-</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📅</div>
-                        <div class="stat-info">
-                            <h4>RDV Today</h4>
-                            <p class="stat-value" id="stat-today-rdv">0</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎫</div>
-                        <div class="stat-info">
-                            <h4>Ticketing</h4>
-                            <p class="stat-value" id="stat-tickets">-</p>
-                        </div>
-                    </div>
+                    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-info"><h4>Active Users</h4><p class="stat-value" id="stat-active-users">-</p></div></div>
+                    <div class="stat-card"><div class="stat-icon">🛡️</div><div class="stat-info"><h4>Administrators</h4><p class="stat-value" id="stat-admins">-</p></div></div>
+                    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-info"><h4>RDV Today</h4><p class="stat-value" id="stat-today-rdv">0</p></div></div>
+                    <div class="stat-card"><div class="stat-icon">🎫</div><div class="stat-info"><h4>Ticketing</h4><p class="stat-value" id="stat-tickets">-</p></div></div>
                 </div>
             </section>
         </main>
@@ -223,54 +129,19 @@
     <div id="edit-modal" class="modal">
         <div class="modal-overlay" onclick="closeEditModal()"></div>
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>✏️ Edit User</h3>
-                <button class="modal-close" onclick="closeEditModal()">&times;</button>
-            </div>
-            
+            <div class="modal-header"><h3>✏️ Edit User</h3><button class="modal-close" onclick="closeEditModal()">&times;</button></div>
             <form id="edit-user-form" class="modal-form">
                 <input type="hidden" id="edit-user-id">
-                
+                <div class="form-row"><div class="form-group"><label>Username</label><input type="text" id="edit-username" readonly class="input-readonly"></div></div>
+                <div class="form-row"><div class="form-group"><label>Email</label><input type="email" id="edit-email" placeholder="user@pharma.com"></div></div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="edit-username" readonly class="input-readonly">
-                    </div>
+                    <div class="form-group"><label>First Name</label><input type="text" id="edit-first-name" placeholder="John"></div>
+                    <div class="form-group"><label>Last Name</label><input type="text" id="edit-last-name" placeholder="Doe"></div>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="edit-email" placeholder="user@pharma.com">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>First Name</label>
-                        <input type="text" id="edit-first-name" placeholder="John">
-                    </div>
-                    <div class="form-group">
-                        <label>Last Name</label>
-                        <input type="text" id="edit-last-name" placeholder="Doe">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>New Password (optional)</label>
-                        <input type="password" id="edit-password" placeholder="Leave empty to keep current">
-                    </div>
-                </div>
-
+                <div class="form-row"><div class="form-group"><label>New Password (optional)</label><input type="password" id="edit-password" placeholder="Leave empty to keep current"></div></div>
                 <div class="form-group-checkbox">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="edit-is-admin">
-                        <span class="checkbox-custom"></span>
-                        <span class="checkbox-text">Administrator privileges</span>
-                    </label>
+                    <label class="checkbox-label"><input type="checkbox" id="edit-is-admin"><span class="checkbox-custom"></span><span class="checkbox-text">Administrator privileges</span></label>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Save Changes</button>
@@ -283,52 +154,18 @@
     <div id="create-modal" class="modal">
         <div class="modal-overlay" onclick="closeCreateModal()"></div>
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>➕ Create User</h3>
-                <button class="modal-close" onclick="closeCreateModal()">&times;</button>
-            </div>
-            
+            <div class="modal-header"><h3>➕ Create User</h3><button class="modal-close" onclick="closeCreateModal()">&times;</button></div>
             <form id="create-user-form" class="modal-form">
+                <div class="form-row"><div class="form-group"><label>Username *</label><input type="text" id="create-username" required placeholder="john.doe"></div></div>
+                <div class="form-row"><div class="form-group"><label>Email *</label><input type="email" id="create-email" required placeholder="john@pharma.com"></div></div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Username *</label>
-                        <input type="text" id="create-username" required placeholder="john.doe">
-                    </div>
+                    <div class="form-group"><label>First Name</label><input type="text" id="create-first-name" placeholder="John"></div>
+                    <div class="form-group"><label>Last Name</label><input type="text" id="create-last-name" placeholder="Doe"></div>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Email *</label>
-                        <input type="email" id="create-email" required placeholder="john@pharma.com">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>First Name</label>
-                        <input type="text" id="create-first-name" placeholder="John">
-                    </div>
-                    <div class="form-group">
-                        <label>Last Name</label>
-                        <input type="text" id="create-last-name" placeholder="Doe">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Password *</label>
-                        <input type="password" id="create-password" required placeholder="Min. 6 characters">
-                    </div>
-                </div>
-
+                <div class="form-row"><div class="form-group"><label>Password *</label><input type="password" id="create-password" required placeholder="Min. 6 characters"></div></div>
                 <div class="form-group-checkbox">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="create-is-admin">
-                        <span class="checkbox-custom"></span>
-                        <span class="checkbox-text">Create as administrator</span>
-                    </label>
+                    <label class="checkbox-label"><input type="checkbox" id="create-is-admin"><span class="checkbox-custom"></span><span class="checkbox-text">Create as administrator</span></label>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="closeCreateModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Create User</button>
@@ -337,7 +174,7 @@
         </div>
     </div>
 
-    <!-- MODAL: CALENDAR EVENT - VERSION CORRIGÉE -->
+    <!-- MODAL: CALENDAR EVENT -->
     <div id="event-modal" class="modal">
         <div class="modal-overlay" onclick="CalendarManager.closeModal()"></div>
         <div class="modal-content">
@@ -345,11 +182,10 @@
                 <h3 id="event-modal-title">📅 Nouveau Planning</h3>
                 <button class="modal-close" onclick="CalendarManager.closeModal()">&times;</button>
             </div>
-            
             <form id="event-form" class="modal-form">
                 <input type="hidden" id="event-id">
-                
-                <!-- TYPE D'ACTIVITÉ -->
+
+                <!-- TYPE -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Type d'activité *</label>
@@ -360,7 +196,7 @@
                     </div>
                 </div>
 
-                <!-- GROUPE RDV : Titre + Commercial -->
+                <!-- GROUPE RDV : champ titre uniquement -->
                 <div id="group-rdv">
                     <div class="form-row">
                         <div class="form-group">
@@ -368,29 +204,23 @@
                             <input type="text" id="event-title" class="form-input" placeholder="Ex: Dr. House">
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>RDV avec</label>
-                            <select id="event-assigned-user" class="form-input">
-                                <option value="">-- Aucun --</option>
-                            </select>
-                        </div>
+                </div>
+
+                <!-- GROUPE GARDE : vide, le select est partagé ci-dessous -->
+                <div id="group-garde" style="display:none;"></div>
+
+                <!-- SELECT EMPLOYÉ UNIQUE — partagé RDV + Garde
+                     Le label change dynamiquement via toggleFields() -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label id="label-assigned-user">👤 RDV avec (employé)</label>
+                        <select id="event-assigned-user" class="form-input">
+                            <option value="">-- Sélectionner un employé --</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- GROUPE GARDE : Utilisateur Interne -->
-                <div id="group-garde" style="display:none;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Personnel de Garde *</label>
-                            <select id="event-assigned-user" class="form-input">
-                                <option value="">-- Sélectionner un employé --</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DATES - TOUJOURS VISIBLES -->
+                <!-- DATES -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>📅 Date de début *</label>
@@ -402,7 +232,7 @@
                     </div>
                 </div>
 
-                <!-- HEURES - TOUJOURS VISIBLES -->
+                <!-- HEURES -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>🕐 Heure de début *</label>
@@ -423,9 +253,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none; margin-right:auto;" onclick="CalendarManager.deleteEvent()">
-                        🗑️ Supprimer
-                    </button>
+                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none; margin-right:auto;" onclick="CalendarManager.deleteEvent()">🗑️ Supprimer</button>
                     <button type="button" class="btn-secondary" onclick="CalendarManager.closeModal()">Annuler</button>
                     <button type="submit" class="btn-primary">💾 Enregistrer</button>
                 </div>
