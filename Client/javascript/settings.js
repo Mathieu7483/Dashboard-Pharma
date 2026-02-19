@@ -746,20 +746,26 @@ const CalendarManager = {
         });
     },
 
-    // ─── TOGGLE FIELDS (rdv shows title, garde hides it) ───
+    // ─── TOGGLE FIELDS ───
+    // group-rdv  : shows the title input (hidden for garde)
+    // group-garde: empty div kept for future use
+    // #event-assigned-user : single shared select — label changes to reflect context
     toggleFields: () => {
         const type       = document.getElementById('event-type').value;
         const groupRdv   = document.getElementById('group-rdv');
         const groupGarde = document.getElementById('group-garde');
+        const label      = document.getElementById('label-assigned-user');
 
         if (type === 'garde') {
             if (groupRdv)   groupRdv.style.display   = 'none';
             if (groupGarde) groupGarde.style.display  = 'block';
+            if (label)      label.textContent          = '🚨 Personnel de garde *';
             document.getElementById('event-title').required         = false;
             document.getElementById('event-assigned-user').required = true;
         } else { // rdv
             if (groupRdv)   groupRdv.style.display   = 'block';
             if (groupGarde) groupGarde.style.display  = 'none';
+            if (label)      label.textContent          = '👤 RDV avec (employé)';
             document.getElementById('event-title').required         = true;
             document.getElementById('event-assigned-user').required = false;
         }
