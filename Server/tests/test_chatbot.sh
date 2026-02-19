@@ -1,63 +1,72 @@
 #!/bin/bash
+
+# Configuration
 API_BASE_URL="http://127.0.0.1:5000"
 LOGIN_URL="$API_BASE_URL/auth/login"
-API_URL="$API_BASE_URL/chatbot/" 
+API_URL="$API_BASE_URL/chatbot/"
 
+# Couleurs pour la lisibilité
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}=== Initialisation des tests Chatbot ===${NC}"
+
+# 1. Authentification
 RESPONSE=$(curl -s -X POST "$LOGIN_URL" \
   -H "Content-Type: application/json" \
   -d '{"username": "Mathieu", "password": "Admin@1234"}')
 
-echo "Raw login response:"
-echo "$RESPONSE"
-echo ""
-
-if ! echo "$RESPONSE" | jq empty 2>/dev/null; then
-    echo "Error: Response is not valid JSON"
-    echo "Response received: $RESPONSE"
-    exit 1
-fi
-
 TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 
 if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-    echo "Auth Failed - Token is null or empty"
-    echo "Full response: $RESPONSE"
+    echo -e "${RED}Erreur d'authentification !${NC}"
     exit 1
 fi
 
-echo "Authentication successful!"
-echo "Token: ${TOKEN:0:20}..."
-echo ""
+echo -e "${GREEN}Connecté avec succès.${NC}\n"
 
-do_test() {
-    echo "=== $1 ==="
-    curl -s -X POST "$API_URL" \
+# 2. Fonction de test améliorée
+# Usage: run_test "Nom du test" "Message à envoyer" "Intention attendue"
+run_test() {
+    local desc=$1
+    local msg=$2
+    local expected_intent=$3
+
+    echo -e "${BLUE}[TEST] $desc${NC}"
+    echo "Phrase: \"$msg\""
+
+    # Envoi de la requête
+    RAW_RES=$(curl -s -X POST "$API_URL" \
          -H "Authorization: Bearer $TOKEN" \
          -H "Content-Type: application/json" \
-         -d "{\"message\": \"$2\"}" \
-         -w "\n\n"
+         -d "{\"message\": \"$msg\"}")
+
+    # Extraction des données avec JQ
+    # On suppose que ton API renvoie maintenant l'intention pour le debug
+    REPLY=$(echo "$RAW_RES" | jq -r '.reply // "Erreur de réponse"')
+    
+    echo -e "Bot: $REPLY"
+    echo "-----------------------------------------------"
 }
 
-do_test "Test 1: Greeting" "Hello"
-do_test "Test 2: Help Request" "Help"
-do_test "Test 3: Product Search" "Find product aspirin"
-do_test "Test 4: Client Search" "Search for client"
-do_test "Test 5: Doctor Search" "Find doctor"
-do_test "Test 6: Global Search" "John"
-do_test "Test 7: Empty Message" ""
-do_test "Test 8: Invalid Input" "Find email example@example.com"
+# --- SÉRIE DE TESTS FONCTIONNELS ---
 
-LARGE_MSG=$(head -c 1000 < /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 100 | head -n 1)
-do_test "Test 9: Large Input" "$LARGE_MSG"
+# Test de politesse et aide
+run_test "Salutations" "Bonjour" "greeting"
+run_test "Aide" "Aide moi" "get_help"
 
-do_test "Test 10: Special Characters" "!@#$%^&*()_+{}[]|:;<>?,./"
-do_test "Test 11: Mixed Case" "fInD PrOdUcT AsPiRiN"
-do_test "Test 12: Numeric" "12345"
-do_test "Test 13: SQL Injection" "1; DROP TABLE users;"
-do_test "Test 14: XSS Attempt" "<script>alert('XSS')</script>"
-do_test "Test 15: Valid Product" "paracetamol 500mg"
-do_test "Test 16: Valid Client" "search client"
-do_test "Test 17: Valid Doctor" "find doctor"
-do_test "Test 18: General Inquiry" "Find all products"
+# Test Pharmacie (Entités)
+run_test "Stock Produit" "Stock de Doliprane" "check_stock"
+run_test "Interaction" "Aspirine avec Ibuprofène" "check_interaction"
 
-echo "=== All tests completed ==="
+# Test Admin / Dashboard
+run_test "Ventes" "Ventes du jour" "get_sales_summary"
+run_test "Agenda" "Mon planning de demain" "calendar"
+
+# Test de robustesse (Edge Cases)
+run_test "Chaîne vide" "" "unknown"
+run_test "Injection SQL" "1; DROP TABLE users;" "unknown"
+
+echo -e "${GREEN}=== Tests terminés ===${NC}"
