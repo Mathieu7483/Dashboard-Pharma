@@ -1,6 +1,10 @@
 /**
  * settings.js - Admin Panel Management
  * Calendar events stored in BACKEND API
+ * 
+ * CHANGELOG:
+ * - RDV et Garde utilisent le même champ #event-assigned-user dans le formulaire
+ * - populateUserSelects() simplifié : un seul select à remplir
  */
 
 const API_BASE = 'http://127.0.0.1:5000';
@@ -32,8 +36,7 @@ function getAuthInfo() {
     if (!token) return { token: null, isAdmin: false };
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        const isAdmin = payload.is_admin === true;
-        return { token, isAdmin };
+        return { token, isAdmin: payload.is_admin === true };
     } catch (e) {
         console.error('Token decode error:', e);
         return { token: null, isAdmin: false };
@@ -68,16 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNavbar();
     fetchUsers();
     fetchTickets();
-    fetchTodayStats(); // ← STATS DEPUIS LE BACKEND
+    fetchTodayStats();
     setupEventListeners();
     initTabSystem();
     initFilters();
     initTicketFilters();
 
-    // Calendar init après chargement des users
-    setTimeout(() => {
-        CalendarManager.init();
-    }, 600);
+    setTimeout(() => CalendarManager.init(), 600);
 });
 
 // ============================================
@@ -86,31 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchTodayStats() {
     const { token } = getAuthInfo();
     if (!token) return;
-
-    console.log('📊 Fetching today stats from backend...');
-
     try {
         const response = await fetch(`${API_BASE}/calendar/events/stats/today`, {
-            method: 'GET',
-            headers: authHeaders(token)
+            method: 'GET', headers: authHeaders(token)
         });
+        if (!response.ok) { console.log('⚠️ Stats error:', response.status); return; }
 
-        if (!response.ok) {
-            console.log('⚠️ Stats endpoint error:', response.status);
-            return;
-        }
-
-        const stats = await response.json();
-        console.log('✅ Today stats:', stats);
-
-        const rdvEl = document.getElementById('stat-today-rdv');
+        const stats   = await response.json();
+        const rdvEl   = document.getElementById('stat-today-rdv');
         const gardeEl = document.getElementById('stat-today-garde');
         const totalEl = document.getElementById('stat-total-events');
-
-        if (rdvEl) rdvEl.textContent = stats.rdv_count;
+        if (rdvEl)   rdvEl.textContent   = stats.rdv_count;
         if (gardeEl) gardeEl.textContent = stats.garde_count;
         if (totalEl) totalEl.textContent = stats.total_all;
-
     } catch (error) {
         console.error("❌ Stats Fetch Error:", error);
     }
@@ -122,31 +110,14 @@ async function fetchTodayStats() {
 async function fetchUsers() {
     const { token, isAdmin } = getAuthInfo();
     if (!token) return;
-
-    console.log('📋 Loading users...');
-
     try {
-        const response = await fetch(`${API_BASE}/users/`, {
-            method: 'GET',
-            headers: authHeaders(token)
-        });
-
+        const response = await fetch(`${API_BASE}/users/`, { method: 'GET', headers: authHeaders(token) });
         if (!response.ok) {
-            if (response.status === 401) {
-                alert('Session expired. Please login again.');
-                window.location.href = 'auth.html';
-                return;
-            }
-            if (response.status === 403) {
-                alert('Access forbidden. Admin rights required.');
-                window.location.href = 'index.html';
-                return;
-            }
+            if (response.status === 401) { alert('Session expired.'); window.location.href = 'auth.html'; return; }
+            if (response.status === 403) { alert('Admin rights required.'); window.location.href = 'index.html'; return; }
             throw new Error(`Fetch failed: ${response.status}`);
         }
-
         const users = await response.json();
-        console.log('✅ Users loaded:', users.length);
         window.allUsers = users;
         renderUserTable(users, isAdmin);
         updateStats(users, window.allTickets || []);
@@ -159,10 +130,9 @@ async function fetchUsers() {
 // 6. RENDER USER TABLE
 // ============================================
 function renderUserTable(users, isAdmin) {
-    const tbody = document.getElementById('user-table-body');
-    const emptyState = document.getElementById('empty-state');
+    const tbody         = document.getElementById('user-table-body');
+    const emptyState    = document.getElementById('empty-state');
     const currentUserId = localStorage.getItem('user_id');
-
     if (!tbody) return;
 
     const countBadge = document.getElementById('users-count');
@@ -176,12 +146,11 @@ function renderUserTable(users, isAdmin) {
     if (emptyState) emptyState.style.display = 'none';
 
     tbody.innerHTML = users.map(user => {
-        const initials = (user.first_name?.[0] || user.username[0]).toUpperCase();
+        const initials      = (user.first_name?.[0] || user.username[0]).toUpperCase();
         const isCurrentUser = user.id === currentUserId;
-        const roleBadge = user.is_admin ?
-            '<span class="badge badge-admin">Admin</span>' :
-            '<span class="badge badge-staff">Personnel</span>';
-
+        const roleBadge     = user.is_admin
+            ? '<span class="badge badge-admin">Admin</span>'
+            : '<span class="badge badge-staff">Personnel</span>';
         return `
             <tr>
                 <td>
@@ -195,17 +164,17 @@ function renderUserTable(users, isAdmin) {
                 </td>
                 <td>
                     <div>${user.email || 'Not specified'}</div>
-                    <small style="color: #6b7280;">ID: ${user.id.slice(0, 8)}...</small>
+                    <small style="color:#6b7280;">ID: ${user.id.slice(0,8)}...</small>
                 </td>
                 <td>${roleBadge}</td>
                 <td><span class="status-badge status-active">Active</span></td>
-                <td><small style="color: #6b7280;">N/A</small></td>
+                <td><small style="color:#6b7280;">N/A</small></td>
                 <td>
                     <div class="action-group">
                         <button class="btn-action" onclick="openEditModal('${user.id}')">✏️ Edit</button>
-                        ${!isCurrentUser ?
-                            `<button class="btn-danger" onclick="deleteUser('${user.id}')">🗑️ Delete</button>` :
-                            '<span class="self-tag">You</span>'}
+                        ${!isCurrentUser
+                            ? `<button class="btn-danger" onclick="deleteUser('${user.id}')">🗑️ Delete</button>`
+                            : '<span class="self-tag">You</span>'}
                     </div>
                 </td>
             </tr>`;
@@ -230,39 +199,31 @@ function updateStats(users = [], tickets = []) {
 window.openEditModal = async (userId) => {
     const { token } = getAuthInfo();
     try {
-        const response = await fetch(`${API_BASE}/users/${userId}`, {
-            headers: authHeaders(token)
-        });
+        const response = await fetch(`${API_BASE}/users/${userId}`, { headers: authHeaders(token) });
         if (!response.ok) return alert('Failed to load user data');
-
         const user = await response.json();
-        document.getElementById('edit-user-id').value = user.id;
-        document.getElementById('edit-username').value = user.username;
-        document.getElementById('edit-email').value = user.email || '';
+        document.getElementById('edit-user-id').value    = user.id;
+        document.getElementById('edit-username').value   = user.username;
+        document.getElementById('edit-email').value      = user.email || '';
         document.getElementById('edit-first-name').value = user.first_name || '';
-        document.getElementById('edit-last-name').value = user.last_name || '';
+        document.getElementById('edit-last-name').value  = user.last_name || '';
         document.getElementById('edit-is-admin').checked = user.is_admin;
-        document.getElementById('edit-password').value = '';
+        document.getElementById('edit-password').value   = '';
         document.getElementById('edit-modal').classList.add('active');
     } catch (error) {
         alert('Network error while loading user');
     }
 };
 
-window.closeEditModal = () => document.getElementById('edit-modal').classList.remove('active');
-window.openCreateModal = () => {
-    document.getElementById('create-user-form').reset();
-    document.getElementById('create-modal').classList.add('active');
-};
+window.closeEditModal   = () => document.getElementById('edit-modal').classList.remove('active');
+window.openCreateModal  = () => { document.getElementById('create-user-form').reset(); document.getElementById('create-modal').classList.add('active'); };
 window.closeCreateModal = () => document.getElementById('create-modal').classList.remove('active');
 
 window.deleteUser = async (userId) => {
     if (!confirm("⚠️ Confirm deletion?")) return;
     const { token } = getAuthInfo();
     try {
-        const response = await fetch(`${API_BASE}/users/${userId}`, {
-            method: 'DELETE', headers: authHeaders(token)
-        });
+        const response = await fetch(`${API_BASE}/users/${userId}`, { method: 'DELETE', headers: authHeaders(token) });
         if (response.ok) { await fetchUsers(); alert('User deleted'); }
         else { const err = await response.json(); alert(err.message || 'Delete failed'); }
     } catch (e) { alert('Network error'); }
@@ -272,20 +233,20 @@ window.deleteUser = async (userId) => {
 // 9. EVENT LISTENERS & FORMS
 // ============================================
 function setupEventListeners() {
-    const editForm = document.getElementById('edit-user-form');
+    const editForm   = document.getElementById('edit-user-form');
     const createForm = document.getElementById('create-user-form');
 
     if (editForm) {
         editForm.onsubmit = async (e) => {
             e.preventDefault();
             const { token } = getAuthInfo();
-            const userId = document.getElementById('edit-user-id').value;
-            const password = document.getElementById('edit-password').value.trim();
-            const payload = {
-                email: document.getElementById('edit-email').value.trim() || null,
+            const userId    = document.getElementById('edit-user-id').value;
+            const password  = document.getElementById('edit-password').value.trim();
+            const payload   = {
+                email:      document.getElementById('edit-email').value.trim() || null,
                 first_name: document.getElementById('edit-first-name').value.trim() || null,
-                last_name: document.getElementById('edit-last-name').value.trim() || null,
-                is_admin: document.getElementById('edit-is-admin').checked
+                last_name:  document.getElementById('edit-last-name').value.trim() || null,
+                is_admin:   document.getElementById('edit-is-admin').checked
             };
             if (password) payload.password = password;
             try {
@@ -301,17 +262,17 @@ function setupEventListeners() {
     if (createForm) {
         createForm.onsubmit = async (e) => {
             e.preventDefault();
-            const { token } = getAuthInfo();
-            const username = document.getElementById('create-username').value.trim();
-            const email = document.getElementById('create-email').value.trim();
-            const password = document.getElementById('create-password').value.trim();
+            const { token }  = getAuthInfo();
+            const username   = document.getElementById('create-username').value.trim();
+            const email      = document.getElementById('create-email').value.trim();
+            const password   = document.getElementById('create-password').value.trim();
             if (!username || !email || !password) return alert('⚠️ All fields required!');
             if (password.length < 6) return alert('⚠️ Password min 6 chars!');
             const payload = {
                 username, email, password,
                 first_name: document.getElementById('create-first-name').value.trim() || null,
-                last_name: document.getElementById('create-last-name').value.trim() || null,
-                is_admin: document.getElementById('create-is-admin').checked
+                last_name:  document.getElementById('create-last-name').value.trim() || null,
+                is_admin:   document.getElementById('create-is-admin').checked
             };
             try {
                 const response = await fetch(`${API_BASE}/users/`, {
@@ -337,7 +298,7 @@ function setupEventListeners() {
 // 10. TAB SYSTEM
 // ============================================
 function initTabSystem() {
-    const tabs = document.querySelectorAll('.tab-btn');
+    const tabs     = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -357,18 +318,18 @@ function initTabSystem() {
 // ============================================
 function initFilters() {
     const searchInput = document.getElementById('user-search');
-    const roleFilter = document.getElementById('role-filter');
+    const roleFilter  = document.getElementById('role-filter');
 
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
+        searchInput.addEventListener('input', () => {
+            const query      = searchInput.value.toLowerCase();
             const { isAdmin } = getAuthInfo();
             if (!window.allUsers) return;
+            const role     = roleFilter ? roleFilter.value : 'all';
             const filtered = window.allUsers.filter(user => {
                 const matchesSearch = !query ||
                     user.username.toLowerCase().includes(query) ||
                     (user.email && user.email.toLowerCase().includes(query));
-                const role = roleFilter ? roleFilter.value : 'all';
                 const matchesRole = role === 'all' ||
                     (role === 'admin' && user.is_admin) ||
                     (role === 'staff' && !user.is_admin);
@@ -391,20 +352,14 @@ function initFilters() {
 async function fetchTickets() {
     const { token } = getAuthInfo();
     if (!token) return;
-
     try {
-        const response = await fetch(`${API_BASE}/tickets/`, {
-            method: 'GET', headers: authHeaders(token)
-        });
-
+        const response = await fetch(`${API_BASE}/tickets/`, { method: 'GET', headers: authHeaders(token) });
         if (!response.ok) {
             if (response.status === 401) { window.location.href = 'auth.html'; return; }
             if (response.status === 403) return;
             throw new Error(`Fetch failed: ${response.status}`);
         }
-
-        const tickets = await response.json();
-        console.log('✅ Tickets loaded:', tickets.length);
+        const tickets     = await response.json();
         window.allTickets = tickets;
         renderTicketTable(tickets);
         updateStats(window.allUsers || [], tickets);
@@ -426,32 +381,40 @@ function renderTicketTable(tickets) {
     }
 
     const priorityBadges = {
-        'high': '<span class="badge" style="background:#ef4444;color:white;padding:4px 8px;border-radius:4px;">🔴 High</span>',
-        'medium': '<span class="badge" style="background:#f59e0b;color:white;padding:4px 8px;border-radius:4px;">🟠 Medium</span>',
-        'low': '<span class="badge" style="background:#3b82f6;color:white;padding:4px 8px;border-radius:4px;">🔵 Low</span>'
+        high:   '<span class="badge" style="background:#ef4444;color:white;padding:4px 8px;border-radius:4px;">🔴 High</span>',
+        medium: '<span class="badge" style="background:#f59e0b;color:white;padding:4px 8px;border-radius:4px;">🟠 Medium</span>',
+        low:    '<span class="badge" style="background:#3b82f6;color:white;padding:4px 8px;border-radius:4px;">🔵 Low</span>'
     };
 
     tbody.innerHTML = tickets.map(ticket => {
-        const date = new Date(ticket.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+        const date        = new Date(ticket.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
         const description = ticket.description.length > 60 ? ticket.description.substring(0, 60) + '...' : ticket.description;
         return `
             <tr>
-                <td><strong>#${ticket.id.slice(0, 8)}...</strong></td>
-                <td><div style="max-width:250px;"><strong>${ticket.subject}</strong><br><small style="color:#6b7280;">${description}</small></div></td>
-                <td><small style="color:#6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small></td>
-                <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
+                <td><strong>#${ticket.id.slice(0,8)}...</strong></td>
                 <td>
-                    <select class="status-select" data-ticket-id="${ticket.id}" data-current-status="${ticket.status}" onchange="handleStatusChange('${ticket.id}', this.value)">
-                        <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
+                    <div style="max-width:250px;">
+                        <strong>${ticket.subject}</strong>
+                        <br><small style="color:#6b7280;">${description}</small>
+                    </div>
+                </td>
+                <td><small style="color:#6b7280;">User ID: ${ticket.user_id.slice(0,8)}...</small></td>
+                <td>${priorityBadges[ticket.priority] || priorityBadges.medium}</td>
+                <td>
+                    <select class="status-select"
+                            data-ticket-id="${ticket.id}"
+                            data-current-status="${ticket.status}"
+                            onchange="handleStatusChange('${ticket.id}', this.value)">
+                        <option value="open"    ${ticket.status === 'open'    ? 'selected' : ''}>🟢 Open</option>
                         <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟡 Pending</option>
-                        <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>🟣 Closed</option>
+                        <option value="closed"  ${ticket.status === 'closed'  ? 'selected' : ''}>🟣 Closed</option>
                     </select>
                 </td>
                 <td><small>${date}</small></td>
                 <td>
                     <div class="action-group">
                         <button class="btn-action" onclick="viewTicket('${ticket.id}')">👁️ View</button>
-                        <button class="btn-action" onclick="openAdminNoteModal('${ticket.id}')">📝Note</button>
+                        <button class="btn-action" onclick="openAdminNoteModal('${ticket.id}')">📝 Note</button>
                         <button class="btn-danger" onclick="deleteTicket('${ticket.id}')">🗑️ Delete</button>
                     </div>
                 </td>
@@ -460,9 +423,9 @@ function renderTicketTable(tickets) {
 }
 
 window.handleStatusChange = async (ticketId, newStatus) => {
-    const sel = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
+    const sel  = document.querySelector(`select[data-ticket-id="${ticketId}"]`);
     const prev = sel.dataset.currentStatus;
-    if (!confirm(`Change ticket #${ticketId} to "${newStatus}"?`)) { sel.value = prev; return; }
+    if (!confirm(`Changer le ticket #${ticketId.slice(0,8)} en "${newStatus}" ?`)) { sel.value = prev; return; }
     const { token } = getAuthInfo();
     try {
         const res = await fetch(`${API_BASE}/tickets/${ticketId}`, {
@@ -476,15 +439,16 @@ window.handleStatusChange = async (ticketId, newStatus) => {
 window.openAdminNoteModal = async (ticketId) => {
     const { token } = getAuthInfo();
     try {
-        const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { headers: authHeaders(token) });
+        const res    = await fetch(`${API_BASE}/tickets/${ticketId}`, { headers: authHeaders(token) });
         if (!res.ok) return alert('Failed');
         const ticket = await res.json();
-        const note = prompt(`Admin Note #${ticket.id}\nCurrent: ${ticket.admin_note || '(none)'}`, ticket.admin_note || '');
+        const note   = prompt(`Note admin — #${ticket.id.slice(0,8)}\nActuelle : ${ticket.admin_note || '(aucune)'}`, ticket.admin_note || '');
         if (note === null) return;
         const upd = await fetch(`${API_BASE}/tickets/${ticketId}`, {
             method: 'PUT', headers: authHeaders(token), body: JSON.stringify({ admin_note: note })
         });
-        if (upd.ok) { alert('✅ Updated'); fetchTickets(); } else alert('Failed');
+        if (upd.ok) { alert('✅ Note mise à jour'); fetchTickets(); }
+        else alert('Failed');
     } catch (e) { alert('Network error'); }
 };
 
@@ -493,35 +457,34 @@ window.viewTicket = async (ticketId) => {
     try {
         const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { headers: authHeaders(token) });
         if (!res.ok) return alert('Failed');
-        const t = await res.json();
-        const adminNote = t.admin_note ? `\n\nAdmin Note:\n${t.admin_note}` : '';
-        alert(`🎫 #${t.id}\nSubject: ${t.subject}\nPriority: ${t.priority}\nStatus: ${t.status}\n\n${t.description}${adminNote}`);
+        const t         = await res.json();
+        const adminNote = t.admin_note ? `\n\nNote admin :\n${t.admin_note}` : '';
+        alert(`🎫 #${t.id}\nSujet : ${t.subject}\nPriorité : ${t.priority}\nStatut : ${t.status}\n\n${t.description}${adminNote}`);
     } catch (e) { alert('Network error'); }
 };
 
 window.deleteTicket = async (ticketId) => {
-    if (!confirm('Delete this ticket?')) return;
+    if (!confirm('Supprimer ce ticket ?')) return;
     const { token } = getAuthInfo();
     try {
         const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { method: 'DELETE', headers: authHeaders(token) });
-        if (res.ok) { await fetchTickets(); alert('✅ Deleted'); }
+        if (res.ok) { await fetchTickets(); alert('✅ Ticket supprimé'); }
         else { const err = await res.json(); alert(err.message || 'Failed'); }
     } catch (e) { alert('Network error'); }
 };
 
 function initTicketFilters() {
-    const statusFilter = document.getElementById('ticket-status-filter');
+    const statusFilter   = document.getElementById('ticket-status-filter');
     const priorityFilter = document.getElementById('ticket-priority-filter');
     const apply = () => {
         if (!window.allTickets) return;
-        const sv = statusFilter ? statusFilter.value : 'all';
+        const sv = statusFilter   ? statusFilter.value   : 'all';
         const pv = priorityFilter ? priorityFilter.value : 'all';
-        const filtered = window.allTickets.filter(t =>
+        renderTicketTable(window.allTickets.filter(t =>
             (sv === 'all' || t.status === sv) && (pv === 'all' || t.priority === pv)
-        );
-        renderTicketTable(filtered);
+        ));
     };
-    if (statusFilter) statusFilter.addEventListener('change', apply);
+    if (statusFilter)   statusFilter.addEventListener('change', apply);
     if (priorityFilter) priorityFilter.addEventListener('change', apply);
 }
 
@@ -542,7 +505,7 @@ function loadNavbar() {
 
 function highlightActiveLink() {
     const page = window.location.pathname.split('/').pop() || 'index.html';
-    const map = {
+    const map  = {
         'index.html': 'nav-dashboard', 'inventory.html': 'nav-inventory',
         'clients.html': 'nav-clients', 'doctors.html': 'nav-doctors', 'settings.html': 'nav-settings'
     };
@@ -571,67 +534,37 @@ const CalendarManager = {
         CalendarManager.setupListeners();
     },
 
-    // ─── LOAD FROM BACKEND (remplace localStorage) ───
+    // ─── LOAD FROM BACKEND ───
     loadEvents: async () => {
         const { token } = getAuthInfo();
         if (!token) return;
-
         try {
-            const response = await fetch(`${API_BASE}/calendar/events/`, {
-                method: 'GET',
-                headers: authHeaders(token)
-            });
-
-            if (!response.ok) {
-                console.error('❌ Failed to load events:', response.status);
-                CalendarManager.events = [];
-                return;
-            }
-
+            const response = await fetch(`${API_BASE}/calendar/events/`, { method: 'GET', headers: authHeaders(token) });
+            if (!response.ok) { console.error('❌ Failed to load events:', response.status); CalendarManager.events = []; return; }
             CalendarManager.events = await response.json();
             console.log(`✅ Loaded ${CalendarManager.events.length} events from backend`);
-
         } catch (error) {
             console.error('❌ Calendar load error:', error);
             CalendarManager.events = [];
         }
     },
 
-    // ─── SAVE TO BACKEND (remplace localStorage) ───
+    // ─── SAVE TO BACKEND ───
     saveEvent: async (eventData, existingId = null) => {
         const { token } = getAuthInfo();
         if (!token) return false;
 
         const method = existingId ? 'PUT' : 'POST';
-        const url = existingId
-            ? `${API_BASE}/calendar/events/${existingId}`
-            : `${API_BASE}/calendar/events/`;
+        const url    = existingId ? `${API_BASE}/calendar/events/${existingId}` : `${API_BASE}/calendar/events/`;
 
         console.log(`📤 ${method} event:`, eventData);
-
         try {
-            const response = await fetch(url, {
-                method: method,
-                headers: authHeaders(token),
-                body: JSON.stringify(eventData)
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                alert(`❌ Error: ${error.message || 'Save failed'}`);
-                return false;
-            }
-
-            const saved = await response.json();
-            console.log(`✅ Event ${existingId ? 'updated' : 'created'}:`, saved);
-
-            // Reload everything from backend
+            const response = await fetch(url, { method, headers: authHeaders(token), body: JSON.stringify(eventData) });
+            if (!response.ok) { const error = await response.json(); alert(`❌ ${error.message || 'Save failed'}`); return false; }
             await CalendarManager.loadEvents();
             CalendarManager.render();
-            fetchTodayStats(); // Refresh stats
-
+            fetchTodayStats();
             return true;
-
         } catch (error) {
             console.error('❌ Save error:', error);
             alert('Network error while saving event');
@@ -643,26 +576,15 @@ const CalendarManager = {
     deleteEvent: async () => {
         const id = document.getElementById('event-id').value;
         if (!id || !confirm('Supprimer cet événement ?')) return;
-
         const { token } = getAuthInfo();
-
         try {
-            const response = await fetch(`${API_BASE}/calendar/events/${id}`, {
-                method: 'DELETE',
-                headers: authHeaders(token)
-            });
-
-            if (!response.ok) {
-                alert('Failed to delete event');
-                return;
-            }
-
+            const response = await fetch(`${API_BASE}/calendar/events/${id}`, { method: 'DELETE', headers: authHeaders(token) });
+            if (!response.ok) { alert('Failed to delete event'); return; }
             CalendarManager.closeModal();
             await CalendarManager.loadEvents();
             CalendarManager.render();
             fetchTodayStats();
             alert('✅ Événement supprimé');
-
         } catch (error) {
             console.error('❌ Delete error:', error);
             alert('Network error');
@@ -671,67 +593,56 @@ const CalendarManager = {
 
     // ─── WEEK NAVIGATION ───
     getStartOfWeek: (date) => {
-        const d = new Date(date);
-        const day = d.getDay();
+        const d    = new Date(date);
+        const day  = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
     },
 
     changeWeek: (direction) => {
-        CalendarManager.currentDate.setDate(
-            CalendarManager.currentDate.getDate() + (direction * 7)
-        );
+        CalendarManager.currentDate.setDate(CalendarManager.currentDate.getDate() + (direction * 7));
         CalendarManager.render();
     },
 
     // ─── EVENT ACTIVE CHECK ───
     isEventActiveAt: (event, dateString, hour) => {
-        // Handle both camelCase (from backend to_dict) and snake_case
-        const startDate = event.startDate || event.start_date;
-        const endDate = event.endDate || event.end_date || startDate;
-        const startTime = event.startTime || event.start_time;
-        const endTime = event.endTime || event.end_time;
-
+        const startDate  = event.startDate  || event.start_date;
+        const endDate    = event.endDate    || event.end_date || startDate;
+        const startTime  = event.startTime  || event.start_time;
+        const endTime    = event.endTime    || event.end_time;
         const eventStart = new Date(startDate + 'T' + startTime);
-        const eventEnd = new Date(endDate + 'T' + endTime);
-        const slotTime = new Date(dateString + 'T' + hour);
-
+        const eventEnd   = new Date(endDate   + 'T' + endTime);
+        const slotTime   = new Date(dateString + 'T' + hour);
         return slotTime >= eventStart && slotTime < eventEnd;
     },
 
     // ─── RENDER CALENDAR ───
     render: () => {
-        const grid = document.getElementById('calendar-grid');
+        const grid  = document.getElementById('calendar-grid');
         const label = document.getElementById('current-week-label');
         if (!grid) return;
 
         grid.innerHTML = '';
         const startOfWeek = CalendarManager.getStartOfWeek(CalendarManager.currentDate);
-
-        const endOfWeek = new Date(startOfWeek);
+        const endOfWeek   = new Date(startOfWeek);
         endOfWeek.setDate(endOfWeek.getDate() + 6);
         label.textContent = `Semaine du ${startOfWeek.getDate()}/${startOfWeek.getMonth()+1} au ${endOfWeek.getDate()}/${endOfWeek.getMonth()+1}`;
 
         const headers = document.querySelectorAll('.day-header');
-        const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const days    = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(startOfWeek);
             dayDate.setDate(dayDate.getDate() + i);
             headers[i].textContent = `${days[dayDate.getDay()]} ${dayDate.getDate()}`;
-
-            if (dayDate.toDateString() === new Date().toDateString()) {
-                headers[i].style.color = '#2563eb';
-                headers[i].style.background = '#eff6ff';
-            } else {
-                headers[i].style.color = '';
-                headers[i].style.background = '';
-            }
+            const isToday = dayDate.toDateString() === new Date().toDateString();
+            headers[i].style.color      = isToday ? '#2563eb' : '';
+            headers[i].style.background = isToday ? '#eff6ff' : '';
         }
 
         CalendarManager.hours.forEach(hour => {
-            const timeLabel = document.createElement('div');
-            timeLabel.className = 'time-slot-label';
+            const timeLabel       = document.createElement('div');
+            timeLabel.className   = 'time-slot-label';
             timeLabel.textContent = hour;
             grid.appendChild(timeLabel);
 
@@ -740,46 +651,32 @@ const CalendarManager = {
                 currentDay.setDate(currentDay.getDate() + i);
                 const dateString = currentDay.toISOString().split('T')[0];
 
-                const cell = document.createElement('div');
-                cell.className = 'calendar-slot';
-                cell.dataset.date = dateString;
-                cell.dataset.time = hour;
+                const cell         = document.createElement('div');
+                cell.className     = 'calendar-slot';
+                cell.dataset.date  = dateString;
+                cell.dataset.time  = hour;
+                cell.onclick = (e) => { if (e.target === cell) CalendarManager.openModal(null, dateString, hour); };
 
-                cell.onclick = (e) => {
-                    if (e.target === cell) CalendarManager.openModal(null, dateString, hour);
-                };
+                CalendarManager.events
+                    .filter(evt => CalendarManager.isEventActiveAt(evt, dateString, hour))
+                    .forEach(evt => {
+                        const div       = document.createElement('div');
+                        const startTime = evt.startTime || evt.start_time;
+                        const endTime   = evt.endTime   || evt.end_time;
+                        // assignedUserName is always returned by backend to_dict()
+                        const userName  = evt.assignedUserName || 'Non assigné';
 
-                const cellEvents = CalendarManager.events.filter(evt =>
-                    CalendarManager.isEventActiveAt(evt, dateString, hour)
-                );
+                        div.className = `event-block event-${evt.type}`;
 
-                cellEvents.forEach(evt => {
-                    const div = document.createElement('div');
-                    const evtType = evt.type;
-                    const evtId = evt.id;
-                    const startTime = evt.startTime || evt.start_time;
-                    const endTime = evt.endTime || evt.end_time;
-
-                    div.className = `event-block event-${evtType}`;
-
-                    if (evtType === 'garde') {
-                        // Use backend assignedUserName or fallback
-                        let userName = evt.assignedUserName || 'Inconnu';
-                        if (userName === 'Inconnu' && window.allUsers && evt.assignedUser) {
-                            const u = window.allUsers.find(user => user.id === evt.assignedUser);
-                            if (u) userName = u.username;
+                        if (evt.type === 'garde') {
+                            div.innerHTML = `<strong>🚨 GARDE</strong><br>${userName}<br><small>${startTime} – ${endTime}</small>`;
+                        } else {
+                            div.innerHTML = `<strong>📅 ${startTime}</strong> ${evt.title}<br><small>👤 ${userName}</small>`;
                         }
-                        div.innerHTML = `<strong>🚨 GARDE</strong><br>${userName}<br><small>${startTime} - ${endTime}</small>`;
-                    } else {
-                        div.innerHTML = `<strong>📅 ${startTime}</strong> ${evt.title}`;
-                    }
 
-                    div.onclick = (e) => {
-                        e.stopPropagation();
-                        CalendarManager.openModal(evtId);
-                    };
-                    cell.appendChild(div);
-                });
+                        div.onclick = (e) => { e.stopPropagation(); CalendarManager.openModal(evt.id); };
+                        cell.appendChild(div);
+                    });
 
                 grid.appendChild(cell);
             }
@@ -788,8 +685,7 @@ const CalendarManager = {
 
     // ─── OPEN MODAL ───
     openModal: (id = null, date = null, time = null) => {
-        const modal = document.getElementById('event-modal');
-        const form = document.getElementById('event-form');
+        const modal     = document.getElementById('event-modal');
         const deleteBtn = document.getElementById('btn-delete-event');
 
         CalendarManager.populateUserSelects();
@@ -798,37 +694,31 @@ const CalendarManager = {
             const evt = CalendarManager.events.find(e => e.id == id);
             if (!evt) return;
 
-            document.getElementById('event-modal-title').textContent = 'Modifier l\'événement';
-            document.getElementById('event-id').value = evt.id;
-            document.getElementById('event-type').value = evt.type;
-            document.getElementById('event-notes').value = evt.notes || '';
-            document.getElementById('event-start-date').value = evt.startDate || evt.start_date;
-            document.getElementById('event-end-date').value = evt.endDate || evt.end_date || evt.startDate || evt.start_date;
-            document.getElementById('event-start-time').value = evt.startTime || evt.start_time;
-            document.getElementById('event-end-time').value = evt.endTime || evt.end_time;
-
-            if (evt.type === 'rdv') {
-                document.getElementById('event-title').value = evt.title || '';
-                document.getElementById('event-sales-rep').value = evt.salesRep || '';
-            } else {
-                document.getElementById('event-assigned-user').value = evt.assignedUser || '';
-            }
-
+            document.getElementById('event-modal-title').textContent  = 'Modifier l\'événement';
+            document.getElementById('event-id').value                  = evt.id;
+            document.getElementById('event-type').value                = evt.type;
+            document.getElementById('event-title').value               = evt.title || '';
+            document.getElementById('event-notes').value               = evt.notes || '';
+            document.getElementById('event-start-date').value          = evt.startDate  || evt.start_date;
+            document.getElementById('event-end-date').value            = evt.endDate    || evt.end_date || evt.startDate || evt.start_date;
+            document.getElementById('event-start-time').value          = evt.startTime  || evt.start_time;
+            document.getElementById('event-end-time').value            = evt.endTime    || evt.end_time;
+            // FIX: use assignedUserId (from backend to_dict) for both rdv and garde
+            document.getElementById('event-assigned-user').value       = evt.assignedUserId || '';
             deleteBtn.style.display = 'block';
         } else {
-            form.reset();
+            document.getElementById('event-form').reset();
             document.getElementById('event-modal-title').textContent = 'Nouveau Planning';
-            document.getElementById('event-id').value = '';
+            document.getElementById('event-id').value         = '';
             document.getElementById('event-start-date').value = date || new Date().toISOString().split('T')[0];
-            document.getElementById('event-end-date').value = date || new Date().toISOString().split('T')[0];
-
+            document.getElementById('event-end-date').value   = date || new Date().toISOString().split('T')[0];
             if (time) {
                 document.getElementById('event-start-time').value = time;
-                let h = parseInt(time.split(':')[0]) + 1;
-                document.getElementById('event-end-time').value = h.toString().padStart(2, '0') + ':00';
+                const h = (parseInt(time.split(':')[0]) + 1) % 24;
+                document.getElementById('event-end-time').value   = h.toString().padStart(2, '0') + ':00';
             } else {
                 document.getElementById('event-start-time').value = '09:00';
-                document.getElementById('event-end-time').value = '10:00';
+                document.getElementById('event-end-time').value   = '10:00';
             }
             deleteBtn.style.display = 'none';
         }
@@ -837,48 +727,40 @@ const CalendarManager = {
         modal.classList.add('active');
     },
 
-    closeModal: () => {
-        document.getElementById('event-modal').classList.remove('active');
-    },
+    closeModal: () => document.getElementById('event-modal').classList.remove('active'),
 
-    // ─── POPULATE USER SELECTS ───
+    // ─── POPULATE USER SELECT ───
+    // FIX: single select #event-assigned-user for both rdv and garde
     populateUserSelects: () => {
-        const repSelect = document.getElementById('event-sales-rep');
-        const userSelect = document.getElementById('event-assigned-user');
-        if (!window.allUsers) return;
+        const select = document.getElementById('event-assigned-user');
+        if (!select || !window.allUsers) return;
 
-        const createOptions = (selectElement) => {
-            // Clear all except first option
-            while (selectElement.children.length > 1) {
-                selectElement.removeChild(selectElement.lastChild);
-            }
-            window.allUsers.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = `${u.username} (${u.first_name || ''} ${u.last_name || ''})`;
-                selectElement.appendChild(opt);
-            });
-        };
+        // Keep the first placeholder option, remove the rest
+        while (select.children.length > 1) select.removeChild(select.lastChild);
 
-        createOptions(repSelect);
-        createOptions(userSelect);
+        window.allUsers.forEach(u => {
+            const opt       = document.createElement('option');
+            opt.value       = u.id;
+            opt.textContent = `${u.username}${u.first_name ? ` (${u.first_name} ${u.last_name || ''})` : ''}`.trim();
+            select.appendChild(opt);
+        });
     },
 
-    // ─── TOGGLE FIELDS ───
+    // ─── TOGGLE FIELDS (rdv shows title, garde hides it) ───
     toggleFields: () => {
-        const type = document.getElementById('event-type').value;
-        const groupRdv = document.getElementById('group-rdv');
+        const type       = document.getElementById('event-type').value;
+        const groupRdv   = document.getElementById('group-rdv');
         const groupGarde = document.getElementById('group-garde');
 
         if (type === 'garde') {
-            groupRdv.style.display = 'none';
-            groupGarde.style.display = 'block';
-            document.getElementById('event-title').required = false;
+            if (groupRdv)   groupRdv.style.display   = 'none';
+            if (groupGarde) groupGarde.style.display  = 'block';
+            document.getElementById('event-title').required         = false;
             document.getElementById('event-assigned-user').required = true;
-        } else {
-            groupRdv.style.display = 'block';
-            groupGarde.style.display = 'none';
-            document.getElementById('event-title').required = true;
+        } else { // rdv
+            if (groupRdv)   groupRdv.style.display   = 'block';
+            if (groupGarde) groupGarde.style.display  = 'none';
+            document.getElementById('event-title').required         = true;
             document.getElementById('event-assigned-user').required = false;
         }
     },
@@ -886,49 +768,35 @@ const CalendarManager = {
     // ─── FORM SUBMIT → BACKEND ───
     setupListeners: () => {
         const form = document.getElementById('event-form');
-
         if (form) {
             form.onsubmit = async (e) => {
                 e.preventDefault();
 
-                const id = document.getElementById('event-id').value;
-                const type = document.getElementById('event-type').value;
+                const id        = document.getElementById('event-id').value;
+                const type      = document.getElementById('event-type').value;
                 const startDate = document.getElementById('event-start-date').value;
-                const endDate = document.getElementById('event-end-date').value || startDate;
+                const endDate   = document.getElementById('event-end-date').value || startDate;
                 const startTime = document.getElementById('event-start-time').value;
-                const endTime = document.getElementById('event-end-time').value;
+                const endTime   = document.getElementById('event-end-time').value;
 
-                // Validation
-                if (endDate < startDate) {
-                    return alert("La date de fin ne peut pas être avant la date de début !");
-                }
-                if (startDate === endDate && endTime <= startTime) {
-                    return alert("L'heure de fin doit être après l'heure de début !");
-                }
+                if (endDate < startDate) return alert("La date de fin ne peut pas être avant la date de début !");
+                if (startDate === endDate && endTime <= startTime) return alert("L'heure de fin doit être après l'heure de début !");
 
-                // Build payload for backend
-                let payload = {
-                    type: type,
-                    startDate: startDate,
-                    endDate: endDate,
-                    startTime: startTime,
-                    endTime: endTime,
-                    notes: document.getElementById('event-notes').value || null
+                // FIX: assignedUser always populated — never forced to null
+                const assignedUser = document.getElementById('event-assigned-user').value || null;
+
+                const payload = {
+                    type,
+                    startDate,
+                    endDate,
+                    startTime,
+                    endTime,
+                    notes:        document.getElementById('event-notes').value || null,
+                    assignedUser, // ← maps to assigned_user_id in Flask route
+                    title:        type === 'rdv' ? document.getElementById('event-title').value : 'Garde'
                 };
 
-                if (type === 'rdv') {
-                    payload.title = document.getElementById('event-title').value;
-                    payload.salesRep = document.getElementById('event-sales-rep').value || null;
-                    payload.assignedUser = null;
-                } else {
-                    payload.title = 'Garde';
-                    payload.assignedUser = document.getElementById('event-assigned-user').value;
-                    payload.salesRep = null;
-                }
-
-                // Save to backend (POST or PUT)
                 const success = await CalendarManager.saveEvent(payload, id || null);
-
                 if (success) {
                     CalendarManager.closeModal();
                     alert('✅ Événement enregistré !');
@@ -937,8 +805,6 @@ const CalendarManager = {
         }
 
         const typeSelect = document.getElementById('event-type');
-        if (typeSelect) {
-            typeSelect.addEventListener('change', () => CalendarManager.toggleFields());
-        }
+        if (typeSelect) typeSelect.addEventListener('change', () => CalendarManager.toggleFields());
     }
 };
