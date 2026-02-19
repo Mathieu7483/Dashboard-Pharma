@@ -14,8 +14,7 @@ ticket_input_model = tickets_ns.model('TicketInput', {
 })
 # Model for serialization and output of ticket data (Output)
 ticket_output_model = tickets_ns.model('TicketOutput', {
-    'id': fields.Integer(readOnly=True, description='The unique ticket identifier'),
-    'subject': fields.String(description='Subject of the support ticket', max_length=100),
+    'id': fields.String(description='The ticket UUID'),    'subject': fields.String(description='Subject of the support ticket', max_length=100),
     'description': fields.String(description='Detailed description of the issue'),
     'priority': fields.String(description='Priority level of the ticket', enum=['low', 'medium', 'high']),
     'status': fields.String(description='Current status of the ticket', enum=['open', 'in_progress', 'closed']),
@@ -58,7 +57,7 @@ class TicketList(Resource):
             priority=data.get('priority', 'medium')
         ), 201
 # --- SECURE RESOURCE 2: Single Ticket (GET, PUT, DELETE) ---
-@tickets_ns.route('/<int:ticket_id>')
+@tickets_ns.route('/<uuid:ticket_id>')
 @tickets_ns.param('ticket_id', 'The ticket identifier')
 class TicketResource(Resource):
     
