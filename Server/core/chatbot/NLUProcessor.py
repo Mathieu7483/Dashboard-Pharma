@@ -10,7 +10,6 @@ class NLUProcessor:
     """
     Natural Language Understanding with French + English support.
     
-    🆕 New features:
     - Bilingual keyword detection (FR/EN)
     - Language auto-detection
     - Greeting and help handlers
@@ -19,7 +18,6 @@ class NLUProcessor:
     """
 
     def __init__(self):
-        # Load French + English spaCy models
         try:
             self.nlp_fr = spacy.load("fr_core_news_md")
             print("✅ Loaded fr_core_news_md")
@@ -34,19 +32,18 @@ class NLUProcessor:
             print("⚠️ EN model not available - using FR for all")
             self.nlp_en = None
         
-        # 🆕 Bilingual greetings
         self.greetings = {
             "fr": ["bonjour", "salut", "bonsoir", "coucou", "hey", "allo"],
             "en": ["hello", "hi", "hey", "good morning", "good evening", "greetings"]
         }
         
-        # 🆕 Help keywords
+        # BUG FIX: help keywords now only trigger get_help when NO other meaningful
+        # content is present. Moved to a separate weak-signal check in analyze().
         self.help_keywords = {
-            "fr": ["aide", "aider", "comment", "utiliser", "guide", "besoin"],
-            "en": ["help", "how", "assist", "guide", "need", "support"]
+            "fr": ["aide", "aider", "guide", "besoin d'aide"],
+            "en": ["help me", "assist me", "need help", "how do i use"]
         }
         
-        # 🆕 Bilingual intent patterns
         self.intent_patterns = {
             "check_interaction": {
                 "keywords": [
@@ -155,6 +152,26 @@ class NLUProcessor:
                 "priority": 4
             },
             
+            "search ticket": {
+                "keywords": [
+                    # FR
+                    "cherche", "trouve", "recherche", "ticket", "problème",
+                    # EN
+                    "find", "search", "ticket", "issue", "problem"
+                ],
+                "priority": 5
+            },
+
+            "calendar": {
+                "keywords": [
+                    # FR
+                    "calendrier", "agenda", "planning", "rendez-vous",
+                    # EN
+                    "calendar", "schedule", "appointments", "agenda"
+                ],
+                "priority": 4
+            },
+
             "list_all": {
                 "keywords": [
                     # FR
@@ -166,150 +183,66 @@ class NLUProcessor:
             }
         }
         
-        # Stop words to exclude from entity extraction
         self.stop_entities = {
-            # Intent keywords
             "docteur", "dr", "médecin", "doctor", "client", "patient",
             "stock", "prix", "price", "alerte", "vente", "ventes",
             "produit", "médicament", "interaction", "avec", "et", "ou",
-            
-            # Common words
-            "cherche", "find", "search", "trouve", "trouver",
-            "quel", "quelle", "quoi", "comment", "combien",
-            "le", "la", "les", "un", "une", "des", "du", "de",
-            "the", "a", "an", "some", "any",
-            
-            # Question words
-            "est", "sont", "a", "ont", "fait", "faire",
-            "puis", "je", "peut", "on", "mélanger", "prendre",
-            "compatibles", "danger", "ensemble",
-            "is", "are", "has", "have", "do", "does",
-            "can", "could", "would", "should"
+            "cherche", "trouve", "recherche", "affiche", "montre",
+            "contact", "téléphone", "tel", "email", "adresse",
+            "rdv", "rendez-vous", "planning", "agenda", "garde",
+            "quel", "quelle", "combien", "où", "est-ce", "que",
+            "le", "la", "les", "un", "une", "des", "du", "de"
+        }
+
+        self.intent_patterns = {
+            "check_interaction": {"keywords": ["incompatible", "interaction", "danger", "mélange", "compatible", "contre-indication"], "priority": 10},
+            "get_sales_summary": {"keywords": ["vente", "chiffre", "ca", "revenue", "argent", "statistique"], "priority": 7},
+            "get_contact_info": {"keywords": ["téléphone", "numéro", "contact", "email", "adresse", "joindre"], "priority": 9},
+            "calendar": {"keywords": ["calendrier", "agenda", "planning", "rdv", "rendez-vous", "garde", "planning"], "priority": 10}, # Upgradé (Bug #4, #7)
+            "check_stock": {"keywords": ["stock", "combien", "quantité", "disponible", "reste"], "priority": 6},
+            "check_price": {"keywords": ["prix", "coûte", "tarif", "montant", "euro", "€"], "priority": 6},
+            "get_help": {"keywords": ["aide", "aider", "comment", "fonctionne"], "priority": 5}
         }
 
     def _detect_language(self, text: str) -> str:
-        """
-        🆕 Détecte la langue du texte (fr/en)
-        
-        Args:
-            text: User input
-            
-        Returns:
-            "fr" or "en"
-        """
         text_lower = text.lower()
-        words = text_lower.split()
+        fr_indicators = ["le", "la", "les", "est", "avec", "pour", "dans", "ordonnance", "quel", "ou"]
+        en_indicators = ["the", "is", "with", "for", "in", "what", "prescription", "or"]
         
-        # Mots indicateurs français
-        fr_indicators = [
-            "le", "la", "les", "un", "une", "des", "du", "de",
-            "est", "sont", "avec", "pour", "dans", "sur", "qui", "pourquoi"
-            "quel", "quelle", "combien", "où", "ordonnance",
-            "mais", "ni", "car"
-        ]
-        
-        # Mots indicateurs anglais
-        en_indicators = [
-            "the", "a", "an", "is", "are", "with", "for",
-            "in", "on", "what", "where", "how", "find",
-            "search", "get", "show", "prescription"
-        ]
-        
-        fr_count = sum(1 for word in words if word in fr_indicators)
-        en_count = sum(1 for word in words if word in en_indicators)
-        
-        # Si présence de mots-clés spécifiques
-        if any(word in text_lower for word in ["find", "search", "get", "show"]):
-            en_count += 2
-        
-        if any(word in text_lower for word in ["cherche", "trouve", "affiche", "montre"]):
-            fr_count += 2
-        
+        fr_count = sum(1 for word in text_lower.split() if word in fr_indicators)
+        en_count = sum(1 for word in text_lower.split() if word in en_indicators)
         return "en" if en_count > fr_count else "fr"
 
     def analyze(self, text: str) -> Dict:
-        """
-        Main analysis entry point with language detection.
-        
-        Args:
-            text: User's natural language query
-            
-        Returns:
-            {
-                "intent": str,
-                "entity": str (first entity, legacy),
-                "entity_list": List[str] (all entities),
-                "confidence": float,
-                "language": str ("fr" or "en")
-            }
-        """
         if not text or not text.strip():
-            return {
-                "intent": "unknown",
-                "entity": "",
-                "entity_list": [],
-                "confidence": 0.0,
-                "language": "fr"
-            }
+            return {"intent": "unknown", "entity": "", "entity_list": [], "confidence": 0.0, "language": "fr"}
         
-        # 🆕 Detect language
         lang = self._detect_language(text)
-        
-        # 🆕 Handle greetings
         text_lower = text.lower().strip()
-        if any(greeting in text_lower for greeting in self.greetings.get(lang, [])):
-            return {
-                "intent": "greeting",
-                "entity": "",
-                "entity_list": [],
-                "confidence": 1.0,
-                "language": lang
-            }
-        
-        # 🆕 Handle help requests
-        if any(kw in text_lower for kw in self.help_keywords.get(lang, [])):
-            return {
-                "intent": "get_help",
-                "entity": "",
-                "entity_list": [],
-                "confidence": 1.0,
-                "language": lang
-            }
-        
-        # Choose appropriate spaCy model
+
+        # Greetings (Short messages only)
+        if any(g in text_lower for g in self.greetings.get(lang, [])) and len(text_lower.split()) <= 2:
+            return {"intent": "greeting", "entity": "", "entity_list": [], "confidence": 1.0, "language": lang}
+
         nlp = self.nlp_fr if lang == "fr" else (self.nlp_en or self.nlp_fr)
         doc = nlp(text)
-        tokens_lemma = [token.lemma_.lower() for token in doc]
         
-        # Extract entities
+        # Extraction & Nettoyage des entités (Bug #1)
         entities = self._extract_entities(doc, text)
+        entities = self._clean_overlapping_entities(entities) 
+
+        # Intent Detection
+        intent, confidence = self._detect_intent(doc, entities, text, lang)
         
-        if not entities:
-            clean_words = [
-                t.text for t in doc 
-                if not t.is_stop and not t.is_punct 
-                and t.text.lower() not in self.stop_entities
-            ]
-            if clean_words:
-                entities = [clean_words[0].capitalize()]
-        
-        # 🆕 Improved interaction detection
-        is_interaction_query = self._detect_interaction_pattern(text, entities)
-        
-        # Detect intent with scoring
-        intent, confidence = self._detect_intent(tokens_lemma, entities, text, lang)
-        
-        # Override intent if interaction detected
-        if is_interaction_query:
-            intent = "check_interaction"
-            confidence = max(confidence, 0.9)
-        
-        # Legacy compatibility
-        entity_str = entities[0] if entities else ""
-        
+        # Sécurity Interaction
+        if len(entities) >= 2 and intent not in ["check_stock", "check_price", "get_contact_info"]:
+            if any(kw in text_lower for kw in ["+", "&", "avec", "et", "mélanger", "mix"]):
+                intent = "check_interaction"
+                confidence = 0.95
+
         return {
             "intent": intent,
-            "entity": entity_str,
+            "entity": entities[0] if entities else "",
             "entity_list": entities,
             "confidence": confidence,
             "language": lang
@@ -318,33 +251,20 @@ class NLUProcessor:
     def _detect_interaction_pattern(self, text: str, entities: List[str]) -> bool:
         """
         Detects if query is about drug interactions.
-        
-        Patterns:
-        - "Aspirine + Ibuprofène" (symbol +)
-        - "Doliprane & Advil" (symbol &)
-        - "Warfarine et Plavix" (conjunction with 2+ entities)
-        - "Can I mix X and Y" (interaction keywords + 2+ entities)
-        
-        Returns:
-            True if interaction query detected
         """
         text_lower = text.lower()
         
-        # Pattern 1: Contains interaction symbols (+, &)
         if '+' in text or '&' in text:
             return len(entities) >= 2
         
-        # Pattern 2: Conjunction words with 2+ entities
         conjunction_words = ['et', 'avec', 'plus', 'and', 'with']
         has_conjunction = any(f' {word} ' in f' {text_lower} ' for word in conjunction_words)
         if has_conjunction and len(entities) >= 2:
-            # 🆕 But NOT if there's an explicit command word
             command_words = ['find', 'search', 'cherche', 'trouve', 'list', 'show']
             has_command = any(word in text_lower for word in command_words)
             if not has_command:
                 return True
         
-        # Pattern 3: Interaction keywords + 2+ entities
         interaction_keywords = [
             'interaction', 'compatible', 'mélanger', 'ensemble',
             'danger', 'puis-je', 'peut-on', 'associer', 'incompatible',
@@ -354,160 +274,72 @@ class NLUProcessor:
         if has_keyword and len(entities) >= 2:
             return True
         
-        # Pattern 4: Just 2+ product names in short query
         if len(entities) >= 2 and len(text.split()) <= 4:
             return True
         
         return False
     
     def _extract_entities(self, doc, original_text: str) -> List[str]:
-        """
-        Extract product, doctor, and client names with smart normalization.
-        🆕 Enhanced with symbol splitting and better product matching
-        """
         entities = []
         text_lower = original_text.lower()
         
-        # 🆕 PHASE 0: Split by interaction symbols
-        if '+' in original_text or '&' in original_text:
+        # 1. Gestion des symboles (ton code existant)
+        if any(sym in original_text for sym in ['+', '&']):
             parts = re.split(r'[+&]', original_text)
             for part in parts:
-                clean_part = part.strip().strip('.,!?;:')
-                if clean_part and clean_part.lower() not in self.stop_entities:
-                    if len(clean_part) >= 3:
-                        entities.append(clean_part.capitalize())
-            
-            if len(entities) >= 2:
-                return entities[:5]
-        
-        # PHASE 1: Known product pattern matching
-        known_products = [
-            # Français
-            "paracétamol", "doliprane", "ibuprofène", "ibuprofen",
-            "amoxicilline", "aspirine", "oméprazole", "cétirizine",
-            "vitamines", "vitamine", "sérum", "hydrocortisone",
-            "clarithromycine", "métronidazole", "loratadine",
-            "furosémide", "pantoprazole", "insuline", "tramadol",
-            "warfarine", "augmentin", "ventoline", "dexaméthasone",
-            "azithromycine", "fluconazole", "montelukast", "plavix",
-            "clopidogrel", "coumadine", "metformine",
-            # English/International
-            "paracetamol", "acetaminophen", "tylenol", "advil",
-            "nurofen", "aspirin", "amoxicillin", "omeprazole"
-        ]
-        
-        for product in known_products:
-            if product in text_lower:
-                words = text_lower.split()
-                for i, word in enumerate(words):
-                    if product in word:
-                        if i + 1 < len(words) and words[i+1] in ["liquide", "crème", "spray", "sirop", "tablet", "capsule"]:
-                            full_name = f"{product.capitalize()} {words[i+1].capitalize()}"
-                            if full_name not in entities:
-                                entities.append(full_name)
-                        else:
-                            if product.capitalize() not in entities:
-                                entities.append(product.capitalize())
-        
-        # PHASE 2: Universal Entity Extraction (POS Tagging)
+                clean = part.strip().strip('.,!?;:')
+                if len(clean) >= 3 and clean.lower() not in self.stop_entities:
+                    entities.append(clean) # On ne capitalise plus de force ici
+            if len(entities) >= 2: return entities
+
+        # 2. Extraction par POS Tagging
         for token in doc:
-            clean_token = token.text.lower()
-            
-            if token.is_stop or token.is_punct or clean_token in self.stop_entities:
+            t_low = token.text.lower()
+            if t_low in self.stop_entities or token.is_punct or token.like_num:
                 continue
             
-            if token.pos_ in ["PROPN", "NOUN", "X"]:
-                cap_token = token.text.capitalize()
-                if len(cap_token) > 2 and cap_token not in entities:
-                    if not token.like_num and not token.is_digit:
-                        entities.append(cap_token)
-        
-        return entities[:5]
+            # On accepte PROPN, NOUN et même les mots "inconnus" s'ils sont assez longs
+            if token.pos_ in ["PROPN", "NOUN", "X", "ADJ"] and len(t_low) > 2:
+                entities.append(token.text) # On garde le texte original !
+
+        # 3. FALLBACK : Si SpaCy n'a rien trouvé (ex: "godalier" ignoré)
+        if not entities:
+            words = original_text.split()
+            for w in words:
+                w_clean = w.lower().strip('.,!?;:')
+                if len(w_clean) > 2 and w_clean not in self.stop_entities:
+                    entities.append(w)
+
+        return entities
     
-    def _detect_intent(self, tokens_lemma: List[str], entities: List[str], 
-                      original_text: str, lang: str) -> tuple:
-        """
-        🆕 Enhanced intent detection with explicit commands and context awareness
+
+    def _clean_overlapping_entities(self, entities: List[str]) -> List[str]:
+        """ Supprime les entités incluses dans d'autres (ex: 'Aspirine' vs 'Aspirine 300mg') """
+        if not entities: return []
+        # Trier par longueur décroissante
+        sorted_ents = sorted(list(set(entities)), key=len, reverse=True)
+        final = []
+        for ent in sorted_ents:
+            if not any(ent in other for other in final):
+                final.append(ent)
+        return final
+    
+
+    def _detect_intent(self, doc, entities: List[str], original_text: str, lang: str) -> tuple:
+        text_lower = original_text.lower()
+        tokens_lemma = [t.lemma_.lower() for t in doc]
         
-        Returns:
-            (intent_name, confidence_score)
-        """
-        text_lower = ' '.join(tokens_lemma)
-        original_lower = original_text.lower()
-        
-        # 🆕 RULE 1: Explicit commands (highest priority)
-        explicit_commands = {
-            # English
-            "find product": "get_product",
-            "search product": "get_product",
-            "find doctor": "get_doctor",
-            "find client": "get_client",
-            "list all": "list_all",
-            "show all": "list_all",
-            # French
-            "cherche produit": "get_product",
-            "trouve produit": "get_product",
-            "liste tous": "list_all",
-            "affiche tous": "list_all",
-        }
-        
-        for phrase, intent in explicit_commands.items():
-            if phrase in original_lower:
-                return intent, 0.95
-        
-        # 🆕 RULE 2: Interaction = 2+ entities + markers (but NO command words)
-        interaction_keywords = ["et", "avec", "plus", "+", "&", "together", "with", "and"]
-        has_interaction_marker = any(kw in original_lower for kw in interaction_keywords)
-        
-        if len(entities) >= 2 and has_interaction_marker:
-            command_words = ["find", "search", "cherche", "liste", "list", "show"]
-            has_command = any(word in original_lower for word in command_words)
-            
-            if not has_command:
-                return "check_interaction", 0.95
-        
-        # 🆕 RULE 3: Single entity + action word = get_product
-        if len(entities) == 1:
-            action_words = ["find", "search", "get", "show", "cherche", "trouve", "affiche"]
-            if any(word in original_lower for word in action_words):
-                return "get_product", 0.85
-        
-        # RULE 4: Keyword scoring (existing logic enhanced)
+        if any(kw in text_lower for kw in ["rdv", "rendez-vous", "garde", "planning", "agenda"]):
+            return "calendar", 0.95
+
         intent_scores = {}
-        
-        for intent_name, config in self.intent_patterns.items():
-            keywords = config["keywords"]
-            priority = config["priority"]
-            
-            matches = sum(1 for kw in keywords if kw in text_lower)
-            
-            if matches > 0:
-                base_score = matches * priority
-                
-                # Boost scores for specific patterns
-                if intent_name == "check_interaction":
-                    if any(word in text_lower for word in ["avec", "ensemble", "et", "mélanger", "with", "and"]):
-                        base_score *= 1.5
-                
-                if intent_name == "get_sales_summary":
-                    if any(word in text_lower for word in ["aujourd'hui", "jour", "today"]):
-                        base_score *= 1.3
-                
-                if intent_name == "list_all":
-                    if any(word in text_lower for word in ["tous", "toutes", "all", "every"]):
-                        base_score *= 1.4
-                
-                intent_scores[intent_name] = base_score
-        
-        # Select highest scoring intent
+        for name, config in self.intent_patterns.items():
+            score = sum(2 for kw in config["keywords"] if kw in text_lower or kw in tokens_lemma)
+            if score > 0:
+                intent_scores[name] = score * config["priority"]
+
         if intent_scores:
-            best_intent = max(intent_scores, key=intent_scores.get)
-            max_score = intent_scores[best_intent]
-            
-            # Normalize confidence (0.0 to 1.0)
-            confidence = min(max_score / 20.0, 1.0)
-            
-            return best_intent, confidence
+            best = max(intent_scores, key=intent_scores.get)
+            return best, min(intent_scores[best] / 20.0, 1.0)
         
-        # Default: assume product search
         return "get_product", 0.4
