@@ -4,11 +4,12 @@ from sqlalchemy.orm import relationship
 from models.user import UserModel
 from utils.decorator import admin_required
 from datetime import datetime
+import uuid
 
 class Ticket(db.Model):
     __tablename__ = 'tickets'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     subject = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(20), default='medium') # low, medium, high

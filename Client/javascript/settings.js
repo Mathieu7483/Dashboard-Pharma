@@ -441,7 +441,7 @@ function renderTicketTable(tickets) {
                 <td><small style="color:#6b7280;">User ID: ${ticket.user_id.slice(0, 8)}...</small></td>
                 <td>${priorityBadges[ticket.priority] || priorityBadges['medium']}</td>
                 <td>
-                    <select class="status-select" data-ticket-id="${ticket.id}" data-current-status="${ticket.status}" onchange="handleStatusChange(${ticket.id}, this.value)">
+                    <select class="status-select" data-ticket-id="${ticket.id}" data-current-status="${ticket.status}" onchange="handleStatusChange('${ticket.id}', this.value)">
                         <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>🟢 Open</option>
                         <option value="pending" ${ticket.status === 'pending' ? 'selected' : ''}>🟡 Pending</option>
                         <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>🟣 Closed</option>
@@ -450,9 +450,9 @@ function renderTicketTable(tickets) {
                 <td><small>${date}</small></td>
                 <td>
                     <div class="action-group">
-                        <button class="btn-action" onclick="viewTicket(${ticket.id})">👁️</button>
-                        <button class="btn-action" onclick="openAdminNoteModal(${ticket.id})">📝</button>
-                        <button class="btn-danger" onclick="deleteTicket(${ticket.id})">🗑️</button>
+                        <button class="btn-action" onclick="viewTicket('${ticket.id}')">👁️ View</button>
+                        <button class="btn-action" onclick="openAdminNoteModal('${ticket.id}')">📝Note</button>
+                        <button class="btn-danger" onclick="deleteTicket('${ticket.id}')">🗑️ Delete</button>
                     </div>
                 </td>
             </tr>`;
