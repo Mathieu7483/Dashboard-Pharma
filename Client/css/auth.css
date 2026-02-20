@@ -1,0 +1,140 @@
+:root {
+    --color-primary: #1E90FF;
+    --color-secondary: #00FF7F;
+    --color-background-start: #FFFFFF;
+    --color-background-mid: #E0FFFF;
+    --color-background-end: #F0FFF0;
+    --color-text-dark: #333;
+}
+
+body {
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: var(--color-text-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, 
+        var(--color-background-start) 0%, 
+        var(--color-background-mid) 50%, 
+        var(--color-background-end) 100%
+    );
+}
+
+.auth-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 350px;
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.2), 
+        0 0 15px var(--color-primary),
+        0 0 30px var(--color-secondary);
+    border: 1px solid rgba(30, 144, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.auth-container:hover {
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.3),
+        0 0 25px var(--color-primary), 
+        0 0 45px var(--color-secondary);
+}
+
+/* --- RÈGLES D'UNIFORMISATION ET DE POSITIONNEMENT (AJOUTS) --- */
+.auth-container input, 
+.auth-container button,
+.auth-container .input-group {
+    width: 100%; 
+    box-sizing: border-box; 
+    margin-bottom: 15px; 
+}
+
+/* Redéfinition des styles d'input pour appliquer la cohérence */
+.auth-container input[type="text"], 
+.auth-container input[type="password"],
+.auth-container input[type="email"] { 
+    padding: 12px;
+    border: 1px solid #ccc; 
+    border-radius: 6px; 
+    transition: border-color 0.2s;
+}
+
+/* Gestion du .input-group */
+.input-group {
+    position: relative;
+}
+
+.input-group input {
+    margin-bottom: 0;
+    padding-right: 70px; /* Espace pour le texte "Afficher" */
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%; 
+    right: 10px; 
+    transform: translateY(-50%); 
+    cursor: pointer; 
+    color: var(--color-primary); /* Utilisation de la variable pour la couleur du lien */
+    font-size: 0.9em; 
+    font-weight: bold;
+    text-transform: uppercase;
+}
+/* --- FIN DES AJOUTS --- */
+
+
+/* Les règles suivantes sont adaptées ou conservées */
+form > * { margin-bottom: 15px; }
+
+input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
+}
+
+h2 {
+    color: var(--color-primary);
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+button { 
+    padding: 12px; 
+    background: linear-gradient(45deg, var(--color-primary), var(--color-secondary));
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: bold;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.toggle-link a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.message { 
+    text-align: center;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.message[style*="green"] {
+    color: darkgreen;
+    background-color: #e6ffe6;
+}
+
+.message[style*="red"] {
+    color: darkred;
+    background-color: #ffe6e6;
+}

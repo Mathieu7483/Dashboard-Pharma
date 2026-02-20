@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pharma - Overview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Main Application Wrapper -->
+    <div class="app-wrapper">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            
+            <div class="sidebar-header">
+                <img src="assets/img/logo-pharma.jpg" alt="Pharma Logo" width="30">
+                <h2>Dashboard Pharma</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#" data-section="view-general" class="nav-link active">📊 General View</a></li>
+                    <li><a href="inventory.html" class="nav-link">📦 Inventory</a></li>
+                    <li><a href="clients.html" class="nav-link">👥 Clients</a></li>
+                    <li><a href="doctors.html" class="nav-link">👨‍⚕️ Doctors</a></li>
+                    <li><a href="settings.html" class="nav-link">⚙️ Settings</a></li>
+                    <button id="open-ticket-btn" class="btn-primary">
+                        <i class="fas fa-ticket-alt"></i> Report an Issue
+                    </button>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>Operator: <strong></strong></p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <header class="section-header">
+                        <h1>Dashboard Pharma Overview</h1>
+                    </header>
+                </div>
+                
+                <div class="top-bar-right">
+                    <button id="logout-btn" class="btn-logout-top">Logout</button>
+                    
+                    <div class="user-profile">
+                        <div class="avatar"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- General View Section -->
+            <section id="view-general" class="content-section">
+                <div class="dashboard-grid">
+                    
+                    <!-- Daily Sales Chart -->
+                    <article class="widget graph-day">
+                        <h3>Daily Sales</h3>
+                        <div class="chart-container">
+                            <canvas id="chartDay"></canvas>
+                        </div>
+                    </article>
+
+                    <!-- Monthly Sales Chart -->
+                    <article class="widget graph-month">
+                        <h3>Monthly Sales</h3>
+                        <div class="chart-container">
+                            <canvas id="chartMonth"></canvas>
+                        </div>
+                    </article>
+
+                    <!-- Inventory Stock Widget -->
+                    <article class="widget inventory-stock">
+                        <h3>Inventory Stock</h3>
+                        <div class="kpi-value" id="stock-efficiency">0%</div>
+                        <p id="stock-status-text">Synchronizing...</p>
+                        <hr class="widget-divider">
+                        <h3>Critical Stock Levels</h3>
+                        <ul class="item-list" id="meds-list">
+                            <li>Loading inventory...</li>
+                        </ul>
+                    </article>
+
+                    <!-- Team Notifications & Staff Widget -->
+                    <article class="widget meds-team">
+                        <!-- Team Notifications Section -->
+                        <div class="meds-section">
+                            <h3>📢 Team Notifications</h3>
+        
+                            <!-- Admin Note Input (visible to admins only) -->
+                            <div id="admin-note-input" class="admin-only" style="margin-bottom: 15px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="new-note-text" class="widget-search" 
+                                           placeholder="Add a quick note..." style="flex: 1;">
+                                    <button id="add-note-btn" class="btn-logout-top" 
+                                            style="background: #2ecc71; border: none; height: 35px; margin-top: 5px;">
+                                        ADD
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Notifications List -->
+                            <ul class="item-list" id="team-notif-list">
+                                <li class="item-entry">
+                                    <div class="info">
+                                        <strong>📌 Note:</strong> Welcome to the Dashboard.<br>
+                                        <small>System is operational</small>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <hr class="widget-divider">
+
+                        <!-- Staff Section -->
+                        <div class="team-section">
+                            <h3>Staff On Duty</h3>
+                            <ul class="item-list" id="team-list">
+                                <li>Loading team...</li>
+                            </ul>
+                        </div>
+                    </article>
+
+                    <!-- Client CRM Widget -->
+                    <article class="widget client-data">
+                        <div class="widget-header">
+                            <h3>Client CRM</h3>
+                            <input type="text" id="search-client" class="widget-search" 
+                                   placeholder="Filter patients...">
+                        </div>
+                        <div class="kpi-value" id="total-clients">0</div>
+                        <div class="scroll-wrapper" id="client-search-result">Registered Clients</div>
+                    </article>
+
+                    <!-- AI Chatbot Widget -->
+                    <article class="widget chatbot-widget">
+                        <h3>AI Caducée</h3>
+                        <div id="chat-window">
+                            <div class="message bot">Hello, I'm Caducée. How can I help you today?</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="user-input" 
+                                   placeholder="Ask Caducée about stocks, sales...">
+                            <button id="send-btn">SEND</button>
+                        </div>
+                    </article>
+
+                    <!-- Medical Network Widget -->
+                    <article class="widget doctor-data">
+                        <div class="widget-header">
+                            <h3>Medical Network</h3>
+                            <input type="text" id="search-doctor" class="widget-search" 
+                                   placeholder="Filter doctors...">
+                        </div>
+                        <div class="kpi-value" id="total-doctors">0</div>
+                        <div class="scroll-wrapper" id="doctor-search-result">Affiliated Doctors</div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Full Inventory Section (Hidden by default) -->
+            <section id="view-stocks" class="content-section" style="display: none;">
+                <header class="section-header">
+                    <h1>Full Inventory Management</h1>
+                    <button class="btn-primary">+ Add New Product</button>
+                </header>
+                <div class="widget full-width">
+                    <table class="data-table" id="full-inventory-table"></table>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="main-footer">
+                <p>&copy; 2026 Dashboard Pharma</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- ============================================
+         MODAL: SUPPORT TICKET
+         ============================================ -->
+    <div id="ticket-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-ticket-modal" class="close">&times;</span>
+            <h2>Support Ticket</h2>
+            <form id="ticket-form">
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" name="subject" required placeholder="e.g., Printer Error">
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required rows="4" 
+                              placeholder="Describe your issue..."></textarea>
+                </div>
+                <button type="submit" class="btn-save">Send Ticket</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="javascript/dashboard.js"></script>
+</body>
+</html>
