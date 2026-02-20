@@ -364,3 +364,18 @@ class FacadeService:
                 db.session.rollback()
                 return False
         return False
+
+
+# --- CALENDAR METHOD ---
+    def get_events_by_date(self, date_str):
+        """
+        fetch events (RDV) for a specific date. This can be used to populate the calendar view.
+        """
+        from models.calendar import CalendarEvent
+        
+        stmt = (
+            db.select(CalendarEvent)
+            .filter(func.date(CalendarEvent.start_time) == date_str)
+            .order_by(CalendarEvent.start_time)
+        )
+        return db.session.execute(stmt).scalars().all()
