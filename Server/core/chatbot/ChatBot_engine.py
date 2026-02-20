@@ -1,14 +1,5 @@
 """
 Server/core/chatbot/ChatBot_engine.py
-Orchestrateur principal — version corrigée et unifiée
-
-Bugs corrigés :
-- greeting/get_help gérés par le NLU (plus de fallback accidentel)
-- "Mon planning de demain" -> _handle_schedule_query
-- intent "search_ticket" (coherence NLU <-> engine)
-- _handle_calendar_events : entite temporelle -> _handle_schedule_query
-- selectinload partout pour eviter lazy loading hors session
-- _format_event helper pour deduplication
 """
 
 from typing import List
@@ -140,20 +131,20 @@ class ChatBotEngine:
 
         if not conflicts:
             return (
-                "## Aucune interaction connue\n\n"
+                " Aucune interaction connue\n\n"
                 f"Produits analyses : {' + '.join(display_names)}\n\n"
                 f"Principes actifs : {', '.join(set(resolved))}\n\n"
                 "Consultez toujours un professionnel de sante."
             )
 
         severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🔴🔴"}
-        output = ["## 🚨 ALERTE INTERACTION MEDICAMENTEUSE\n",
+        output = [" 🚨 ALERTE INTERACTION MEDICAMENTEUSE\n",
                   f"Analyse pour : {' + '.join(display_names)}\n"]
         for c in conflicts:
             ix = c["interaction"]
             emoji = severity_emoji.get(ix.severity.lower(), "⚠️")
             output += [
-                f"### {emoji} {c['name_a']} + {c['name_b']}",
+                f" {emoji} {c['name_a']} + {c['name_b']}",
                 f"Principes actifs : {ix.ingredient_a} / {ix.ingredient_b}",
                 f"Gravite : {ix.severity.upper()}",
                 f"Details : {ix.description}",
@@ -189,7 +180,7 @@ class ChatBotEngine:
             return f"Produit '{entities[0]}' introuvable."
         rx = "Sur ordonnance" if product.is_prescription_only else "Vente libre"
         return (
-            f"## {product.name}\n"
+            f" {product.name}\n"
             f"   Prix : {product.price:.2f} EUR\n"
             f"   Type : {rx}\n"
             f"   Dosage : {product.dosage}\n"
@@ -222,17 +213,17 @@ class ChatBotEngine:
             db.select(ProductModel).where(ProductModel.stock < threshold).order_by(ProductModel.stock)
         ).scalars().all()
         if not low_stock:
-            return f"Tous les produits ont un stock suffisant (>={threshold} unites)."
-        output = [f"## Alertes Stock Bas (< {threshold} unites)\n"]
+            return f"🟢 Tous les produits ont un stock suffisant (>={threshold} unites)."
+        output = [f"⚠️ Alertes Stock Bas (< {threshold} unites)\n"]
         critical = [p for p in low_stock if p.stock < 5]
         warning  = [p for p in low_stock if 5 <= p.stock < threshold]
         if critical:
-            output.append("### CRITIQUE (< 5 unites)")
+            output.append("🔴CRITIQUE (< 5 unites)")
             for p in critical:
                 output.append(f"   {p.name} : {p.stock} unites")
             output.append("")
         if warning:
-            output.append("### FAIBLE (5-19 unites)")
+            output.append("🟠FAIBLE (5-19 unites)")
             for p in warning:
                 output.append(f"   {p.name} : {p.stock} unites")
         output.append(f"\n{len(low_stock)} produits necessitent un reapprovisionnement.")
@@ -257,14 +248,14 @@ class ChatBotEngine:
             ca, ra = ca or 0, ra or 0.0
 
             output = [
-                "## Performances de Vente\n",
-                f"### Aujourd'hui ({today.strftime('%d/%m/%Y')})",
+                " Performances de Vente\n",
+                f" Aujourd'hui ({today.strftime('%d/%m/%Y')})",
                 f"   Transactions : {ct}",
                 f"   CA : {rt:.2f} EUR\n",
-                f"### Cette semaine (depuis le {week_start.strftime('%d/%m')})",
+                f" Cette semaine (depuis le {week_start.strftime('%d/%m')})",
                 f"   Transactions : {cw}",
                 f"   CA : {rw:.2f} EUR\n",
-                "### Cumule total",
+                " Cumule total",
                 f"   Transactions : {ca}",
                 f"   CA total : {ra:.2f} EUR",
             ]
@@ -287,7 +278,7 @@ class ChatBotEngine:
             return f"Aucun contact trouve pour '{search_term}'."
         p = person[0]
         output = [
-            f"## Coordonnees - {p.first_name} {p.last_name}",
+            f" Coordonnees - {p.first_name} {p.last_name}",
             f"   Poste : {category}",
             f"   Tel : {p.phone or 'Non renseigne'}",
             f"   Email : {p.email or 'Non renseigne'}",
@@ -349,7 +340,7 @@ class ChatBotEngine:
             ).scalars().all()
             if not events:
                 return "Aucun evenement prevu dans les 7 prochains jours."
-            output = ["## Agenda - 7 prochains jours\n"]
+            output = ["📅 Agenda - 7 prochains jours\n"]
             for e in events:
                 output += self._format_event(e)
             return "\n".join(output)
@@ -377,7 +368,7 @@ class ChatBotEngine:
                 f"Aucun evenement pour '{search_term}' dans les 7 prochains jours.\n\n"
                 "Essayez : 'rdv', 'garde', ou le nom d'un collaborateur."
             )
-        output = [f"## Evenements - '{search_term}'\n"]
+        output = [f"📅 Evenements - '{search_term}'\n"]
         for e in events:
             output += self._format_event(e)
         return "\n".join(output)
@@ -420,7 +411,7 @@ class ChatBotEngine:
         if not events:
             return f"Aucun evenement prevu pour le {date_fr}."
 
-        output = [f"## Planning du {date_fr}\n"]
+        output = [f"📅 Planning du {date_fr}\n"]
         for e in events:
             output += self._format_event(e)
         return "\n".join(output)
@@ -465,7 +456,7 @@ class ChatBotEngine:
                   f"{total} resultat(s) trouve(s)\n"]
 
         if results["products"]:
-            output.append(f"### PRODUITS ({len(results['products'])})\n")
+            output.append(f"💊 PRODUITS ({len(results['products'])})\n")
             for p in results["products"][:5]:
                 rx    = "Ordonnance" if p.is_prescription_only else "Libre"
                 stock = "OK" if p.stock >= 20 else ("~" if p.stock >= 10 else "!!")
@@ -477,7 +468,7 @@ class ChatBotEngine:
                 ]
 
         if results["clients"]:
-            output.append(f"### CLIENTS ({len(results['clients'])})\n")
+            output.append(f"👤 CLIENTS ({len(results['clients'])})\n")
             for c in results["clients"][:3]:
                 output += [
                     f"{c.first_name} {c.last_name}".upper(),
@@ -486,7 +477,7 @@ class ChatBotEngine:
                 ]
 
         if results["doctors"]:
-            output.append(f"### MEDECINS ({len(results['doctors'])})\n")
+            output.append(f"🩺 MEDECINS ({len(results['doctors'])})\n")
             for d in results["doctors"][:3]:
                 output += [
                     f"Dr. {d.first_name} {d.last_name}",
@@ -551,7 +542,7 @@ class ChatBotEngine:
 
     def _generate_help_message(self) -> str:
         return (
-            "## Comment utiliser le Chatbot\n\n"
+            "Comment utiliser le Chatbot\n\n"
             "Recherche universelle :\n"
             "- 'Aspirine' -> Produits, clients ET docteurs\n"
             "- 'Dupont' -> Tous les Dupont\n\n"
