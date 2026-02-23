@@ -17,7 +17,8 @@ chat_input_model = ns.model('ChatInput', {
 
 # Output model for the bot's detailed response
 chat_output_model = ns.model('ChatOutput', {
-    'reply': fields.String(description='The formatted data report or error message')
+    'reply': fields.String(description='The formatted data report or error message'),
+    'intent': fields.String(description='The detected NLU intent')
 })
 
 # --- ROUTES ---
@@ -27,19 +28,17 @@ class ChatbotQuery(Resource):
     @ns.doc('process_chat_query')
     @ns.expect(chat_input_model)
     @ns.marshal_with(chat_output_model, code=200)
-    @jwt_required() # Authentication required for chatbot usage
+    @jwt_required()
     def post(self):
         data = ns.payload
         user_msg = data.get('message')
+  
+        result = bot_engine.process_query(user_msg)
         
-        # 1. Capture the engine's output
-        reply = bot_engine.process_query(user_msg)
-        
-        # 2. PRINT IN YOUR TERMINAL (Watch the black window!)
+        # Debug console
         print(f"\n--- DEBUG CHATBOT ---")
-        print(f"User Message: {user_msg}")
-        print(f"Engine Output: {reply}")
+        print(f"Result: {result}")
         print(f"----------------------\n")
 
-        # 3. Ensure we return a string under the 'reply' key
-        return {'reply': str(reply)}, 200
+
+        return result, 200
