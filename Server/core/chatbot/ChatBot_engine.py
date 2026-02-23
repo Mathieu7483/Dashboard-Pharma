@@ -16,6 +16,7 @@ from models.product_alias import ProductAliasModel
 from models.ticket import Ticket
 from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
+import unicodedata
 
 
 class ChatBotEngine:
@@ -28,6 +29,13 @@ class ChatBotEngine:
             "semaine", "prochaine", "prochain",
             "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
         }
+
+
+
+    def _norm(self, s: str) -> str:
+        """Normalise une chaîne : minuscules et suppression des accents."""
+        if not s: return ""
+        return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower().strip()
 
     # =========================================================================
     # POINT D'ENTREE
@@ -115,61 +123,69 @@ class ChatBotEngine:
     def _handle_interaction_check(self, entity_list: list) -> str:
         if len(entity_list) < 2:
             return (
-                "Mentionnez au moins DEUX produits pour verifier la compatibilite.\n\n"
+                "Mentionnez au moins DEUX produits pour vérifier la compatibilité.\n\n"
                 "Exemples :\n"
-                "   - 'Aspirine et Ibuprofene compatibles ?'\n"
-                "   - 'Doliprane avec Advil danger ?'\n"
-                "   - 'Warfarine et Plavix interaction ?'"
+                "   - 'Aspirine et Ibuprofène compatibles ?'\n"
+                "   - 'Doliprane avec Advil danger ?'"
             )
 
         resolved, display_names = [], []
         for name in entity_list:
             ingredient, display = self._resolve_to_active_ingredient(name)
-            resolved.append(ingredient)
+            # On stocke le nom propre pour l'affichage, 
+            # MAIS on normalise l'ingrédient pour la recherche DB
+            resolved.append(self._norm(ingredient))
             display_names.append(display)
 
-        print(f"Resolved: {list(zip(display_names, resolved))}")
+        print(f"Resolved (Normalized): {list(zip(display_names, resolved))}")
 
         conflicts = []
         for i in range(len(resolved)):
             for j in range(i + 1, len(resolved)):
                 a, b = resolved[i], resolved[j]
+                
+                # On utilise la version normalisée (a et b) dans le ILIKE
                 result = db.session.execute(
                     db.select(InteractionModel).where(
                         or_(
-                            InteractionModel.ingredient_a.ilike(f"%{a}%") &
-                            InteractionModel.ingredient_b.ilike(f"%{b}%"),
-                            InteractionModel.ingredient_a.ilike(f"%{b}%") &
-                            InteractionModel.ingredient_b.ilike(f"%{a}%"),
+                            (InteractionModel.ingredient_a.ilike(f"%{a}%")) & 
+                            (InteractionModel.ingredient_b.ilike(f"%{b}%")),
+                            (InteractionModel.ingredient_a.ilike(f"%{b}%")) & 
+                            (InteractionModel.ingredient_b.ilike(f"%{a}%"))
                         )
                     )
                 ).scalar_one_or_none()
+                
                 if result:
-                    conflicts.append({"interaction": result, "name_a": display_names[i], "name_b": display_names[j]})
+                    conflicts.append({
+                        "interaction": result, 
+                        "name_a": display_names[i], 
+                        "name_b": display_names[j]
+                    })
 
         if not conflicts:
             return (
-                " Aucune interaction connue\n\n"
-                f"Produits analyses : {' + '.join(display_names)}\n\n"
-                f"Principes actifs : {', '.join(set(resolved))}\n\n"
-                "⚠️ Consultez toujours un professionnel de sante."
+                "✅ Aucune interaction connue\n\n"
+                f"Produits analysés : {' + '.join(display_names)}\n\n"
+                "⚠️ Consultez toujours un professionnel de santé."
             )
 
         severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🔴🔴"}
-        output = [" 🚨 ALERTE INTERACTION MEDICAMENTEUSE\n",
+        output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n",
                   f"Analyse pour : {' + '.join(display_names)}\n"]
+        
         for c in conflicts:
             ix = c["interaction"]
             emoji = severity_emoji.get(ix.severity.lower(), "⚠️")
             output += [
-                f" {emoji} {c['name_a']} + {c['name_b']}",
-                f"Principes actifs : {ix.ingredient_a} / {ix.ingredient_b}",
-                f"Gravite : {ix.severity.upper()}",
-                f"Details : {ix.description}",
+                f"{emoji} {c['name_a']} + {c['name_b']}",
+                f"Gravité : {ix.severity.upper()}",
+                f"Détails : {ix.description}",
                 "---\n"
             ]
         output.append("⚠️ IMPORTANT : Consultez un pharmacien avant utilisation.")
         return "\n".join(output)
+    
 
     def _handle_stock_query(self, entities: list) -> str:
         if not entities:
