@@ -34,8 +34,7 @@ run_test() {
     local msg=$2
     local expected_intent=$3
 
-    echo -e "${BLUE}[TEST] $desc${NC}"
-    echo "Phrase: \"$msg\""
+    echo -ne "${BLUE}[TEST] $desc : ${NC}"
 
     # Envoi de la requête
     RAW_RES=$(curl -s -X POST "$API_URL" \
@@ -43,12 +42,20 @@ run_test() {
          -H "Content-Type: application/json" \
          -d "{\"message\": \"$msg\"}")
 
-    # Extraction des données avec JQ
-    # On suppose que ton API renvoie maintenant l'intention pour le debug
-    REPLY=$(echo "$RAW_RES" | jq -r '.reply // "Erreur de réponse"')
-    
-    echo -e "Bot: $REPLY"
-    echo "-----------------------------------------------"
+    # Extraction des données
+    INTENT=$(echo "$RAW_RES" | jq -r '.intent')
+    REPLY=$(echo "$RAW_RES" | jq -r '.reply')
+
+    # Logique de validation
+    if [ "$INTENT" == "$expected_intent" ]; then
+        echo -e "${GREEN}PASS${NC} (Intent: $INTENT)"
+    else
+        echo -e "${RED}FAIL${NC}"
+        echo "   Attendu: $expected_intent"
+        echo "   Reçu:    $INTENT"
+        echo "   Réponse: $REPLY"
+        # OPTIONNEL : exit 1 si on veut stopper au premier échec
+    fi
 }
 
 # --- SÉRIE DE TESTS FONCTIONNELS ---
