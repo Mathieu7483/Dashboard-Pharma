@@ -33,65 +33,80 @@ class ChatBotEngine:
     # POINT D'ENTREE
     # =========================================================================
 
-    def process_query(self, user_text: str) -> str:
+    def process_query(self, user_text: str) -> dict:
+        # Empty input -> message d'aide
         if not user_text or not user_text.strip():
-            return "Posez une question. Exemples : 'Stock Doliprane' ou 'Ventes du jour'"
+            return {
+                "intent": "unknown",
+                "reply": "Posez une question. Exemples : 'Stock Doliprane' ou 'Ventes du jour'"
+            }
 
         analysis = self.nlu.analyze(user_text)
-        intent   = analysis.get("intent")
+        intent   = analysis.get("intent", "unknown")
         entities = analysis.get("entity_list", [])
 
-        print(f"NLU -> intent={intent!r} entities={entities}")
-
         try:
+            response_text = ""
+
             if intent == "greeting":
-                return "Bonjour ! Comment puis-je vous aider ?"
+                response_text = "Bonjour ! Comment puis-je vous aider ?"
 
-            if intent == "get_help":
-                return self._generate_help_message()
+            elif intent == "get_help":
+                response_text = self._generate_help_message()
 
-            if intent == "check_interaction":
-                return self._handle_interaction_check(entities)
+            elif intent == "check_interaction":
+                response_text = self._handle_interaction_check(entities)
 
-            if intent == "get_stock_alerts":
-                return self._handle_stock_alerts()
+            elif intent == "get_stock_alerts":
+                response_text = self._handle_stock_alerts()
 
-            if intent == "get_sales_summary":
-                return self._handle_sales_summary()
+            elif intent == "get_sales_summary":
+                response_text = self._handle_sales_summary()
 
-            if intent == "check_stock":
-                return self._handle_stock_query(entities)
+            elif intent == "check_stock":
+                response_text = self._handle_stock_query(entities)
 
-            if intent == "check_price":
-                return self._handle_price_query(entities)
+            elif intent == "check_price":
+                response_text = self._handle_price_query(entities)
 
-            if intent == "get_prescription_info":
-                return self._handle_prescription_info(entities)
+            elif intent == "get_prescription_info":
+                response_text = self._handle_prescription_info(entities)
 
-            if intent == "get_contact_info":
-                return self._handle_contact_search(entities)
+            elif intent == "get_contact_info":
+                response_text = self._handle_contact_search(entities)
 
-            if intent == "search_ticket":
-                return self._handle_ticket_info(entities)
+            elif intent == "search_ticket":
+                response_text = self._handle_ticket_info(entities)
 
-            if intent == "calendar":
-                return self._handle_calendar_events(entities, user_text)
+            elif intent == "calendar":
+                response_text = self._handle_calendar_events(entities, user_text)
 
-            if intent in ("get_doctor", "get_client", "list_all", "get_product"):
+            elif intent in ("get_doctor", "get_client", "list_all", "get_product"):
                 if not entities:
-                    return self._generate_help_message()
-                return self._execute_multi_category_search(entities[0])
+                    response_text = self._generate_help_message()
+                else:
+                    response_text = self._execute_multi_category_search(entities[0])
 
-            if entities:
-                return self._execute_multi_category_search(entities[0])
+            else:
+                if entities:
+                    response_text = self._execute_multi_category_search(entities[0])
+                else:
+                    response_text = self._generate_help_message()
+                    intent = "get_help"
 
-            return self._generate_help_message()
+            return {
+                "intent": intent,
+                "reply": response_text
+            }
 
         except Exception as e:
             import traceback
             print(f"ChatBot Error: {e}")
             traceback.print_exc()
-            return "Erreur lors du traitement. Reformulez votre demande."
+            return {
+                "intent": "error",
+                "reply": "Erreur lors du traitement. Reformulez votre demande."
+            }
 
     # =========================================================================
     # HANDLERS
