@@ -17,13 +17,14 @@ from models.ticket import Ticket
 from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
 import unicodedata
-
+from services.facade import FacadeService
 
 class ChatBotEngine:
 
     def __init__(self):
         self.nlu = NLUProcessor()
         self.nlu.load_products_from_db()
+        self.facade = FacadeService()
         self._temporal_words = {
             "demain", "aujourd'hui", "hier",
             "semaine", "prochaine", "prochain",
@@ -42,13 +43,48 @@ class ChatBotEngine:
     # =========================================================================
 
     def process_query(self, user_text: str, user_id: str = None) -> dict:
-        # Empty input -> message d'aide
-        if not user_text or not user_text.strip():
+        """
+        Main entry point for the chatbot logic. 
+        """
+        # DEBUG: Let's see what's happening in the console
+        print(f"DEBUG: Received text: '{user_text}' | UserID: {user_id}")
+
+        # Normalize text: lower case, remove accents/special chars if needed, and strip whitespace
+        clean_text = user_text.lower().strip()
+
+        # 1. PROFILE CHECK (Robust detection)
+        # We check for several variations to be sure
+        profile_triggers = ["qui suis je", "qui suis-je", "mon profil", "who am i"]
+        
+        if any(trigger in clean_text for trigger in profile_triggers):
+            if not user_id:
+                return {
+                    "intent": "auth_check", 
+                    "reply": "I cannot identify you. Make sure you are logged in and the token is valid."
+                }
+            
+            user = self.facade.get_user_by_id(user_id)
+            if user:
+                # Use username as a fallback if names are missing
+                display_name = f"{user.first_name} {user.last_name}".strip()
+                
+                # If the result is empty or just "None None"
+                if not display_name or "None" in display_name:
+                    display_name = user.username
+
+                return {
+                    "intent": "user_identify",
+                    "reply": f"You are {display_name}, logged in as {user.username}."
+                }
+
+        # 2. EMPTY INPUT CHECK
+        if not clean_text:
             return {
                 "intent": "unknown",
-                "reply": "Posez une question. Exemples : 'Stock Doliprane' ou 'Ventes du jour'"
+                "reply": "Please ask a question."
             }
 
+        # 3. NLU Analysis (Intent detection and entity extraction)
         analysis = self.nlu.analyze(user_text)
         intent   = analysis.get("intent", "unknown")
         entities = analysis.get("entity_list", [])
@@ -56,8 +92,9 @@ class ChatBotEngine:
         try:
             response_text = ""
 
+            # 4. Intent Routing Logic
             if intent == "greeting":
-                response_text = "Bonjour ! Comment puis-je vous aider ?"
+                response_text = "Hello! How can I help you today?"
 
             elif intent == "get_help":
                 response_text = self._generate_help_message()
@@ -69,7 +106,7 @@ class ChatBotEngine:
                 response_text = self._handle_stock_alerts()
 
             elif intent == "get_sales_daily":
-                response_text = self._handle_sales_daily()
+                response_text = self._handle_sales_daily(user_id)
 
             elif intent == "get_sales_summary":
                 response_text = self._handle_sales_summary()
@@ -92,12 +129,14 @@ class ChatBotEngine:
             elif intent == "calendar":
                 response_text = self._handle_calendar_events(entities, user_text)
 
+            # 5. Multi-category search for ambiguous queries
             elif intent in ("get_doctor", "get_client", "list_all", "get_product"):
                 if not entities:
                     response_text = self._generate_help_message()
                 else:
                     response_text = self._execute_multi_category_search(entities[0])
 
+            # 6. Fallback logic
             else:
                 if entities:
                     response_text = self._execute_multi_category_search(entities[0])
@@ -111,12 +150,13 @@ class ChatBotEngine:
             }
 
         except Exception as e:
+            # Critical error logging
             import traceback
             print(f"ChatBot Error: {e}")
             traceback.print_exc()
             return {
                 "intent": "error",
-                "reply": "Erreur lors du traitement. Reformulez votre demande."
+                "reply": "An error occurred while processing your request. Please try again."
             }
 
     # =========================================================================
