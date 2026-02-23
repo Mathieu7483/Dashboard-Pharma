@@ -415,7 +415,7 @@ class ChatBotEngine:
         if not ticket:
             return f"Aucun ticket trouve pour '{search_term}'."
         output = [
-            f"## Ticket #{ticket.id[:8]}...",
+            f" Ticket  {ticket.id[:8]}...",
             f"   Sujet : {ticket.subject}",
             f"   Description : {ticket.description}",
             f"   Priorite : {ticket.priority.capitalize()}",
@@ -527,7 +527,7 @@ class ChatBotEngine:
                     else e.creator.username  if e.creator
                     else "Non assigne")
         lines = [
-            f"### {label}",
+            f" {label}",
             f"Date : {e.start_date} de {e.start_time} a {e.end_time}",
             f"Assigne a : {assigned}",
         ]
