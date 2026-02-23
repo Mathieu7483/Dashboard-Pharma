@@ -38,7 +38,7 @@ class ChatBotEngine:
         return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower().strip()
 
     # =========================================================================
-    # POINT D'ENTREE
+    # ENTRY POINT
     # =========================================================================
 
     def process_query(self, user_text: str) -> dict:
@@ -135,8 +135,7 @@ class ChatBotEngine:
         resolved, display_names = [], []
         for name in entity_list:
             ingredient, display = self._resolve_to_active_ingredient(name)
-            # On stocke le nom propre pour l'affichage, 
-            # MAIS on normalise l'ingrédient pour la recherche DB
+            # Using the normalized ingredient name for database queries, but keeping the original display name for output
             resolved.append(self._norm(ingredient))
             display_names.append(display)
 
@@ -147,7 +146,7 @@ class ChatBotEngine:
             for j in range(i + 1, len(resolved)):
                 a, b = resolved[i], resolved[j]
                 
-                # On utilise la version normalisée (a et b) dans le ILIKE
+                # using ilike with wildcards to allow partial matches and different word orders
                 result = db.session.execute(
                     db.select(InteractionModel).where(
                         or_(
@@ -312,7 +311,7 @@ class ChatBotEngine:
     def _handle_sales_daily(self) -> str:
         try:
             now = datetime.now()
-            # Définition de la plage pour capturer TOUTES les ventes de 00:00 à 23:59
+            # Define start and end of the current day
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
@@ -389,20 +388,16 @@ class ChatBotEngine:
         return "\n".join(output)
 
     def _handle_calendar_events(self, entities: list, user_text: str = "") -> str:
-        """
-        FIX: si mot temporel detecte -> _handle_schedule_query.
-        Sinon filtre par titre/type/notes sur les 7 prochains jours.
-        """
         text_lower = user_text.lower()
 
-        # Mot temporel -> planning par date
+        # Temporal keywords (demain, demain, lundi, etc.) -> corresponding date filter
         if any(tw in text_lower for tw in self._temporal_words):
             return self._handle_schedule_query(user_text)
 
         today_str    = datetime.now().strftime("%Y-%m-%d")
         week_end_str = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
 
-        # Pas d'entite -> agenda 7 jours complet
+        # No entity -> list all events in the next 7 days
         if not entities:
             events = db.session.execute(
                 db.select(CalendarEvent)
@@ -419,7 +414,7 @@ class ChatBotEngine:
                 output += self._format_event(e)
             return "\n".join(output)
 
-        # Entite -> filtre
+        # Entity -> filter events by title, notes, or type matching the search term
         search_term = entities[0].strip().lower()
         events = db.session.execute(
             db.select(CalendarEvent)
@@ -448,10 +443,6 @@ class ChatBotEngine:
         return "\n".join(output)
 
     def _handle_schedule_query(self, user_text: str) -> str:
-        """
-        FIX: desormais appelee depuis _handle_calendar_events.
-        Gere aujourd'hui, demain, hier et les jours nommes.
-        """
         text_lower = user_text.lower()
         now = datetime.now()
 
@@ -506,7 +497,7 @@ class ChatBotEngine:
         return lines
 
     # =========================================================================
-    # RECHERCHE MULTI-CATEGORIES
+    # MULTI-CATEGORY SEARCH (products, clients, doctors)
     # =========================================================================
 
     def _execute_multi_category_search(self, search_term: str) -> str:
@@ -565,7 +556,7 @@ class ChatBotEngine:
         return "\n".join(output)
 
     # =========================================================================
-    # UTILITAIRES
+    # UTILITY METHODS
     # =========================================================================
 
     def _resolve_to_active_ingredient(self, product_name: str) -> tuple:
