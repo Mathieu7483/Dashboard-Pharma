@@ -1,15 +1,6 @@
 """
 Server/core/chatbot/NLUProcessor.py
-NLU bilingue FR/EN — version finale avec emojis
-
-Bugs corriges :
-- Double definition de intent_patterns (ecrasement silencieux)
-- "Bonjour" / "Hello" -> greeting
-- "Aide moi" -> get_help
-- stop_entities complet
-- _detect_interaction_pattern : regle "2 entites courtes" supprimee (faux positifs)
-- Intent calendar : priority 9, keywords rdv/garde
-- Intent check_stock : priority 6
+NLU bilingue FR/EN
 """
 
 import re
@@ -36,7 +27,7 @@ class NLUProcessor:
 
         # ── 👋 Salutations ────────────────────────────────────────────────────
         self.greetings = {
-            "fr": ["bonjour", "salut", "bonsoir", "coucou", "allo"],
+            "fr": ["bonjour", "salut", "bonsoir", "coucou", "salutations"],
             "en": ["hello", "hi", "good morning", "good evening", "greetings"]
         }
 
@@ -94,23 +85,7 @@ class NLUProcessor:
         }
 
         # ── 💊 Produits connus (detection directe) ───────────────────────────
-        self.known_products = {
-            # ── Sans accents (normalisé) ──────────────────────────────────────
-            "paracetamol", "doliprane", "ibuprofene", "ibuprofen",
-            "amoxicilline", "aspirine", "omeprazole", "cetirizine",
-            "vitamine", "vitamines", "serum", "hydrocortisone",
-            "clarithromycine", "metronidazole", "loratadine",
-            "furosemide", "pantoprazole", "insuline", "tramadol",
-            "warfarine", "augmentin", "ventoline", "dexamethasone",
-            "azithromycine", "fluconazole", "montelukast", "plavix",
-            "clopidogrel", "coumadine", "metformine",
-            "acetaminophen", "tylenol", "advil",
-            "nurofen", "aspirin", "amoxicillin",
-            # ── Avec accents FR (FIX: "ibuprofène" ne matchait pas "ibuprofene") ──
-            "ibuprofène", "paracétamol", "oméprazole", "cétirizine",
-            "sérum", "furosémide", "métronidazole", "dexaméthasone",
-            "azithromycine", "métformine", "résorcinol",
-        }
+        self.known_products: set = set()
 
         # ── 🧠 Intent patterns — UNE SEULE definition ─────────────────────────
         self.intent_patterns = {
@@ -232,6 +207,58 @@ class NLUProcessor:
                 "priority": 3
             },
         }
+
+    def load_products_from_db(self) -> None:
+        """
+        Charge les produits connus depuis la base de données et enrichit le dictionnaire d'entités.
+            - Inclut le nom complet, le premier mot, et la version sans accents pour chaque produit et principe actif.
+
+        """
+        import unicodedata
+        from models.product import ProductModel
+        from database.data_manager import db
+
+        def _norm(s: str) -> str:
+            return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower()
+
+        try:
+            rows = db.session.execute(
+                db.select(ProductModel.name, ProductModel.active_ingredient)
+            ).all()
+
+            new_set: set = set()
+            for name, ingredient in rows:
+                if name:
+                    name_low  = name.lower().strip()
+                    name_norm = _norm(name)
+                    # Nom complet : "Doliprane 1000mg"
+                    new_set.add(name_low)
+                    new_set.add(name_norm)
+                    # Premier mot seulement : "Doliprane"
+                    first_word = name_low.split()[0] if name_low.split() else name_low
+                    new_set.add(first_word)
+                    new_set.add(_norm(first_word))
+                if ingredient:
+                    ing_low  = ingredient.lower().strip()
+                    ing_norm = _norm(ingredient)
+                    new_set.add(ing_low)
+                    new_set.add(ing_norm)
+                    # Principe actif peut etre "Acide acetylsalicylique" -> premier mot aussi
+                    first_ing = ing_low.split()[0] if ing_low.split() else ing_low
+                    new_set.add(first_ing)
+                    new_set.add(_norm(first_ing))
+
+            self.known_products = new_set
+            print(f"✅ NLU: {len(new_set)} entrees produits chargees depuis la DB")
+
+        except Exception as e:
+            print(f"⚠️  NLU: Impossible de charger les produits depuis la DB: {e}")
+            # Fallback minimal si la DB est inaccessible
+            self.known_products = {
+                "doliprane", "aspirine", "ibuprofene", "ibuprofene",
+                "paracetamol", "amoxicilline", "omeprazole",
+            }
+
 
     # ══════════════════════════════════════════════════════════════════════════
     # 🔍 POINT D'ENTREE PRINCIPAL
@@ -421,8 +448,8 @@ class NLUProcessor:
             t_low = token.text.lower()
             if t_low in self.stop_entities or token.is_punct or token.like_num:
                 continue
-            # FIX: NOUN accepté si >= 6 lettres (médicaments rarement tagués PROPN)
-            is_relevant = (token.pos_ in ("PROPN", "X")) or (token.pos_ == "NOUN" and len(t_low) >= 6)
+            # FIX: NOUN accepté si >= 4 lettres (médicaments rarement tagués PROPN)
+            is_relevant = (token.pos_ in ("PROPN", "X")) or (token.pos_ == "NOUN" and len(t_low) >= 4)
             if is_relevant and len(t_low) > 2:
                 cap = token.text.capitalize()
                 if cap not in entities:
