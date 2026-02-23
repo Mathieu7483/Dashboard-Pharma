@@ -3,7 +3,7 @@ Server/core/chatbot/ChatBot_engine.py
 """
 
 from typing import List
-from sqlalchemy import or_, func, cast, Date
+from sqlalchemy import or_, and_, func, cast, Date
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta
 from database.data_manager import db
@@ -22,6 +22,7 @@ class ChatBotEngine:
 
     def __init__(self):
         self.nlu = NLUProcessor()
+        self.nlu.load_products_from_db()
         self._temporal_words = {
             "demain", "aujourd'hui", "hier",
             "semaine", "prochaine", "prochain",
@@ -121,8 +122,10 @@ class ChatBotEngine:
                 result = db.session.execute(
                     db.select(InteractionModel).where(
                         or_(
-                            (InteractionModel.ingredient_a == a) & (InteractionModel.ingredient_b == b),
-                            (InteractionModel.ingredient_a == b) & (InteractionModel.ingredient_b == a),
+                            InteractionModel.ingredient_a.ilike(f"%{a}%") &
+                            InteractionModel.ingredient_b.ilike(f"%{b}%"),
+                            InteractionModel.ingredient_a.ilike(f"%{b}%") &
+                            InteractionModel.ingredient_b.ilike(f"%{a}%"),
                         )
                     )
                 ).scalar_one_or_none()
@@ -134,7 +137,7 @@ class ChatBotEngine:
                 " Aucune interaction connue\n\n"
                 f"Produits analyses : {' + '.join(display_names)}\n\n"
                 f"Principes actifs : {', '.join(set(resolved))}\n\n"
-                "Consultez toujours un professionnel de sante."
+                "⚠️ Consultez toujours un professionnel de sante."
             )
 
         severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🔴🔴"}
@@ -150,7 +153,7 @@ class ChatBotEngine:
                 f"Details : {ix.description}",
                 "---\n"
             ]
-        output.append("IMPORTANT : Consultez un pharmacien avant utilisation.")
+        output.append("⚠️ IMPORTANT : Consultez un pharmacien avant utilisation.")
         return "\n".join(output)
 
     def _handle_stock_query(self, entities: list) -> str:
@@ -159,13 +162,13 @@ class ChatBotEngine:
         products = self._search_database(ProductModel, entities[0])
         if not products:
             return f"Aucun produit trouve pour '{entities[0]}'."
-        output = [f"## Etat des stocks : {entities[0].capitalize()}"]
+        output = [f" Etat des stocks : {entities[0].capitalize()}"]
         for p in products:
-            if p.stock > 100:   emoji, status = "OK", "Excellent"
-            elif p.stock > 50:  emoji, status = "OK", "Bon"
-            elif p.stock > 20:  emoji, status = "~", "Moyen"
-            elif p.stock > 5:   emoji, status = "!", "Faible"
-            else:               emoji, status = "!!", "CRITIQUE"
+            if p.stock > 100:   emoji, status = "🟢", "Excellent"
+            elif p.stock > 50:  emoji, status = "🟢", "Bon"
+            elif p.stock > 20:  emoji, status = "🟡", "Moyen"
+            elif p.stock > 5:   emoji, status = "🟠", "Faible"
+            else:               emoji, status = "⚠️🔴", "CRITIQUE"
             rx = "Ordonnance" if p.is_prescription_only else "Libre"
             output.append(f"   {emoji} {p.name} ({p.dosage}) - {p.stock} unites ({status}) | {p.price:.2f}EUR | {rx}")
         return "\n".join(output)
@@ -452,14 +455,14 @@ class ChatBotEngine:
                 " - Utilisez une partie du nom"
             )
 
-        output = [f"## Resultats pour \"{search_term}\"",
+        output = [f" Resultats pour \"{search_term}\"",
                   f"{total} resultat(s) trouve(s)\n"]
 
         if results["products"]:
             output.append(f"💊 PRODUITS ({len(results['products'])})\n")
             for p in results["products"][:5]:
                 rx    = "Ordonnance" if p.is_prescription_only else "Libre"
-                stock = "OK" if p.stock >= 20 else ("~" if p.stock >= 10 else "!!")
+                stock = "🟢" if p.stock >= 20 else ("🟠" if p.stock >= 10 else "🔴")
                 output += [
                     f"{p.name}",
                     f"   Stock : {stock} {p.stock} unites",
