@@ -68,6 +68,9 @@ class ChatBotEngine:
             elif intent == "get_stock_alerts":
                 response_text = self._handle_stock_alerts()
 
+            elif intent == "get_sales_daily":
+                response_text = self._handle_sales_daily()
+
             elif intent == "get_sales_summary":
                 response_text = self._handle_sales_summary()
 
@@ -265,36 +268,73 @@ class ChatBotEngine:
 
     def _handle_sales_summary(self) -> str:
         try:
-            today      = datetime.now().date()
-            week_start = today - timedelta(days=today.weekday())
+            now = datetime.now()
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            week_start = (start_of_day - timedelta(days=now.weekday()))
 
-            def _q(filter_):
+            def _get_stats(filter_condition):
                 return db.session.query(
                     func.count(SaleModel.id),
                     func.sum(SaleModel.total_amount)
-                ).filter(filter_).first()
+                ).filter(filter_condition).first()
 
-            ct, rt = _q(cast(SaleModel.sale_date, Date) == today)
-            cw, rw = _q(SaleModel.sale_date >= week_start)
-            ca, ra = _q(True)
-            ct, rt = ct or 0, rt or 0.0
-            cw, rw = cw or 0, rw or 0.0
-            ca, ra = ca or 0, ra or 0.0
+            # daily stats
+            ct, rt = _get_stats(SaleModel.sale_date >= start_of_day)
+            # weekly stats
+            cw, rw = _get_stats(SaleModel.sale_date >= week_start)
+            # cumulative stats
+            ca, ra = _get_stats(True)
+
+            # Clean None values
+            ct, rt = (ct or 0), (rt or 0.0)
+            cw, rw = (cw or 0), (rw or 0.0)
+            ca, ra = (ca or 0), (ra or 0.0)
 
             output = [
                 " Performances de Vente\n",
-                f" Aujourd'hui ({today.strftime('%d/%m/%Y')})",
+                f" Aujourd'hui ({now.strftime('%d/%m/%Y')})",
                 f"   Transactions : {ct}",
                 f"   CA : {rt:.2f} EUR\n",
                 f" Cette semaine (depuis le {week_start.strftime('%d/%m')})",
                 f"   Transactions : {cw}",
                 f"   CA : {rw:.2f} EUR\n",
-                " Cumule total",
+                f" Cumule total",
                 f"   Transactions : {ca}",
                 f"   CA total : {ra:.2f} EUR",
             ]
             if ca > 0:
                 output.append(f"   Panier moyen : {ra/ca:.2f} EUR")
+                
+            return "\n".join(output)
+        except Exception as e:
+            return f"Erreur statistiques : {str(e)}"
+
+    def _handle_sales_daily(self) -> str:
+        try:
+            now = datetime.now()
+            # Définition de la plage pour capturer TOUTES les ventes de 00:00 à 23:59
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+            sales = db.session.query(
+                SaleModel.id, SaleModel.total_amount, SaleModel.sale_date, SaleModel.user_id
+            ).filter(
+                and_(
+                    SaleModel.sale_date >= start_of_day,
+                    SaleModel.sale_date <= end_of_day
+                )
+            ).all()
+
+            if not sales:
+                return f"Aucune vente enregistrée pour aujourd'hui ({now.strftime('%d/%m/%Y')})."
+
+            output = [f" Ventes du jour ({now.strftime('%d/%m/%Y')})\n"]
+            for s in sales:
+                output.append(f" Transaction #{str(s.id)[:8]}... - {s.total_amount:.2f} EUR - {s.sale_date.strftime('%H:%M')} - User {str(s.user_id)[:8]}...")
+            
+            output.append(f"\nTotal transactions : {len(sales)}")
+            output.append(f"CA total : {sum(s.total_amount for s in sales):.2f} EUR")
+            
             return "\n".join(output)
         except Exception as e:
             return f"Erreur statistiques : {str(e)}"
