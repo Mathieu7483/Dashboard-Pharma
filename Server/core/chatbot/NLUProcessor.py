@@ -1,9 +1,10 @@
 """
 Server/core/chatbot/NLUProcessor.py
-NLU bilingue FR/EN
+Bilingual NLU (FR/EN) for Pharmacy Management
 """
 
 import re
+import unicodedata
 from typing import Dict, List
 import spacy
 
@@ -11,6 +12,7 @@ import spacy
 class NLUProcessor:
 
     def __init__(self):
+        # -- SpaCy Models Loading ----------------------------------------------
         try:
             self.nlp_fr = spacy.load("fr_core_news_md")
             print("✅ Loaded fr_core_news_md")
@@ -25,26 +27,28 @@ class NLUProcessor:
             print("⚠️  EN model not available — using FR for all")
             self.nlp_en = None
 
-        # ── 👋 Salutations ────────────────────────────────────────────────────
+        # -- Greetings ---------------------------------------------------------
         self.greetings = {
             "fr": ["bonjour", "salut", "bonsoir", "coucou", "salutations"],
             "en": ["hello", "hi", "good morning", "good evening", "greetings"]
         }
 
-        # ── ❓ Aide (message court uniquement) ────────────────────────────────
+        # -- Help (short messages only) ----------------------------------------
         self.help_keywords = {
             "fr": ["aide", "aider", "guide", "besoin d'aide", "comment utiliser"],
             "en": ["help me", "assist me", "need help", "how do i use"]
         }
 
-        # ── 📅 Mots-cles temporels calendrier ────────────────────────────────
+        # -- Temporal keywords for calendar ------------------------------------
         self.temporal_keywords = {
             "demain", "aujourd'hui", "hier",
             "semaine", "prochaine", "prochain",
-            "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
+            "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche",
+            "tomorrow", "today", "yesterday", "week", "next",
+            "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
         }
 
-        # ── 🚫 Stop entities : mots a ne JAMAIS extraire comme entite ─────────
+        # -- Stop entities: words that should NEVER be extracted as entities ---
         self.stop_entities = {
             # Intent-keywords FR
             "docteur", "medecin", "praticien", "specialiste",
@@ -64,10 +68,10 @@ class NLUProcessor:
             "sales", "revenue",
             "prescription", "phone", "address",
             "calendar", "schedule", "appointment", "meeting",
-            # Verbes / mots commandes
+            # Verbs / Command words
             "cherche", "trouve", "trouver", "recherche", "affiche", "montre",
             "find", "search", "show", "get", "list",
-            # Articles / mots vides FR
+            # Function words (Stop words) FR
             "le", "la", "les", "un", "une", "des", "du", "de", "d",
             "ce", "cet", "cette", "ces", "mon", "ma", "mes", "son", "sa", "ses",
             "et", "ou", "avec", "pour", "dans", "sur", "sous", "par",
@@ -77,20 +81,20 @@ class NLUProcessor:
             "que", "qui", "quoi", "quel", "quelle", "quels",
             "comment", "combien", "pourquoi", "quand",
             "puis", "peut", "faut", "faire", "prendre",
-            # Articles EN
+            # Function words EN
             "the", "an", "some", "any",
             "is", "are", "was", "were", "has", "have", "do", "does",
             "can", "could", "would", "should", "may", "might",
             "i", "you", "he", "she", "we", "they", "it",
         }
 
-        # ── 💊 Produits connus (detection directe) ───────────────────────────
+        # -- Known products (direct detection) ---------------------------------
         self.known_products: set = set()
 
-        # ── 🧠 Intent patterns — UNE SEULE definition ─────────────────────────
+        # -- Intent patterns with priorities -----------------------------------
         self.intent_patterns = {
 
-            # 💊 + 💊 Interactions medicamenteuses
+            # Drug-drug interactions
             "check_interaction": {
                 "keywords": [
                     "incompatible", "interaction", "melange", "melanger",
@@ -101,7 +105,7 @@ class NLUProcessor:
                 "priority": 10
             },
 
-            # 📦 Alertes stock bas / rupture
+            # Low stock / Shortage alerts
             "get_stock_alerts": {
                 "keywords": [
                     "alerte", "manque", "rupture", "stock faible", "faible stock",
@@ -111,7 +115,7 @@ class NLUProcessor:
                 "priority": 8
             },
 
-            # 💶 Ventes et statistiques
+            # Sales and statistics
             "get_sales_summary": {
                 "keywords": [
                     "vente", "ventes", "chiffre", "ca", "revenue",
@@ -121,7 +125,7 @@ class NLUProcessor:
                 "priority": 7
             },
 
-            # 📋 Ordonnance / prescription
+            # Prescription info
             "get_prescription_info": {
                 "keywords": [
                     "ordonnance", "prescription", "obligatoire",
@@ -131,7 +135,7 @@ class NLUProcessor:
                 "priority": 6
             },
 
-            # 📞 Coordonnees contact
+            # Contact details
             "get_contact_info": {
                 "keywords": [
                     "telephone", "numero", "tel",
@@ -141,7 +145,7 @@ class NLUProcessor:
                 "priority": 9
             },
 
-            # 🩺 Medecin
+            # Doctor info
             "get_doctor": {
                 "keywords": [
                     "docteur", "dr", "medecin", "praticien", "specialiste",
@@ -150,7 +154,7 @@ class NLUProcessor:
                 "priority": 5
             },
 
-            # 👤 Client
+            # Client / Patient info
             "get_client": {
                 "keywords": [
                     "client", "patient", "acheteur",
@@ -159,7 +163,7 @@ class NLUProcessor:
                 "priority": 5
             },
 
-            # 📦 Stock produit (priority 6 — FIX: etait 4, doit surpasser interaction sans marqueur)
+            # Product stock level
             "check_stock": {
                 "keywords": [
                     "stock", "combien", "quantite", "disponible",
@@ -169,7 +173,7 @@ class NLUProcessor:
                 "priority": 6
             },
 
-            # 💰 Prix
+            # Price check
             "check_price": {
                 "keywords": [
                     "prix", "coute", "tarif",
@@ -179,7 +183,7 @@ class NLUProcessor:
                 "priority": 6
             },
 
-            # 🎫 Tickets support
+            # Support tickets
             "search_ticket": {
                 "keywords": [
                     "ticket", "incident",
@@ -188,7 +192,7 @@ class NLUProcessor:
                 "priority": 7
             },
 
-            # 📅 Calendrier / agenda (priority 9 — FIX: etait 4)
+            # Calendar / Planning
             "calendar": {
                 "keywords": [
                     "calendrier", "agenda", "planning", "rendez-vous", "rdv",
@@ -198,7 +202,7 @@ class NLUProcessor:
                 "priority": 9
             },
 
-            # 📋 Lister tout
+            # Listing all items
             "list_all": {
                 "keywords": [
                     "liste", "tous", "toutes", "affiche", "montre",
@@ -210,11 +214,9 @@ class NLUProcessor:
 
     def load_products_from_db(self) -> None:
         """
-        Charge les produits connus depuis la base de données et enrichit le dictionnaire d'entités.
-            - Inclut le nom complet, le premier mot, et la version sans accents pour chaque produit et principe actif.
-
+        Loads known products from database and populates the entity dictionary.
+        - Includes full name, first word, and normalized (no accent) versions.
         """
-        import unicodedata
         from models.product import ProductModel
         from database.data_manager import db
 
@@ -231,10 +233,10 @@ class NLUProcessor:
                 if name:
                     name_low  = name.lower().strip()
                     name_norm = _norm(name)
-                    # Nom complet : "Doliprane 1000mg"
+                    # Full name: "Doliprane 1000mg"
                     new_set.add(name_low)
                     new_set.add(name_norm)
-                    # Premier mot seulement : "Doliprane"
+                    # First word only: "Doliprane"
                     first_word = name_low.split()[0] if name_low.split() else name_low
                     new_set.add(first_word)
                     new_set.add(_norm(first_word))
@@ -243,31 +245,30 @@ class NLUProcessor:
                     ing_norm = _norm(ingredient)
                     new_set.add(ing_low)
                     new_set.add(ing_norm)
-                    # Principe actif peut etre "Acide acetylsalicylique" -> premier mot aussi
+                    # Active ingredient first word: "Acide" from "Acide acetylsalicylique"
                     first_ing = ing_low.split()[0] if ing_low.split() else ing_low
                     new_set.add(first_ing)
                     new_set.add(_norm(first_ing))
 
             self.known_products = new_set
-            print(f"✅ NLU: {len(new_set)} entrees produits chargees depuis la DB")
+            print(f"✅ NLU: {len(new_set)} product entries loaded from DB")
 
         except Exception as e:
-            print(f"⚠️  NLU: Impossible de charger les produits depuis la DB: {e}")
-            # Fallback minimal si la DB est inaccessible
+            print(f"⚠️  NLU: Could not load products from DB: {e}")
+            # Minimal fallback if DB is unreachable
             self.known_products = {
-                "doliprane", "aspirine", "ibuprofene", "ibuprofene",
+                "doliprane", "aspirine", "ibuprofene",
                 "paracetamol", "amoxicilline", "omeprazole",
             }
 
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # 🔍 POINT D'ENTREE PRINCIPAL
-    # ══════════════════════════════════════════════════════════════════════════
+    # ==========================================================================
+    # 🔍 MAIN ENTRY POINT
+    # ==========================================================================
 
     def analyze(self, text: str) -> Dict:
         """
-        Analyse le texte et retourne :
-            intent, entity, entity_list, confidence, language
+        Analyzes the text and returns a dictionary containing:
+        intent, entity, entity_list, confidence, and detected language.
         """
         if not text or not text.strip():
             return {"intent": "unknown", "entity": "", "entity_list": [], "confidence": 0.0, "language": "fr"}
@@ -275,16 +276,15 @@ class NLUProcessor:
         lang       = self._detect_language(text)
         text_lower = text.lower().strip()
 
-        # 👋 Salutation — detectee en premier, avant tout le reste
-        # FIX: verifie FR + EN pour ne pas rater "Hello" detecte en FR
+        # 👋 Greeting detection - high priority, checked first
         if self._is_greeting(text_lower, lang):
             return {"intent": "greeting", "entity": "", "entity_list": [], "confidence": 1.0, "language": lang}
 
-        # ❓ Aide — seulement si message court (<=5 mots)
+        # ❓ Help request - only if the message is short (<= 5 words)
         if self._is_help_request(text_lower, lang):
             return {"intent": "get_help", "entity": "", "entity_list": [], "confidence": 1.0, "language": lang}
 
-        # 📅 Calendrier — court-circuit immediat si mot-cle agenda/rdv/garde detecte
+        # 📅 Calendar query - immediate short-circuit if calendar keywords are present
         if self._is_calendar_query(text_lower):
             entities = self._extract_calendar_entities(text_lower)
             return {
@@ -295,15 +295,14 @@ class NLUProcessor:
                 "language": lang
             }
 
-        # 🧠 Pipeline NLU principal
+        # 🧠 Main NLU Pipeline
         nlp = self.nlp_fr if lang == "fr" else (self.nlp_en or self.nlp_fr)
         doc = nlp(text)
 
         entities       = self._extract_entities(doc, text)
         intent, conf   = self._detect_intent(doc, entities, text, lang)
 
-        # 💊 Interaction — uniquement si marqueurs EXPLICITES dans le texte
-        # FIX: suppression de la regle "2 entites courtes = interaction" (faux positifs)
+        # 💊 Interaction - only if EXPLICIT markers are found in the text
         if intent != "check_interaction" and self._has_explicit_interaction_markers(text_lower, entities):
             intent = "check_interaction"
             conf   = 0.95
@@ -316,28 +315,25 @@ class NLUProcessor:
             "language":    lang
         }
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # ⚡ DETECTIONS RAPIDES (avant pipeline NLU)
-    # ══════════════════════════════════════════════════════════════════════════
+    # ==========================================================================
+    # ⚡ QUICK DETECTIONS (Before NLU Pipeline)
+    # ==========================================================================
 
     def _is_greeting(self, text_lower: str, lang: str) -> bool:
-        """
-        Vrai seulement si message court ET commence par une salutation.
-        FIX: verifie FR + EN ensemble — 'Hello' detecte en FR ne ratait plus.
-        """
+        """Returns True if message is short AND starts with a greeting."""
         if len(text_lower.split()) > 4:
             return False
         all_greets = self.greetings.get("fr", []) + self.greetings.get("en", [])
         return any(text_lower.startswith(g) or text_lower == g for g in all_greets)
 
     def _is_help_request(self, text_lower: str, lang: str) -> bool:
-        """Vrai seulement si message court (<= 5 mots) contenant un mot d'aide."""
+        """Returns True if message is short (<= 5 words) and contains help keywords."""
         if len(text_lower.split()) > 5:
             return False
         return any(kw in text_lower for kw in self.help_keywords.get(lang, []))
 
     def _is_calendar_query(self, text_lower: str) -> bool:
-        """Vrai si le texte contient un mot-cle calendrier evident."""
+        """Returns True if text contains obvious calendar/schedule triggers."""
         calendar_triggers = {
             "rdv", "r.d.v", "rendez-vous", "garde", "gardes",
             "planning", "agenda", "calendrier",
@@ -347,11 +343,7 @@ class NLUProcessor:
         return bool(words & calendar_triggers)
 
     def _extract_calendar_entities(self, text_lower: str) -> List[str]:
-        """
-        Pour les requetes calendrier, extrait :
-        - les types d'evenements (rdv, garde)
-        - les mots temporels (demain, lundi...)
-        """
+        """Extracts event types and temporal keywords from calendar queries."""
         entities = []
         words    = re.split(r'\W+', text_lower)
 
@@ -367,20 +359,18 @@ class NLUProcessor:
 
     def _has_explicit_interaction_markers(self, text_lower: str, entities: List[str]) -> bool:
         """
-        Interaction UNIQUEMENT si :
-        1. Au moins 2 entites distinctes dans le TEXTE
-        2. ET un marqueur explicite (symbole, mot-cle interaction, conjonction)
-
-        FIX: suppression de "2 entites courtes = interaction" (source des faux positifs sur aspirine)
+        Interaction is valid ONLY if:
+        1. At least 2 distinct entities in text
+        2. AND an explicit marker (symbol, keyword, conjunction)
         """
         if len(entities) < 2:
             return False
 
-        # Symboles forts
+        # Strong symbols
         if "+" in text_lower or "&" in text_lower:
             return True
 
-        # Mots-cles interaction explicites
+        # Explicit interaction keywords
         interaction_keywords = [
             "interaction", "compatible", "incompatible", "melanger", "melange",
             "ensemble", "danger", "puis-je", "peut-on", "associer",
@@ -389,7 +379,7 @@ class NLUProcessor:
         if any(kw in text_lower for kw in interaction_keywords):
             return True
 
-        # Conjonction + 2 entites (mais PAS si mot de commande present)
+        # Conjunction + 2 entities (not if a command word is present)
         conjunctions  = ["et", "avec", "plus", "and", "with"]
         command_words = ["find", "search", "cherche", "liste", "list", "show", "montre", "affiche"]
         has_conj      = any(f" {w} " in f" {text_lower} " for w in conjunctions)
@@ -397,25 +387,24 @@ class NLUProcessor:
 
         return has_conj and not has_command
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # 🏷️  EXTRACTION D'ENTITES
-    # ══════════════════════════════════════════════════════════════════════════
+    # ==========================================================================
+    # 🏷️ ENTITY EXTRACTION
+    # ==========================================================================
 
     def _normalize(self, text: str) -> str:
-        """Supprime les accents pour la comparaison (ibuprofène → ibuprofene)."""
-        import unicodedata
+        """Removes accents for matching (e.g., 'ibuprofène' -> 'ibuprofene')."""
         return unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode("ascii").lower()
 
     def _extract_entities(self, doc, original_text: str) -> List[str]:
         """
-        Extrait les noms propres / produits du texte.
-        Ordre : symboles → produits connus → POS tagging → fallback
+        Extracts proper names and products from text.
+        Order: symbols → known products → POS tagging → fallback
         """
         text_lower      = original_text.lower()
-        text_normalized = self._normalize(original_text)  # FIX: version sans accents pour matching
+        text_normalized = self._normalize(original_text)
         entities        = []
 
-        # 1️⃣  Separation par symboles + / &
+        # 1️⃣ Split by symbols + / &
         if "+" in original_text or "&" in original_text:
             parts = re.split(r"[+&]", original_text)
             for part in parts:
@@ -425,11 +414,10 @@ class NLUProcessor:
             if len(entities) >= 2:
                 return self._deduplicate_entities(entities)
 
-        # 2️⃣  Produits connus (dictionnaire)
-        # FIX: on cherche dans text_lower (accents) ET text_normalized (sans accents)
+        # 2️⃣ Known products lookup (Dictionary)
         for product in self.known_products:
             product_norm = self._normalize(product)
-            # Match dans le texte original (avec accents) OU normalisé (sans accents)
+            # Match in original text (with accents) OR normalized (without)
             search_text = text_lower if product in text_lower else text_normalized
             search_prod = product    if product in text_lower else product_norm
 
@@ -437,25 +425,25 @@ class NLUProcessor:
                 pattern = rf"\b{re.escape(search_prod)}\b\s*(\d+\s*mg|\d+\s*g)?"
                 match   = re.search(pattern, search_text)
                 if match:
-                    # Récupère le mot original depuis le texte source (avec accents)
+                    # Get original word from source text (keep accents)
                     start, end = match.start(), match.end()
                     cap = original_text[start:end].strip().capitalize()
                     if cap and cap not in entities:
                         entities.append(cap)
 
-        # 3️⃣  POS Tagging spaCy (noms propres ET noms communs longs = médicaments)
+        # 3️⃣ SpaCy POS Tagging (Proper nouns AND long common nouns as medications)
         for token in doc:
             t_low = token.text.lower()
             if t_low in self.stop_entities or token.is_punct or token.like_num:
                 continue
-            # FIX: NOUN accepté si >= 4 lettres (médicaments rarement tagués PROPN)
+            # NOUN accepted if >= 4 chars (meds are often tagged as NOUN instead of PROPN)
             is_relevant = (token.pos_ in ("PROPN", "X")) or (token.pos_ == "NOUN" and len(t_low) >= 4)
             if is_relevant and len(t_low) > 2:
                 cap = token.text.capitalize()
                 if cap not in entities:
                     entities.append(cap)
 
-        # 4️⃣  Fallback : premier mot non-stop si rien trouve
+        # 4️⃣ Fallback: First non-stop word if nothing found
         if not entities:
             for token in doc:
                 t_low = token.text.lower()
@@ -466,7 +454,7 @@ class NLUProcessor:
         return self._deduplicate_entities(entities)
 
     def _deduplicate_entities(self, entities: List[str]) -> List[str]:
-        """Supprime les entites incluses dans d'autres (ex: 'Aspirine' vs 'Aspirine 300mg')."""
+        """Removes entities contained within others (e.g., 'Aspirin' vs 'Aspirin 300mg')."""
         sorted_ents = sorted(set(entities), key=len, reverse=True)
         final       = []
         for ent in sorted_ents:
@@ -474,15 +462,15 @@ class NLUProcessor:
                 final.append(ent)
         return final[:5]
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # 🎯 DETECTION D'INTENT
-    # ══════════════════════════════════════════════════════════════════════════
+    # ==========================================================================
+    # 🎯 INTENT DETECTION
+    # ==========================================================================
 
     def _detect_intent(self, doc, entities: List[str], original_text: str, lang: str) -> tuple:
         text_lower   = original_text.lower()
         tokens_lemma = {token.lemma_.lower() for token in doc}
 
-        # 🔑 Regle 1 : commandes explicites (priorite absolue)
+        # Rule 1: Explicit commands (Absolute priority)
         explicit_commands = {
             "find product":    "get_product",
             "search product":  "get_product",
@@ -507,7 +495,7 @@ class NLUProcessor:
             if phrase in text_lower:
                 return intent, 0.95
 
-        # 📊 Regle 2 : scoring par mots-cles
+        # Rule 2: Keyword scoring
         intent_scores = {}
         for intent_name, config in self.intent_patterns.items():
             score = 0
@@ -515,7 +503,7 @@ class NLUProcessor:
                 if kw in text_lower or kw in tokens_lemma:
                     score += config["priority"]
             if score > 0:
-                # 🔁 Bonus contextuels
+                # Contextual bonuses
                 if intent_name == "get_sales_summary" and any(w in text_lower for w in ["aujourd'hui", "jour", "today"]):
                     score *= 1.3
                 if intent_name == "check_stock" and len(entities) >= 1:
@@ -531,11 +519,12 @@ class NLUProcessor:
 
         return "get_product", 0.4
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # 🌍 DETECTION DE LANGUE
-    # ══════════════════════════════════════════════════════════════════════════
+    # ==========================================================================
+    # 🌍 LANGUAGE DETECTION
+    # ==========================================================================
 
     def _detect_language(self, text: str) -> str:
+        """Basic detection based on high-frequency indicators (Bilingual FR/EN)."""
         text_lower = text.lower()
         words      = text_lower.split()
 
@@ -554,6 +543,7 @@ class NLUProcessor:
         fr_count = sum(1 for w in words if w in fr_indicators)
         en_count = sum(1 for w in words if w in en_indicators)
 
+        # Boost language detection based on command verbs
         if any(w in text_lower for w in ["find", "search", "show", "get"]):
             en_count += 2
         if any(w in text_lower for w in ["cherche", "trouve", "affiche", "montre"]):
