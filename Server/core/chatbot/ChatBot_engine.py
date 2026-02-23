@@ -41,7 +41,7 @@ class ChatBotEngine:
     # ENTRY POINT
     # =========================================================================
 
-    def process_query(self, user_text: str) -> dict:
+    def process_query(self, user_text: str, user_id: str = None) -> dict:
         # Empty input -> message d'aide
         if not user_text or not user_text.strip():
             return {
