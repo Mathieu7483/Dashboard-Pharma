@@ -24,7 +24,6 @@ class ChatBotEngine:
 
     def __init__(self):
         self.nlu = NLUProcessor()
-        self.nlu.load_products_from_db()
         self.facade = FacadeService()
         self._temporal_words = {
             "demain", "aujourd'hui", "hier",
@@ -99,7 +98,8 @@ class ChatBotEngine:
 
             # 4. Intent Routing Logic
             if intent == "greeting":
-                response_text = "Hello! How can I help you today?"
+                user = self.facade.get_user_by_id(user_id) if user_id else None
+                response_text = f"Bonjour {user.username} ! Comment puis-je vous aider aujourd'hui ?"
 
             elif intent == "get_help":
                 response_text = self._generate_help_message()
@@ -538,8 +538,8 @@ class ChatBotEngine:
                     else "Non assigne")
         lines = [
             f" {label}",
-            f"Date : {e.start_date} de {e.start_time} a {e.end_time}",
-            f"Assigne a : {assigned}",
+            f"Date : {e.start_date} de {e.start_time} au {e.end_date} à {e.end_time}",
+            f"Assigne à : {assigned}",
         ]
         if e.notes:
             lines.append(f"Notes : {e.notes}")
