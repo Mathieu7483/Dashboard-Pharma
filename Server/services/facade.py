@@ -1,5 +1,5 @@
 from database.data_manager import db, bcrypt
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, desc
 from models.user import UserModel
 from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
@@ -123,7 +123,7 @@ class FacadeService:
     # --- SALE METHODS ---
     
     def get_all_sales(self, user_id=None):
-        stmt = db.select(SaleModel).order_by(SaleModel.sale_date.desc())
+        stmt = db.select(SaleModel).order_by(desc(SaleModel.sale_date))
         if user_id:
             stmt = stmt.filter(SaleModel.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
@@ -335,7 +335,7 @@ class FacadeService:
         Fetch tickets. If user_id is provided, only fetch tickets for that user.
         If None, fetch all (for Admin).
         """
-        stmt = db.select(Ticket).order_by(Ticket.created_at.desc())
+        stmt = db.select(Ticket).order_by(desc(Ticket.created_at))
         if user_id:
             stmt = stmt.filter(Ticket.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
