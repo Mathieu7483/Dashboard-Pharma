@@ -1,10 +1,12 @@
 from database.data_manager import db, bcrypt
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from models.user import UserModel
 from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from models.calendar import CalendarEvent
+from models.interaction import InteractionModel
 from models.ticket import Ticket
 from datetime import datetime, UTC
 
@@ -304,6 +306,28 @@ class FacadeService:
     def delete_doctor(self, doctor_id):
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
+
+
+    # --- INTERACTION METHODS ---
+    def get_interaction(self, ingredient_a, ingredient_b):
+        """
+        Queries the database for an interaction between two active ingredients.
+        Standardized to SQLAlchemy 2.0 syntax.
+        """
+        stmt = (
+            db.select(InteractionModel)
+            .where(
+                or_(
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_b}%")),
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_a}%"))
+                )
+            )
+        )
+        # We use scalar_one_or_none() to get a single object or None
+        return db.session.execute(stmt).scalar_one_or_none()
+
     
     # --- TICKET CRUD METHODS ---
     def get_all_tickets(self, user_id=None):
