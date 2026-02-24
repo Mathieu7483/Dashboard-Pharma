@@ -16,7 +16,7 @@ class Ticket(db.Model):
     status = db.Column(db.String(20), default='open') # open, in_progress, closed
     
     # Relations
-    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Admin can add notes to the ticket
