@@ -55,7 +55,11 @@ class TicketList(Resource):
             subject=data['subject'], 
             description=data['description'],
             priority=data.get('priority', 'medium')
-        ), 201
+        )
+        if not new_ticket:
+            tickets_ns.abort(400, "Échec de la création du ticket. Vérifiez les données.")
+
+        return new_ticket, 201
 # --- SECURE RESOURCE 2: Single Ticket (GET, PUT, DELETE) ---
 @tickets_ns.route('/<uuid:ticket_id>')
 @tickets_ns.param('ticket_id', 'The ticket identifier')
