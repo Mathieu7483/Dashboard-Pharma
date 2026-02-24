@@ -1,12 +1,21 @@
 from app import create_app
-from utils.seeder import seed_all_initial_data
 from database.data_manager import db
+from utils.seeder import seed_all_initial_data
 
 app = create_app()
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    print("\n--- 🔧 Database Initialization ---")
+    db.create_all()
+
+    print("--- 🌱 Seeding Process ---")
+    try:
         seed_all_initial_data()
-    
-    app.run(debug=True, port=5000)
+        print("✅ Seeding completed successfully.")
+    except Exception as e:
+        print(f"❌ Seeding failed: {str(e)}")
+
+print("\n--- 🚀 Starting Pharma Server ---")
+print("Documentation: http://127.0.0.1:5000/docs")
+
+app.run(debug=True, port=5000)
