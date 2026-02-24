@@ -414,6 +414,11 @@ class ChatBotEngine:
             ).scalar_one_or_none()
         if not ticket:
             return f"Aucun ticket trouve pour '{search_term}'."
+        user_name = "Inconnu"
+        if ticket.user_id:
+            user = self.facade.get_user_by_id(ticket.user_id)
+            if user:
+                user_name = user.username   
         output = [
             f" Ticket  {ticket.id[:8]}...",
             f"   Sujet : {ticket.subject}",
@@ -421,7 +426,7 @@ class ChatBotEngine:
             f"   Priorite : {ticket.priority.capitalize()}",
             f"   Statut : {ticket.status.capitalize()}",
             f"   Cree le : {ticket.created_at.strftime('%d/%m/%Y %H:%M')}",
-            f"   Utilisateur : {ticket.user_id[:8]}...",
+            f"   Par utilisateur : {user_name}",
         ]
         if ticket.admin_note:
             output.append(f"   Note admin : {ticket.admin_note}")
