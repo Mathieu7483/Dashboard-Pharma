@@ -1377,3 +1377,50 @@ label.item-entry input[type="checkbox"] {
     filter: brightness(1.1);
     transform: translateY(-2px);
 }
+
+
+
+/* ========================================================================== 
+   19. Avatar & Status Indicator for Chatbot Widget
+   ========================================================================== */
+/* Le container : simple, centré, pas de halo radial */
+.avatar-container {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    padding: 15px 0;
+    width: 100%;
+}
+
+/* L'image : Pas de brightness bizarre, juste ton beau PNG détouré */
+.bot-avatar {
+    width: 85px; /* Taille légèrement réduite pour plus d'élégance */
+    height: 85px;
+    object-fit: contain;
+    /* Ombre portée naturelle (grise/douce) au lieu de colorée */
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s ease;
+}
+
+/* Au survol : un simple zoom très léger */
+.bot-avatar:hover {
+    transform: scale(1.03);
+}
+
+.bot-avatar.thinking {
+    animation: simple-fade 2s infinite ease-in-out;
+}
+
+@keyframes simple-fade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Mini avatar dans le chat : reste discret */
+.mini-avatar {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    margin-right: 8px;
+    filter: grayscale(20%); /* Un peu plus terne pour ne pas distraire */
+}
