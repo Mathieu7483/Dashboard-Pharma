@@ -1,5 +1,6 @@
 """
 Server/core/chatbot/ChatBot_engine.py
+Code: English | UI/Outputs: French
 """
 
 from typing import List
@@ -31,64 +32,52 @@ class ChatBotEngine:
             "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
         }
 
-
-
     def _norm(self, s: str) -> str:
-        """Normalise une chaîne : minuscules et suppression des accents."""
+        """Normalize string: lowercase and remove accents."""
         if not s: return ""
         return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower().strip()
 
     # =========================================================================
-    # ENTRY POINT
+    # MAIN ENTRY POINT
     # =========================================================================
 
     def process_query(self, user_text: str, user_id: str = None) -> dict:
         """
-        Main entry point for the chatbot logic. 
+        Main engine logic. Analyzes intent and returns a French response.
         """
-        # DEBUG: Let's see what's happening in the console
         print(f"DEBUG: Received text: '{user_text}' | UserID: {user_id}")
 
-        # Normalize text: lower case, remove accents/special chars if needed, and strip whitespace
         clean_text = user_text.lower().strip()
 
-        # Sanitize: block suspicious inputs
+        # Security: block basic SQL injection patterns
         if re.search(r"[;'\"\\]|--|\b(drop|truncate|delete|insert)\b", clean_text):
-            return {"intent": "unknown", "reply": "Requête non valide."}
+            return {"intent": "unknown", "reply": "Requête non valide pour des raisons de sécurité."}
 
-        # 1. PROFILE CHECK (Robust detection)
-        # We check for several variations to be sure
-        profile_triggers = ["qui suis je", "qui suis-je", "mon profil", "who am i"]
-        
+        # 1. Profile / Identity check
+        profile_triggers = ["qui suis je", "qui suis-je", "mon profil", "c'est qui"]
         if any(trigger in clean_text for trigger in profile_triggers):
             if not user_id:
                 return {
                     "intent": "auth_check", 
-                    "reply": "I cannot identify you. Make sure you are logged in and the token is valid."
+                    "reply": "Je ne parviens pas à vous identifier. Assurez-vous d'être connecté."
                 }
             
             user = self.facade.get_user_by_id(user_id)
             if user:
-                # Use username as a fallback if names are missing
                 display_name = f"{user.first_name} {user.last_name}".strip()
-                
-                # If the result is empty or just "None None"
                 if not display_name or "None" in display_name:
                     display_name = user.username
 
                 return {
                     "intent": "user_identify",
-                    "reply": f"You are {display_name}, logged in as {user.username}."
+                    "reply": f"Vous êtes {display_name}, connecté sous l'identifiant {user.username}."
                 }
 
-        # 2. EMPTY INPUT CHECK
+        # 2. Empty input check
         if not clean_text:
-            return {
-                "intent": "unknown",
-                "reply": "Please ask a question."
-            }
+            return {"intent": "unknown", "reply": "Veuillez poser une question."}
 
-        # 3. NLU Analysis (Intent detection and entity extraction)
+        # 3. NLU Analysis
         analysis = self.nlu.analyze(user_text)
         intent   = analysis.get("intent", "unknown")
         entities = analysis.get("entity_list", [])
@@ -96,10 +85,11 @@ class ChatBotEngine:
         try:
             response_text = ""
 
-            # 4. Intent Routing Logic
+            # 4. Intent Routing
             if intent == "greeting":
                 user = self.facade.get_user_by_id(user_id) if user_id else None
-                response_text = f"Bonjour {user.username} ! Comment puis-je vous aider aujourd'hui ?"
+                name = user.username if user else "collègue"
+                response_text = f"Bonjour {name} ! Comment puis-je vous aider aujourd'hui ?"
 
             elif intent == "get_help":
                 response_text = self._generate_help_message()
@@ -111,7 +101,7 @@ class ChatBotEngine:
                 response_text = self._handle_stock_alerts()
 
             elif intent == "get_sales_daily":
-                response_text = self._handle_sales_daily(user_id)
+                response_text = self._handle_sales_daily()
 
             elif intent == "get_sales_summary":
                 response_text = self._handle_sales_summary()
@@ -141,7 +131,7 @@ class ChatBotEngine:
                 else:
                     response_text = self._execute_multi_category_search(entities[0])
 
-            # 6. Fallback logic
+            # 6. Fallback
             else:
                 if entities:
                     response_text = self._execute_multi_category_search(entities[0])
@@ -149,55 +139,41 @@ class ChatBotEngine:
                     response_text = self._generate_help_message()
                     intent = "get_help"
 
-            return {
-                "intent": intent,
-                "reply": response_text
-            }
+            return {"intent": intent, "reply": response_text}
 
         except Exception as e:
-            # Critical error logging
             import traceback
             print(f"ChatBot Error: {e}")
             traceback.print_exc()
             return {
                 "intent": "error",
-                "reply": "An error occurred while processing your request. Please try again."
+                "reply": "Une erreur est survenue lors du traitement de votre demande. Veuillez réessayer."
             }
 
     # =========================================================================
-    # HANDLERS
+    # INTENT HANDLERS (Outputs in French)
     # =========================================================================
 
     def _handle_interaction_check(self, entity_list: list) -> str:
-        """
-        Handles drug-drug interaction checks by resolving entities 
-        and querying the database via the facade.
-        """
+        """Handles drug interaction checking logic."""
         if len(entity_list) < 2:
             return (
-                "Please mention at least TWO products to check compatibility.\n\n"
-                "Examples:\n"
-                "   - 'Aspirin and Ibuprofen compatible?'\n"
-                "   - 'Doliprane with Advil danger?'"
+                "Veuillez mentionner au moins DEUX produits pour vérifier leur compatibilité.\n\n"
+                "Exemples :\n"
+                "   - 'Aspirine et Ibuprofène compatibles ?'\n"
+                "   - 'Doliprane avec Advil danger ?'"
             )
 
         resolved, display_names = [], []
         for name in entity_list:
-            # Resolve trade names (e.g., Advil) to active ingredients (e.g., Ibuprofen)
             ingredient, display = self._resolve_to_active_ingredient(name)
             resolved.append(self._norm(ingredient))
             display_names.append(display)
 
-        # Logging for debugging purposes
-        print(f"DEBUG - Resolved (Normalized): {list(zip(display_names, resolved))}")
-
         conflicts = []
-        # Nested loop to check every possible pair of drugs
         for i in range(len(resolved)):
             for j in range(i + 1, len(resolved)):
-                # DELEGATION: Ask the facade, not the DB directly
                 result = self.facade.get_interaction(resolved[i], resolved[j])
-                
                 if result:
                     conflicts.append({
                         "interaction": result, 
@@ -205,59 +181,48 @@ class ChatBotEngine:
                         "name_b": display_names[j]
                     })
 
-        # Case: No interactions found
         if not conflicts:
             return (
-                "✅ No known interaction detected.\n\n"
-                f"Analyzed products: {' + '.join(display_names)}\n\n"
-                "⚠️ Always consult a healthcare professional."
+                "✅ Aucune interaction connue détectée.\n\n"
+                f"Produits analysés : {' + '.join(display_names)}\n\n"
+                "⚠️ Toujours consulter un pharmacien ou la base Vidal."
             )
 
-        # UI Mapping for severity levels
-        severity_emoji = {
-            "low": "⚠️", 
-            "moderate": "🟠", 
-            "high": "🔴", 
-            "critical": "🔴🔴"
-        }
+        severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🛑"}
         
-        output = [
-            "🚨 DRUG INTERACTION ALERT\n",
-            f"Analysis for: {' + '.join(display_names)}\n"
-        ]
-        
+        output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n", f"Analyse pour : {' + '.join(display_names)}\n"]
         for c in conflicts:
             ix = c["interaction"]
             emoji = severity_emoji.get(ix.severity.lower(), "⚠️")
             output += [
                 f"{emoji} {c['name_a']} + {c['name_b']}",
-                f"Severity: {ix.severity.upper()}",
-                f"Details: {ix.description}",
+                f"Sévérité : {ix.severity.upper()}",
+                f"Détails : {ix.description}",
                 "---\n"
             ]
-            
-        output.append("⚠️ IMPORTANT: Consult your pharmacist before use.")
+        output.append("⚠️ IMPORTANT : Avis médical requis avant délivrance.")
         return "\n".join(output)
-    
 
     def _handle_stock_query(self, entities: list) -> str:
+        """Queries product stock levels."""
         if not entities:
-            return "Quel produit souhaitez-vous verifier ?"
+            return "Quel produit souhaitez-vous vérifier ?"
         products = self._search_database(ProductModel, entities[0])
         if not products:
-            return f"Aucun produit trouve pour '{entities[0]}'."
-        output = [f" Etat des stocks : {entities[0].capitalize()}"]
+            return f"Aucun produit trouvé pour '{entities[0]}'."
+        output = [f"📊 État des stocks : {entities[0].capitalize()}"]
         for p in products:
-            if p.stock > 100:   emoji, status = "🟢", "Excellent"
-            elif p.stock > 50:  emoji, status = "🟢", "Bon"
-            elif p.stock > 20:  emoji, status = "🟡", "Moyen"
+            if p.stock > 100:   emoji, status = "🟢", "Optimal"
+            elif p.stock > 50:  emoji, status = "🟢", "Correct"
+            elif p.stock > 20:  emoji, status = "🟡", "À surveiller"
             elif p.stock > 5:   emoji, status = "🟠", "Faible"
             else:               emoji, status = "⚠️🔴", "CRITIQUE"
-            rx = "Ordonnance" if p.is_prescription_only else "Libre"
-            output.append(f"   {emoji} {p.name} ({p.dosage}) - {p.stock} unites ({status}) | {p.price:.2f}EUR | {rx}")
+            rx = "Sur ordonnance" if p.is_prescription_only else "Vente libre"
+            output.append(f"   {emoji} {p.name} ({p.dosage}) - {p.stock} unités ({status}) | {p.price:.2f}€ | {rx}")
         return "\n".join(output)
 
     def _handle_price_query(self, entities: list) -> str:
+        """Queries product pricing."""
         if not entities:
             return "Quel produit cherchez-vous ?"
         product = db.session.execute(
@@ -267,16 +232,17 @@ class ChatBotEngine:
             return f"Produit '{entities[0]}' introuvable."
         rx = "Sur ordonnance" if product.is_prescription_only else "Vente libre"
         return (
-            f" {product.name}\n"
-            f"   Prix : {product.price:.2f} EUR\n"
-            f"   Type : {rx}\n"
+            f"💊 {product.name}\n"
+            f"   Prix : {product.price:.2f} €\n"
+            f"   Régime : {rx}\n"
             f"   Dosage : {product.dosage}\n"
-            f"   Stock : {product.stock} unites"
+            f"   Stock : {product.stock} unités"
         )
 
     def _handle_prescription_info(self, entities: list) -> str:
+        """Checks if a product requires a prescription."""
         if not entities:
-            return "Quel medicament souhaitez-vous verifier ?"
+            return "Quel médicament souhaitez-vous vérifier ?"
         product = db.session.execute(
             db.select(ProductModel).where(ProductModel.name.ilike(f"%{entities[0]}%"))
         ).scalar_one_or_none()
@@ -284,39 +250,41 @@ class ChatBotEngine:
             return f"Produit '{entities[0]}' introuvable."
         if product.is_prescription_only:
             return (
-                f"{product.name} necessite une ordonnance medicale.\n"
-                f"   Principe actif : {product.active_ingredient}\n"
+                f"📝 {product.name} nécessite obligatoirement une ordonnance.\n"
+                f"   Molécule : {product.active_ingredient}\n"
                 f"   Dosage : {product.dosage}"
             )
         return (
-            f"{product.name} est disponible en vente libre.\n"
-            f"   Prix : {product.price:.2f} EUR\n"
-            f"   Stock : {product.stock} unites"
+            f"✅ {product.name} est disponible en vente libre.\n"
+            f"   Prix : {product.price:.2f} €\n"
+            f"   Stock : {product.stock} unités"
         )
 
     def _handle_stock_alerts(self) -> str:
+        """Lists products with low stock levels."""
         threshold = 20
         low_stock = db.session.execute(
             db.select(ProductModel).where(ProductModel.stock < threshold).order_by(ProductModel.stock)
         ).scalars().all()
         if not low_stock:
-            return f"🟢 Tous les produits ont un stock suffisant (>={threshold} unites)."
-        output = [f"⚠️ Alertes Stock Bas (< {threshold} unites)\n"]
+            return f"🟢 Stock satisfaisant pour tous les produits (>= {threshold} unités)."
+        output = [f"⚠️ Alertes Stock Bas (< {threshold} unités)\n"]
         critical = [p for p in low_stock if p.stock < 5]
         warning  = [p for p in low_stock if 5 <= p.stock < threshold]
         if critical:
-            output.append("🔴CRITIQUE (< 5 unites)")
+            output.append("🔴 CRITIQUE (< 5 unités)")
             for p in critical:
-                output.append(f"   {p.name} : {p.stock} unites")
+                output.append(f"   {p.name} : {p.stock} unités")
             output.append("")
         if warning:
-            output.append("🟠FAIBLE (5-19 unites)")
+            output.append("🟠 FAIBLE (5-19 unités)")
             for p in warning:
-                output.append(f"   {p.name} : {p.stock} unites")
-        output.append(f"\n{len(low_stock)} produits necessitent un reapprovisionnement.")
+                output.append(f"   {p.name} : {p.stock} unités")
+        output.append(f"\nTotal : {len(low_stock)} produits à réapprovisionner.")
         return "\n".join(output)
 
     def _handle_sales_summary(self) -> str:
+        """Generates performance statistics for daily and weekly sales."""
         try:
             now = datetime.now()
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -328,360 +296,253 @@ class ChatBotEngine:
                     func.sum(SaleModel.total_amount)
                 ).filter(filter_condition).first()
 
-            # daily stats
             ct, rt = _get_stats(SaleModel.sale_date >= start_of_day)
-            # weekly stats
             cw, rw = _get_stats(SaleModel.sale_date >= week_start)
-            # cumulative stats
             ca, ra = _get_stats(True)
 
-            # Clean None values
             ct, rt = (ct or 0), (rt or 0.0)
             cw, rw = (cw or 0), (rw or 0.0)
             ca, ra = (ca or 0), (ra or 0.0)
 
             output = [
-                " Performances de Vente\n",
-                f" Aujourd'hui ({now.strftime('%d/%m/%Y')})",
-                f"   Transactions : {ct}",
-                f"   CA : {rt:.2f} EUR\n",
-                f" Cette semaine (depuis le {week_start.strftime('%d/%m')})",
-                f"   Transactions : {cw}",
-                f"   CA : {rw:.2f} EUR\n",
-                f" Cumule total",
-                f"   Transactions : {ca}",
-                f"   CA total : {ra:.2f} EUR",
+                "📈 PERFORMANCE DES VENTES\n",
+                f"Aujourd'hui ({now.strftime('%d/%m/%Y')})",
+                f"   Transactions : {ct} | CA : {rt:.2f} €\n",
+                f"Cette semaine (depuis le {week_start.strftime('%d/%m')})",
+                f"   Transactions : {cw} | CA : {rw:.2f} €\n",
+                f"Cumul Total",
+                f"   Transactions : {ca} | CA : {ra:.2f} €",
             ]
             if ca > 0:
-                output.append(f"   Panier moyen : {ra/ca:.2f} EUR")
-                
+                output.append(f"   Panier moyen : {ra/ca:.2f} €")
             return "\n".join(output)
         except Exception as e:
             return f"Erreur statistiques : {str(e)}"
 
     def _handle_sales_daily(self) -> str:
+        """Retrieves a list of today's sales."""
         try:
             now = datetime.now()
-            # Define start and end of the current day
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
             sales = db.session.query(
                 SaleModel.id, SaleModel.total_amount, SaleModel.sale_date, SaleModel.user_id
-            ).filter(
-                and_(
-                    SaleModel.sale_date >= start_of_day,
-                    SaleModel.sale_date <= end_of_day
-                )
-            ).all()
+            ).filter(and_(SaleModel.sale_date >= start_of_day, SaleModel.sale_date <= end_of_day)).all()
 
             if not sales:
                 return f"Aucune vente enregistrée pour aujourd'hui ({now.strftime('%d/%m/%Y')})."
 
-            output = [f" Ventes du jour ({now.strftime('%d/%m/%Y')})\n"]
+            output = [f"📋 Ventes du jour ({now.strftime('%d/%m/%Y')})\n"]
             for s in sales:
-                output.append(f" Transaction #{str(s.id)[:8]}... - {s.total_amount:.2f} EUR - {s.sale_date.strftime('%H:%M')} - User {str(s.user_id)[:8]}...")
+                output.append(f"Ticket #{str(s.id)[:8]}... - {s.total_amount:.2f} € - {s.sale_date.strftime('%H:%M')}")
             
             output.append(f"\nTotal transactions : {len(sales)}")
-            output.append(f"CA total : {sum(s.total_amount for s in sales):.2f} EUR")
-            
+            output.append(f"CA journalier : {sum(s.total_amount for s in sales):.2f} €")
             return "\n".join(output)
         except Exception as e:
-            return f"Erreur statistiques : {str(e)}"
+            return f"Erreur : {str(e)}"
 
     def _handle_contact_search(self, entities: list) -> str:
+        """Searches for doctors or clients contact information."""
         if not entities:
-            return "De qui souhaitez-vous obtenir les coordonnees ?"
+            return "Qui recherchez-vous ?"
         search_term = entities[0]
         person = self._search_database(DoctorModel, search_term)
-        category = "Medecin"
+        category = "Médecin"
         if not person:
             person = self._search_database(ClientModel, search_term)
             category = "Client"
         if not person:
-            return f"Aucun contact trouve pour '{search_term}'."
+            return f"Aucun contact trouvé pour '{search_term}'."
         p = person[0]
         output = [
-            f" Coordonnees - {p.first_name} {p.last_name}",
-            f"   Poste : {category}",
-            f"   Tel : {p.phone or 'Non renseigne'}",
-            f"   Email : {p.email or 'Non renseigne'}",
+            f"👤 Fiche Contact - {p.first_name} {p.last_name}",
+            f"   Rôle : {category}",
+            f"   Tél : {p.phone or 'Non renseigné'}",
+            f"   Email : {p.email or 'Non renseigné'}",
         ]
         if hasattr(p, 'address') and p.address:
             output.append(f"   Adresse : {p.address}")
         return "\n".join(output)
 
     def _handle_ticket_info(self, entities: list) -> str:
+        """Retrieves support ticket details."""
         if not entities:
-            return "Quel ticket souhaitez-vous consulter ? Ex: 'Ticket Doliprane' ou 'Ticket #1234'"
+            return "Quel ticket souhaitez-vous consulter ? (ex: 'Ticket #1234')"
         search_term = entities[0].strip()
         if search_term.startswith("#"):
-            ticket = db.session.execute(
-                db.select(Ticket).where(Ticket.id == search_term[1:])
-            ).scalar_one_or_none()
+            ticket = db.session.execute(db.select(Ticket).where(Ticket.id == search_term[1:])).scalar_one_or_none()
         else:
-            ticket = db.session.execute(
-                db.select(Ticket).where(Ticket.subject.ilike(f"%{search_term}%"))
-            ).scalar_one_or_none()
+            ticket = db.session.execute(db.select(Ticket).where(Ticket.subject.ilike(f"%{search_term}%"))).scalar_one_or_none()
         if not ticket:
-            return f"Aucun ticket trouve pour '{search_term}'."
-        user_name = "Inconnu"
-        if ticket.user_id:
-            user = self.facade.get_user_by_id(ticket.user_id)
-            if user:
-                user_name = user.username   
+            return f"Ticket '{search_term}' introuvable."
+        
         output = [
-            f" Ticket  {ticket.id[:8]}...",
+            f"🎫 Ticket {ticket.id[:8]}...",
             f"   Sujet : {ticket.subject}",
             f"   Description : {ticket.description}",
-            f"   Priorite : {ticket.priority.capitalize()}",
-            f"   Statut : {ticket.status.capitalize()}",
-            f"   Cree le : {ticket.created_at.strftime('%d/%m/%Y %H:%M')}",
-            f"   Par utilisateur : {user_name}",
+            f"   Priorité : {ticket.priority.capitalize()}",
+            f"   Statut : {ticket.status.replace('open','Ouvert').replace('closed','Fermé')}",
+            f"   Créé le : {ticket.created_at.strftime('%d/%m/%Y %H:%M')}",
         ]
-        if ticket.admin_note:
-            output.append(f"   Note admin : {ticket.admin_note}")
         return "\n".join(output)
 
     def _handle_calendar_events(self, entities: list, user_text: str = "") -> str:
+        """Handles calendar and schedule queries."""
         text_lower = user_text.lower()
-
-        # Temporal keywords (demain, demain, lundi, etc.) -> corresponding date filter
         if any(tw in text_lower for tw in self._temporal_words):
             return self._handle_schedule_query(user_text)
 
-        today_str    = datetime.now().strftime("%Y-%m-%d")
+        today_str = datetime.now().strftime("%Y-%m-%d")
         week_end_str = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
 
-        # No entity -> list all events in the next 7 days
         if not entities:
             events = db.session.execute(
                 db.select(CalendarEvent)
-                .options(selectinload(CalendarEvent.assigned_user),
-                         selectinload(CalendarEvent.creator))
-                .where(CalendarEvent.start_date >= today_str,
-                       CalendarEvent.start_date <= week_end_str)
+                .options(selectinload(CalendarEvent.assigned_user), selectinload(CalendarEvent.creator))
+                .where(CalendarEvent.start_date >= today_str, CalendarEvent.start_date <= week_end_str)
                 .order_by(CalendarEvent.start_date, CalendarEvent.start_time)
             ).scalars().all()
             if not events:
-                return "Aucun evenement prevu dans les 7 prochains jours."
+                return "Aucun événement prévu cette semaine."
             output = ["📅 Agenda - 7 prochains jours\n"]
             for e in events:
                 output += self._format_event(e)
             return "\n".join(output)
 
-        # Entity -> filter events by title, notes, or type matching the search term
         search_term = entities[0].strip().lower()
         events = db.session.execute(
-            db.select(CalendarEvent)
-            .options(selectinload(CalendarEvent.assigned_user),
-                     selectinload(CalendarEvent.creator))
-            .where(
-                CalendarEvent.start_date >= today_str,
-                CalendarEvent.start_date <= week_end_str,
-                or_(
-                    CalendarEvent.title.ilike(f"%{search_term}%"),
-                    CalendarEvent.notes.ilike(f"%{search_term}%"),
-                    CalendarEvent.type.ilike(f"%{search_term}%"),
-                )
-            )
+            db.select(CalendarEvent).options(selectinload(CalendarEvent.assigned_user), selectinload(CalendarEvent.creator))
+            .where(CalendarEvent.start_date >= today_str,
+                   or_(CalendarEvent.title.ilike(f"%{search_term}%"),
+                       CalendarEvent.notes.ilike(f"%{search_term}%"),
+                       CalendarEvent.type.ilike(f"%{search_term}%")))
             .order_by(CalendarEvent.start_date, CalendarEvent.start_time)
         ).scalars().all()
 
         if not events:
-            return (
-                f"Aucun evenement pour '{search_term}' dans les 7 prochains jours.\n\n"
-                "Essayez : 'rdv', 'garde', ou le nom d'un collaborateur."
-            )
-        output = [f"📅 Evenements - '{search_term}'\n"]
+            return f"Aucun événement trouvé pour '{search_term}'."
+        output = [f"📅 Résultats Agenda - '{search_term}'\n"]
         for e in events:
             output += self._format_event(e)
         return "\n".join(output)
 
     def _handle_schedule_query(self, user_text: str) -> str:
+        """Processes temporal queries (tomorrow, monday, etc.)."""
         text_lower = user_text.lower()
         now = datetime.now()
-
-        if "demain" in text_lower:
-            target = now + timedelta(days=1)
-        elif "hier" in text_lower:
-            target = now - timedelta(days=1)
-        elif "aujourd" in text_lower:
-            target = now
+        if "demain" in text_lower:      target = now + timedelta(days=1)
+        elif "hier" in text_lower:      target = now - timedelta(days=1)
+        elif "aujourd" in text_lower:   target = now
         else:
-            jours = {"lundi": 0, "mardi": 1, "mercredi": 2, "jeudi": 3,
-                     "vendredi": 4, "samedi": 5, "dimanche": 6}
+            days = {"lundi": 0, "mardi": 1, "mercredi": 2, "jeudi": 3, "vendredi": 4, "samedi": 5, "dimanche": 6}
             target = now
-            for jour, num in jours.items():
-                if jour in text_lower:
+            for day, num in days.items():
+                if day in text_lower:
                     diff = (num - now.weekday()) % 7 or 7
                     target = now + timedelta(days=diff)
                     break
-
-        date_iso = target.strftime("%Y-%m-%d")
-        date_fr  = target.strftime("%d/%m/%Y")
-
+        date_iso, date_fr = target.strftime("%Y-%m-%d"), target.strftime("%d/%m/%Y")
         events = db.session.execute(
-            db.select(CalendarEvent)
-            .options(selectinload(CalendarEvent.assigned_user),
-                     selectinload(CalendarEvent.creator))
-            .where(CalendarEvent.start_date == date_iso)
-            .order_by(CalendarEvent.start_time)
+            db.select(CalendarEvent).options(selectinload(CalendarEvent.assigned_user), selectinload(CalendarEvent.creator))
+            .where(CalendarEvent.start_date == date_iso).order_by(CalendarEvent.start_time)
         ).scalars().all()
 
-        if not events:
-            return f"Aucun evenement prevu pour le {date_fr}."
-
+        if not events: return f"Rien de prévu pour le {date_fr}."
         output = [f"📅 Planning du {date_fr}\n"]
-        for e in events:
-            output += self._format_event(e)
+        for e in events: output += self._format_event(e)
         return "\n".join(output)
 
     def _format_event(self, e: CalendarEvent) -> List[str]:
-        label    = e.title or e.type.capitalize()
-        assigned = (e.assigned_user.username if e.assigned_user
-                    else e.creator.username  if e.creator
-                    else "Non assigne")
+        """Formatting helper for calendar events with multi-day support."""
+        label = e.title or e.type.capitalize()
+        assigned = (e.assigned_user.username if e.assigned_user else "Non assigné")
+        
+        # Format dates to FR
+        start_dt_fr = datetime.strptime(e.start_date, '%Y-%m-%d').strftime('%d/%m/%Y')
+        end_dt_fr   = datetime.strptime(e.end_date, '%Y-%m-%d').strftime('%d/%m/%Y')
+        
+        # Logic: If the event ends on a different day, show both dates
+        if e.start_date == e.end_date:
+            time_info = f"Le {start_dt_fr} de {e.start_time} à {e.end_time}"
+        else:
+            time_info = f"Du {start_dt_fr} ({e.start_time}) au {end_dt_fr} ({e.end_time})"
+            
         lines = [
-            f" {label}",
-            f"Date : {e.start_date} de {e.start_time} au {e.end_date} à {e.end_time}",
-            f"Assigne à : {assigned}",
+            f"📍 {label}",
+            f"   {time_info}",
+            f"   Assigné : {assigned}"
         ]
+        
         if e.notes:
-            lines.append(f"Notes : {e.notes}")
+            lines.append(f"   Note : {e.notes}")
+            
         lines.append("")
         return lines
 
-    # =========================================================================
-    # MULTI-CATEGORY SEARCH (products, clients, doctors)
-    # =========================================================================
-
     def _execute_multi_category_search(self, search_term: str) -> str:
+        """Searches across products, clients, and doctors for a given term."""
         results = {
             "products": self._search_database(ProductModel, search_term),
             "clients":  self._search_database(ClientModel, search_term),
             "doctors":  self._search_database(DoctorModel, search_term),
         }
         total = sum(len(v) for v in results.values())
-
         if total == 0:
-            return (
-                f"Aucun resultat pour '{search_term}'.\n\n"
-                "Suggestions :\n"
-                " - Verifiez l'orthographe\n"
-                " - Essayez un nom plus court\n"
-                " - Utilisez une partie du nom"
-            )
+            return f"Aucun résultat pour '{search_term}'."
 
-        output = [f" Resultats pour \"{search_term}\"",
-                  f"{total} resultat(s) trouve(s)\n"]
-
+        output = [f"🔍 Résultats pour \"{search_term}\" ({total} trouvés)\n"]
         if results["products"]:
-            output.append(f"💊 PRODUITS ({len(results['products'])})\n")
-            for p in results["products"][:5]:
-                rx    = "Ordonnance" if p.is_prescription_only else "Libre"
-                stock = "🟢" if p.stock >= 20 else ("🟠" if p.stock >= 10 else "🔴")
-                output += [
-                    f"{p.name}",
-                    f"   Stock : {stock} {p.stock} unites",
-                    f"   Prix : {p.price:.2f} EUR | {rx}",
-                    f"   Compo : {p.active_ingredient} ({p.dosage})", ""
-                ]
-
+            output.append("💊 PRODUITS")
+            for p in results["products"][:3]:
+                output.append(f"   - {p.name} ({p.stock} unités)")
         if results["clients"]:
-            output.append(f"👤 CLIENTS ({len(results['clients'])})\n")
+            output.append("\n👤 CLIENTS")
             for c in results["clients"][:3]:
-                output += [
-                    f"{c.first_name} {c.last_name}".upper(),
-                    f"   Tel : {c.phone or 'Non renseigne'}",
-                    f"   Email : {c.email or 'Non renseigne'}", ""
-                ]
-
+                output.append(f"   - {c.first_name} {c.last_name}")
         if results["doctors"]:
-            output.append(f"🩺 MEDECINS ({len(results['doctors'])})\n")
+            output.append("\n🩺 MÉDECINS")
             for d in results["doctors"][:3]:
-                output += [
-                    f"Dr. {d.first_name} {d.last_name}",
-                    f"   Specialite : {d.specialty or 'Generaliste'}",
-                    f"   Tel : {d.phone or 'Non renseigne'}",
-                    f"   Email : {d.email or 'Non renseigne'}", ""
-                ]
-
-        if total > 1:
-            output += ["---", "Precisez avec 'stock', 'prix', 'Dr' ou 'contact' pour plus de details"]
+                output.append(f"   - Dr. {d.last_name}")
         return "\n".join(output)
 
     # =========================================================================
-    # UTILITY METHODS
+    # UTILITIES
     # =========================================================================
 
     def _resolve_to_active_ingredient(self, product_name: str) -> tuple:
+        """Resolves trade names to active ingredients using aliases."""
         name = product_name.strip()
         try:
-            alias = db.session.execute(
-                db.select(ProductAliasModel).where(ProductAliasModel.alias.ilike(name))
-            ).scalars().first()
-            if alias:
-                return alias.active_ingredient, name
-            product = db.session.execute(
-                db.select(ProductModel)
-                .where(ProductModel.name.ilike(f"%{name}%"))
-                .order_by(func.length(ProductModel.name))
-            ).scalars().first()
-            if product:
-                return product.active_ingredient, product.name
+            alias = db.session.execute(db.select(ProductAliasModel).where(ProductAliasModel.alias.ilike(name))).scalars().first()
+            if alias: return alias.active_ingredient, name
+            product = db.session.execute(db.select(ProductModel).where(ProductModel.name.ilike(f"%{name}%"))).scalars().first()
+            if product: return product.active_ingredient, product.name
             return name.capitalize(), name.capitalize()
-        except Exception as e:
-            print(f"Resolution produit '{name}': {e}")
-            return name.capitalize(), name.capitalize()
+        except: return name.capitalize(), name.capitalize()
 
     def _search_database(self, model, search_term: str) -> list:
-        if not model or not search_term:
-            return []
+        """Helper to search specific model in DB."""
+        if not model or not search_term: return []
         term = search_term.lower().strip()
-        for prefix in ['dr ', 'doc ', 'docteur ', 'doctor ', 'mr ', 'mme ', 'mlle ']:
-            if term.startswith(prefix):
-                term = term[len(prefix):].strip()
+        for prefix in ['dr ', 'doc ', 'docteur ', 'mr ', 'mme ']:
+            if term.startswith(prefix): term = term[len(prefix):].strip()
         if model == ProductModel:
-            condition = or_(
-                model.name.ilike(f"%{term}%"),
-                model.active_ingredient.ilike(f"%{term}%"),
-            )
+            condition = or_(model.name.ilike(f"%{term}%"), model.active_ingredient.ilike(f"%{term}%"))
         else:
-            condition = or_(
-                model.last_name.ilike(f"%{term}%"),
-                model.first_name.ilike(f"%{term}%"),
-            )
-            if " " in term:
-                a, b = term.split(" ", 1)
-                condition = or_(
-                    condition,
-                    model.first_name.ilike(f"%{a}%") & model.last_name.ilike(f"%{b}%"),
-                    model.first_name.ilike(f"%{b}%") & model.last_name.ilike(f"%{a}%"),
-                )
+            condition = or_(model.last_name.ilike(f"%{term}%"), model.first_name.ilike(f"%{term}%"))
         return db.session.execute(db.select(model).where(condition).limit(5)).scalars().all()
 
     def _generate_help_message(self) -> str:
+        """Help instructions in French."""
         return (
-            "Comment utiliser le Chatbot\n\n"
-            "Recherche universelle :\n"
-            "- 'Aspirine' -> Produits, clients ET docteurs\n"
-            "- 'Dupont' -> Tous les Dupont\n\n"
-            "Produits :\n"
-            "- 'Stock Doliprane' -> Inventaire\n"
-            "- 'Prix Amoxicilline' -> Tarif\n"
-            "- 'Aspirine ordonnance ?' -> Prescription ?\n\n"
-            "Interactions :\n"
-            "- 'Aspirine et Ibuprofene compatibles ?'\n"
-            "- 'Doliprane avec Advil danger ?'\n\n"
-            "Analyses :\n"
-            "- 'Ventes du jour' -> CA et statistiques\n"
-            "- 'Produits en rupture' -> Alertes stock\n\n"
-            "Agenda :\n"
-            "- 'Rdv' -> Rendez-vous cette semaine\n"
-            "- 'Garde' -> Gardes planifiees\n"
-            "- 'Planning de demain' -> Evenements demain\n\n"
-            "Coordonnees :\n"
-            "- 'Contact Dr Martin' -> Coordonnees medecin\n"
-            "- 'Telephone client Lefevre' -> Numero client"
+            "💡 Aide du Chatbot Pharmacie\n\n"
+            "• Recherche : 'Doliprane', 'Dupont'\n"
+            "• Stock : 'Stock Aspirine', 'Produits en rupture'\n"
+            "• Prix : 'Prix Amoxicilline'\n"
+            "• Interactions : 'Aspirine et Advil danger ?'\n"
+            "• Ventes : 'Ventes du jour', 'Bilan des ventes'\n"
+            "• Agenda : 'Planning de demain', 'Mes rendez-vous'\n"
+            "• Contact : 'Contact Dr Martin'"
         )
