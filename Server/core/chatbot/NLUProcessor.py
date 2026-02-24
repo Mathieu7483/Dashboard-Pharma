@@ -36,7 +36,7 @@ class NLUProcessor:
         # -- Help (short messages only) ----------------------------------------
         self.help_keywords = {
             "fr": ["aide", "aider", "guide", "besoin d'aide", "comment utiliser"],
-            "en": ["help me", "assist me", "need help", "how do i use"]
+            "en": ["help", "help me", "assist me", "need help", "how do i use"]
         }
 
         # -- Temporal keywords for calendar ------------------------------------
@@ -544,9 +544,9 @@ class NLUProcessor:
         en_count = sum(1 for w in words if w in en_indicators)
 
         # Boost language detection based on command verbs
-        if any(w in text_lower for w in ["find", "search", "show", "get"]):
+        if any(w in text_lower for w in ["find", "search", "show", "get", "list", "help"]):
             en_count += 2
-        if any(w in text_lower for w in ["cherche", "trouve", "affiche", "montre"]):
+        if any(w in text_lower for w in ["cherche", "trouve", "affiche", "montre", "aide"]):
             fr_count += 2
 
         return "en" if en_count > fr_count else "fr"
