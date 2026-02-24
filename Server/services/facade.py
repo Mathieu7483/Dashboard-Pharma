@@ -317,7 +317,8 @@ class FacadeService:
         return db.session.execute(stmt).scalars().all()
 
     def get_ticket_by_id(self, ticket_id):
-        return db.session.get(Ticket, ticket_id)
+        str_id = str(ticket_id) 
+        return db.session.get(Ticket, str_id)
        
     def create_ticket(self, user_id, subject, description, priority='medium'):
         try:
