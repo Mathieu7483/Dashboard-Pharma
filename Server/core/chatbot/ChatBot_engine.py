@@ -17,6 +17,7 @@ from models.ticket import Ticket
 from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
 import unicodedata
+import re
 from services.facade import FacadeService
 
 class ChatBotEngine:
@@ -51,6 +52,10 @@ class ChatBotEngine:
 
         # Normalize text: lower case, remove accents/special chars if needed, and strip whitespace
         clean_text = user_text.lower().strip()
+
+        # Sanitize: block suspicious inputs
+        if re.search(r"[;'\"\\]|--|\b(drop|truncate|delete|insert)\b", clean_text):
+            return {"intent": "unknown", "reply": "Requête non valide."}
 
         # 1. PROFILE CHECK (Robust detection)
         # We check for several variations to be sure
