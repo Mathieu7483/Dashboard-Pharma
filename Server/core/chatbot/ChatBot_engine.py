@@ -169,39 +169,34 @@ class ChatBotEngine:
     # =========================================================================
 
     def _handle_interaction_check(self, entity_list: list) -> str:
+        """
+        Handles drug-drug interaction checks by resolving entities 
+        and querying the database via the facade.
+        """
         if len(entity_list) < 2:
             return (
-                "Mentionnez au moins DEUX produits pour vérifier la compatibilité.\n\n"
-                "Exemples :\n"
-                "   - 'Aspirine et Ibuprofène compatibles ?'\n"
-                "   - 'Doliprane avec Advil danger ?'"
+                "Please mention at least TWO products to check compatibility.\n\n"
+                "Examples:\n"
+                "   - 'Aspirin and Ibuprofen compatible?'\n"
+                "   - 'Doliprane with Advil danger?'"
             )
 
         resolved, display_names = [], []
         for name in entity_list:
+            # Resolve trade names (e.g., Advil) to active ingredients (e.g., Ibuprofen)
             ingredient, display = self._resolve_to_active_ingredient(name)
-            # Using the normalized ingredient name for database queries, but keeping the original display name for output
             resolved.append(self._norm(ingredient))
             display_names.append(display)
 
-        print(f"Resolved (Normalized): {list(zip(display_names, resolved))}")
+        # Logging for debugging purposes
+        print(f"DEBUG - Resolved (Normalized): {list(zip(display_names, resolved))}")
 
         conflicts = []
+        # Nested loop to check every possible pair of drugs
         for i in range(len(resolved)):
             for j in range(i + 1, len(resolved)):
-                a, b = resolved[i], resolved[j]
-                
-                # using ilike with wildcards to allow partial matches and different word orders
-                result = db.session.execute(
-                    db.select(InteractionModel).where(
-                        or_(
-                            (InteractionModel.ingredient_a.ilike(f"%{a}%")) & 
-                            (InteractionModel.ingredient_b.ilike(f"%{b}%")),
-                            (InteractionModel.ingredient_a.ilike(f"%{b}%")) & 
-                            (InteractionModel.ingredient_b.ilike(f"%{a}%"))
-                        )
-                    )
-                ).scalar_one_or_none()
+                # DELEGATION: Ask the facade, not the DB directly
+                result = self.facade.get_interaction(resolved[i], resolved[j])
                 
                 if result:
                     conflicts.append({
@@ -210,27 +205,38 @@ class ChatBotEngine:
                         "name_b": display_names[j]
                     })
 
+        # Case: No interactions found
         if not conflicts:
             return (
-                "✅ Aucune interaction connue\n\n"
-                f"Produits analysés : {' + '.join(display_names)}\n\n"
-                "⚠️ Consultez toujours un professionnel de santé."
+                "✅ No known interaction detected.\n\n"
+                f"Analyzed products: {' + '.join(display_names)}\n\n"
+                "⚠️ Always consult a healthcare professional."
             )
 
-        severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🔴🔴"}
-        output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n",
-                  f"Analyse pour : {' + '.join(display_names)}\n"]
+        # UI Mapping for severity levels
+        severity_emoji = {
+            "low": "⚠️", 
+            "moderate": "🟠", 
+            "high": "🔴", 
+            "critical": "🔴🔴"
+        }
+        
+        output = [
+            "🚨 DRUG INTERACTION ALERT\n",
+            f"Analysis for: {' + '.join(display_names)}\n"
+        ]
         
         for c in conflicts:
             ix = c["interaction"]
             emoji = severity_emoji.get(ix.severity.lower(), "⚠️")
             output += [
                 f"{emoji} {c['name_a']} + {c['name_b']}",
-                f"Gravité : {ix.severity.upper()}",
-                f"Détails : {ix.description}",
+                f"Severity: {ix.severity.upper()}",
+                f"Details: {ix.description}",
                 "---\n"
             ]
-        output.append("⚠️ IMPORTANT : Consultez un pharmacien avant utilisation.")
+            
+        output.append("⚠️ IMPORTANT: Consult your pharmacist before use.")
         return "\n".join(output)
     
 
