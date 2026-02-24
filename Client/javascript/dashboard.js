@@ -134,6 +134,7 @@ class PharmaChat {
         this.window = document.getElementById('chat-window');
         this.input = document.getElementById('user-input');
         this.btn = document.getElementById('send-btn');
+        this.logo = document.getElementById('bot-logo'); // AJOUT ICI : Récupère l'image
         if (this.window) this.init();
     }
 
@@ -157,6 +158,9 @@ class PharmaChat {
         this.addMsg('user', msg);
         this.input.value = '';
 
+        // AJOUT ICI : On fait pulser le logo pendant la réflexion
+        if (this.logo) this.logo.classList.add('thinking');
+
         try {
             const res = await fetch(`${API_BASE_URL}/chatbot/`, {
                 method: 'POST',
@@ -167,18 +171,33 @@ class PharmaChat {
             this.addMsg('bot', data.reply);
         } catch (e) { 
             this.addMsg('bot', "Connection error."); 
+        } finally {
+            // AJOUT ICI : On arrête l'animation quoi qu'il arrive (succès ou erreur)
+            if (this.logo) this.logo.classList.remove('thinking');
         }
     }
 
     /**
      * Add message to chat window
-     * @param {string} role - Message role (user/bot)
-     * @param {string} text - Message text
      */
     addMsg(role, text) {
         const d = document.createElement('div');
         d.className = `message ${role}`;
-        d.innerText = text;
+        
+        // OPTIONNEL : Si tu veux l'image détourée aussi à côté de chaque message du bot
+        if (role === 'bot') {
+            const img = document.createElement('img');
+            img.src = "assets/img/Mockup_de_base.png"; // Mets le bon chemin ici
+            img.className = "mini-avatar";
+            d.appendChild(img);
+            
+            const span = document.createElement('span');
+            span.innerText = text;
+            d.appendChild(span);
+        } else {
+            d.innerText = text;
+        }
+
         this.window.appendChild(d);
         this.window.scrollTop = this.window.scrollHeight;
     }
