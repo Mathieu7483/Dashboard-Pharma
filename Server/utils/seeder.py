@@ -259,15 +259,15 @@ def _seed_medical_interactions():
 
     for c in conflicts:
         db.session.add(InteractionModel(
-            ingredient_a=c["a"],
-            ingredient_b=c["b"],
-            severity=c["sev"],
+            ingredient_a=_norm(c["a"]).lower(),
+            ingredient_b=_norm(c["b"]).lower(),
+            severity=c["sev"].lower(),
             description=c["desc"]
         ))
 
     try:
         db.session.commit()
-        print(f"✅ Success: {len(conflicts)} interactions medicales seedees (sans accents).")
+        print(f"✅ Success: {len(conflicts)} interactions seedées proprement.")
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error during Interaction seeding: {e}")
+        print(f"❌ Error: {e}")
