@@ -36,7 +36,7 @@ class ChatbotQuery(Resource):
         user_msg = data.get('message')
         current_user_id = get_jwt_identity()
 
-        if not user_msg:
+        if user_msg is None:
             ns.abort(400, message="Message content is required.")
 
         try:
