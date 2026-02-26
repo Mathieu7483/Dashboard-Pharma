@@ -1,10 +1,6 @@
 /**
  * settings.js - Admin Panel Management
  * Calendar events stored in BACKEND API
- * 
- * CHANGELOG:
- * - RDV et Garde utilisent le même champ #event-assigned-user dans le formulaire
- * - populateUserSelects() simplifié : un seul select à remplir
  */
 
 const API_BASE = 'http://127.0.0.1:5000';

@@ -1,10 +1,12 @@
 from database.data_manager import db, bcrypt
-from sqlalchemy import func
+from sqlalchemy import func, or_, desc
 from models.user import UserModel
 from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from models.calendar import CalendarEvent
+from models.interaction import InteractionModel
 from models.ticket import Ticket
 from datetime import datetime, UTC
 
@@ -121,7 +123,7 @@ class FacadeService:
     # --- SALE METHODS ---
     
     def get_all_sales(self, user_id=None):
-        stmt = db.select(SaleModel).order_by(SaleModel.sale_date.desc())
+        stmt = db.select(SaleModel).order_by(desc(SaleModel.sale_date))
         if user_id:
             stmt = stmt.filter(SaleModel.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
@@ -304,6 +306,28 @@ class FacadeService:
     def delete_doctor(self, doctor_id):
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
+
+
+    # --- INTERACTION METHODS ---
+    def get_interaction(self, ingredient_a, ingredient_b):
+        """
+        Queries the database for an interaction between two active ingredients.
+        Standardized to SQLAlchemy 2.0 syntax.
+        """
+        stmt = (
+            db.select(InteractionModel)
+            .where(
+                or_(
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_b}%")),
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_a}%"))
+                )
+            )
+        )
+        # We use scalar_one_or_none() to get a single object or None
+        return db.session.execute(stmt).scalar_one_or_none()
+
     
     # --- TICKET CRUD METHODS ---
     def get_all_tickets(self, user_id=None):
@@ -311,13 +335,14 @@ class FacadeService:
         Fetch tickets. If user_id is provided, only fetch tickets for that user.
         If None, fetch all (for Admin).
         """
-        stmt = db.select(Ticket).order_by(Ticket.created_at.desc())
+        stmt = db.select(Ticket).order_by(desc(Ticket.created_at))
         if user_id:
             stmt = stmt.filter(Ticket.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
 
     def get_ticket_by_id(self, ticket_id):
-        return db.session.get(Ticket, ticket_id)
+        str_id = str(ticket_id) 
+        return db.session.get(Ticket, str_id)
        
     def create_ticket(self, user_id, subject, description, priority='medium'):
         try:
@@ -364,3 +389,18 @@ class FacadeService:
                 db.session.rollback()
                 return False
         return False
+
+
+# --- CALENDAR METHOD ---
+    def get_events_by_date(self, date_str):
+        """
+        fetch events (RDV) for a specific date. This can be used to populate the calendar view.
+        """
+        from models.calendar import CalendarEvent
+        
+        stmt = (
+            db.select(CalendarEvent)
+            .filter(func.date(CalendarEvent.start_time) == date_str)
+            .order_by(CalendarEvent.start_time)
+        )
+        return db.session.execute(stmt).scalars().all()

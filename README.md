@@ -318,15 +318,19 @@ Directory structure:
     │   ├── index.html
     │   ├── inventory.html
     │   ├── navbar.html
+    │   ├── settings.html
     │   ├── css/
     │   │   ├── auth.css
+    │   │   ├── calendar.css
+    │   │   ├── settings.css
     │   │   └── style.css
     │   └── javascript/
     │       ├── auth.js
     │       ├── clients.js
     │       ├── dashboard.js
     │       ├── doctors.js
-    │       └── inventory.js
+    │       ├── inventory.js
+    │       └── settings.js
     └── Server/
         ├── app.py
         ├── config.py
@@ -335,12 +339,14 @@ Directory structure:
         │   ├── __init__.py
         │   ├── analytics.py
         │   ├── auth.py
+        │   ├── calendar_events.py
         │   ├── chatbot.py
         │   ├── clients.py
         │   ├── doctors.py
         │   ├── inventory.py
         │   ├── products.py
         │   ├── sales.py
+        │   ├── tickets.py
         │   └── users.py
         ├── core/
         │   └── chatbot/
@@ -348,15 +354,18 @@ Directory structure:
         │       └── NLUProcessor.py
         ├── database/
         │   ├── __init__.py
-        │   ├── data_manager.py
-        │   └── initial_inventory.csv
+        │   └── data_manager.py
         ├── models/
         │   ├── __init__.py
         │   ├── basemodel.py
+        │   ├── calendar.py
         │   ├── client.py
         │   ├── doctor.py
+        │   ├── interaction.py
         │   ├── product.py
+        │   ├── product_alias.py
         │   ├── sale.py
+        │   ├── ticket.py
         │   └── user.py
         ├── services/
         │   ├── __init__.py
@@ -368,8 +377,11 @@ Directory structure:
             ├── __init__.py
             ├── data_seed.json
             ├── decorator.py
+            ├── initial_inventory.csv
+            ├── seed_aliases.py
             ├── seed_sales.py
             └── seeder.py
+
 
 ```
 ----
