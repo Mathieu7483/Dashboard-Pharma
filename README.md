@@ -72,6 +72,7 @@ Directory structure:
         ├── app.py
         ├── config.py
         ├── run.py
+        ├── setup_db.py
         ├── api/
         │   ├── __init__.py
         │   ├── analytics.py
@@ -81,6 +82,7 @@ Directory structure:
         │   ├── clients.py
         │   ├── doctors.py
         │   ├── inventory.py
+        │   ├── notes.py
         │   ├── products.py
         │   ├── sales.py
         │   ├── tickets.py
@@ -99,6 +101,7 @@ Directory structure:
         │   ├── client.py
         │   ├── doctor.py
         │   ├── interaction.py
+        │   ├── note.py
         │   ├── product.py
         │   ├── product_alias.py
         │   ├── sale.py
