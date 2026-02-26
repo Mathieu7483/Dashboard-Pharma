@@ -7,6 +7,7 @@ from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.calendar import CalendarEvent
 from models.interaction import InteractionModel
+from models.note import Note
 from models.ticket import Ticket
 from datetime import datetime, UTC
 
@@ -328,6 +329,48 @@ class FacadeService:
         # We use scalar_one_or_none() to get a single object or None
         return db.session.execute(stmt).scalar_one_or_none()
 
+    # --- NOTES METHODS ---
+    def get_all_notes(self):
+        stmt = db.select(Note).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+    
+    def get_notes_by_user(self, user_id):
+        stmt = db.select(Note).filter_by(user_id=user_id).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+    
+    def get_note_by_id(self, note_id):
+        return db.session.get(Note, note_id)
+    
+    def create_note(self, user_id, text):
+        try:
+            new_note = Note(user_id=user_id, text=text)
+            return new_note if new_note.save_to_db() else None
+        except Exception as e:
+            print(f"Error creating note: {e}")
+            return None
+        
+    def update_note_text(self, note_id, new_text):
+        note = self.get_note_by_id(note_id)
+        if note:
+            note.update_text(new_text)
+            return note
+        return None
+    
+    def delete_note(self, note_id):
+        note = self.get_note_by_id(note_id)
+        
+        if not note:
+            print(f"Delete failed: Note {note_id} not found.")
+            return False
+
+        try:
+            note.delete() 
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting note {note_id}: {e}")
+            return False
+    
     
     # --- TICKET CRUD METHODS ---
     def get_all_tickets(self, user_id=None):
