@@ -1,6 +1,5 @@
 /**
  * settings.js - Admin Panel Management
- * Calendar events stored in BACKEND API
  */
 
 const API_BASE = 'http://127.0.0.1:5000';
