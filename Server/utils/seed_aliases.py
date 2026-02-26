@@ -9,114 +9,63 @@ from models.product_alias import ProductAliasModel
 def seed_product_aliases():
     """
     Populate the product_aliases table with common commercial names.
-    Run this after creating tables.
     """
     if ProductAliasModel.query.first():
         print("Product aliases already seeded.")
         return
     
+    # NOTE: Les ingrédients actifs sont normalisés (minuscules, sans accents)
+    # pour matcher avec la table interactions et le CSV produits.
     aliases = [
         # Anti-inflammatoires / Antalgiques
-        {"alias": "Aspirine", "ingredient": "Acide Acétylsalicylique", "cat": "analgesic"},
-        {"alias": "Aspegic", "ingredient": "Acide Acétylsalicylique", "cat": "analgesic"},
-        {"alias": "Kardégic", "ingredient": "Acide Acétylsalicylique", "cat": "analgesic"},
+        {"alias": "Aspirine", "ingredient": "acide acetylsalicylique", "cat": "analgesic"},
+        {"alias": "Aspegic", "ingredient": "acide acetylsalicylique", "cat": "analgesic"},
+        {"alias": "Kardégic", "ingredient": "acide acetylsalicylique", "cat": "analgesic"},
         
-        {"alias": "Ibuprofène", "ingredient": "Ibuprofène", "cat": "analgesic"},
-        {"alias": "Advil", "ingredient": "Ibuprofène", "cat": "analgesic"},
-        {"alias": "Nurofen", "ingredient": "Ibuprofène", "cat": "analgesic"},
-        {"alias": "Spedifen", "ingredient": "Ibuprofène", "cat": "analgesic"},
+        {"alias": "Ibuprofène", "ingredient": "ibuprofene", "cat": "analgesic"},
+        {"alias": "Advil", "ingredient": "ibuprofene", "cat": "analgesic"},
+        {"alias": "Nurofen", "ingredient": "ibuprofene", "cat": "analgesic"},
+        {"alias": "Spedifen", "ingredient": "ibuprofene", "cat": "analgesic"},
         
-        {"alias": "Paracétamol", "ingredient": "Paracétamol", "cat": "analgesic"},
-        {"alias": "Doliprane", "ingredient": "Paracétamol", "cat": "analgesic"},
-        {"alias": "Dafalgan", "ingredient": "Paracétamol", "cat": "analgesic"},
-        {"alias": "Efferalgan", "ingredient": "Paracétamol", "cat": "analgesic"},
-        {"alias": "Tylenol", "ingredient": "Paracétamol", "cat": "analgesic"},
+        {"alias": "Paracétamol", "ingredient": "paracetamol", "cat": "analgesic"},
+        {"alias": "Doliprane", "ingredient": "paracetamol", "cat": "analgesic"},
+        {"alias": "Dafalgan", "ingredient": "paracetamol", "cat": "analgesic"},
+        {"alias": "Efferalgan", "ingredient": "paracetamol", "cat": "analgesic"},
+        {"alias": "Tylenol", "ingredient": "paracetamol", "cat": "analgesic"},
         
         # Antibiotiques
-        {"alias": "Amoxicilline", "ingredient": "Amoxicilline", "cat": "antibiotic"},
-        {"alias": "Clamoxyl", "ingredient": "Amoxicilline", "cat": "antibiotic"},
-        {"alias": "Augmentin", "ingredient": "Amoxicilline/Clavulanate", "cat": "antibiotic"},
+        {"alias": "Amoxicilline", "ingredient": "amoxicilline", "cat": "antibiotic"},
+        {"alias": "Clamoxyl", "ingredient": "amoxicilline", "cat": "antibiotic"},
+        {"alias": "Augmentin", "ingredient": "amoxicilline/clavulanate", "cat": "antibiotic"},
         
-        {"alias": "Azithromycine", "ingredient": "Azithromycine", "cat": "antibiotic"},
-        {"alias": "Zithromax", "ingredient": "Azithromycine", "cat": "antibiotic"},
+        {"alias": "Azithromycine", "ingredient": "azithromycine", "cat": "antibiotic"},
+        {"alias": "Zithromax", "ingredient": "azithromycine", "cat": "antibiotic"},
         
-        {"alias": "Clarithromycine", "ingredient": "Clarithromycine", "cat": "antibiotic"},
-        {"alias": "Zeclar", "ingredient": "Clarithromycine", "cat": "antibiotic"},
+        {"alias": "Clarithromycine", "ingredient": "clarithromycine", "cat": "antibiotic"},
+        {"alias": "Zeclar", "ingredient": "clarithromycine", "cat": "antibiotic"},
         
-        {"alias": "Ciprofloxacine", "ingredient": "Ciprofloxacine", "cat": "antibiotic"},
-        {"alias": "Ciflox", "ingredient": "Ciprofloxacine", "cat": "antibiotic"},
+        # Anticoagulants
+        {"alias": "Warfarine", "ingredient": "warfarine", "cat": "anticoagulant"},
+        {"alias": "Coumadine", "ingredient": "warfarine", "cat": "anticoagulant"},
+        {"alias": "Clopidogrel", "ingredient": "clopidogrel", "cat": "anticoagulant"},
+        {"alias": "Plavix", "ingredient": "clopidogrel", "cat": "anticoagulant"},
+        {"alias": "Rivaroxaban", "ingredient": "rivaroxaban", "cat": "anticoagulant"},
+        {"alias": "Xarelto", "ingredient": "rivaroxaban", "cat": "anticoagulant"},
         
-        {"alias": "Doxycycline", "ingredient": "Doxycycline", "cat": "antibiotic"},
+        # IPP
+        {"alias": "Oméprazole", "ingredient": "omeprazole", "cat": "ppi"},
+        {"alias": "Mopral", "ingredient": "omeprazole", "cat": "ppi"},
+        {"alias": "MopralPro", "ingredient": "omeprazole", "cat": "ppi"},
         
-        # Anticoagulants / Antiagrégants (CRITICAL)
-        {"alias": "Warfarine", "ingredient": "Warfarine", "cat": "anticoagulant"},
-        {"alias": "Coumadine", "ingredient": "Warfarine", "cat": "anticoagulant"},
-        
-        {"alias": "Clopidogrel", "ingredient": "Clopidogrel", "cat": "anticoagulant"},
-        {"alias": "Plavix", "ingredient": "Clopidogrel", "cat": "anticoagulant"},
-        
-        {"alias": "Rivaroxaban", "ingredient": "Rivaroxaban", "cat": "anticoagulant"},
-        {"alias": "Xarelto", "ingredient": "Rivaroxaban", "cat": "anticoagulant"},
-        {"alias": "Rivière", "ingredient": "Rivaroxaban", "cat": "anticoagulant"},  # From your CSV
-        
-        # Antihistaminiques
-        {"alias": "Cétirizine", "ingredient": "Cétirizine", "cat": "antihistamine"},
-        {"alias": "Zyrtec", "ingredient": "Cétirizine", "cat": "antihistamine"},
-        
-        {"alias": "Loratadine", "ingredient": "Loratadine", "cat": "antihistamine"},
-        {"alias": "Clarityne", "ingredient": "Loratadine", "cat": "antihistamine"},
-        
-        {"alias": "Lévocétirizine", "ingredient": "Lévocétirizine", "cat": "antihistamine"},
-        {"alias": "Xyzal", "ingredient": "Lévocétirizine", "cat": "antihistamine"},
-        
-        # IPP (Inhibiteurs Pompe à Protons)
-        {"alias": "Oméprazole", "ingredient": "Oméprazole", "cat": "ppi"},
-        {"alias": "Mopral", "ingredient": "Oméprazole", "cat": "ppi"},
-        {"alias": "MopralPro", "ingredient": "Oméprazole", "cat": "ppi"},
-        
-        {"alias": "Pantoprazole", "ingredient": "Pantoprazole", "cat": "ppi"},
-        {"alias": "Inipomp", "ingredient": "Pantoprazole", "cat": "ppi"},
-        
-        # Diurétiques
-        {"alias": "Furosémide", "ingredient": "Furosémide", "cat": "diuretic"},
-        {"alias": "Lasilix", "ingredient": "Furosémide", "cat": "diuretic"},
-        
-        # Corticoïdes
-        {"alias": "Hydrocortisone", "ingredient": "Hydrocortisone", "cat": "corticoid"},
-        {"alias": "Dexaméthasone", "ingredient": "Dexaméthasone", "cat": "corticoid"},
-        {"alias": "Prednisone", "ingredient": "Prednisone", "cat": "corticoid"},
-        {"alias": "Cortancyl", "ingredient": "Prednisone", "cat": "corticoid"},
-        
-        # Antidiabétiques
-        {"alias": "Metformine", "ingredient": "Metformine", "cat": "antidiabetic"},
-        {"alias": "Glucophage", "ingredient": "Metformine", "cat": "antidiabetic"},
-        {"alias": "Stagid", "ingredient": "Metformine", "cat": "antidiabetic"},
-        
-        {"alias": "Insuline", "ingredient": "Insuline Lispro", "cat": "antidiabetic"},
-        
-        # Bronchodilatateurs
-        {"alias": "Ventoline", "ingredient": "Salbutamol", "cat": "bronchodilator"},
-        {"alias": "Salbutamol", "ingredient": "Salbutamol", "cat": "bronchodilator"},
-        
-        # Antidépresseurs
-        {"alias": "Lexapro", "ingredient": "Escitalopram", "cat": "antidepressant"},
-        {"alias": "Escitalopram", "ingredient": "Escitalopram", "cat": "antidepressant"},
-        
-        # Statines
-        {"alias": "Simvastatine", "ingredient": "Simvastatine", "cat": "statin"},
-        {"alias": "Atorvastatine", "ingredient": "Atorvastatine", "cat": "statin"},
-        
-        # Antihypertenseurs
-        {"alias": "Amlodipine", "ingredient": "Amlodipine", "cat": "antihypertensive"},
-        {"alias": "Losartan", "ingredient": "Losartan", "cat": "antihypertensive"},
-        {"alias": "Captopril", "ingredient": "Captopril", "cat": "antihypertensive"},
-        {"alias": "Enalapril", "ingredient": "Enalapril", "cat": "antihypertensive"},
+        # Diurétiques / Corticoïdes
+        {"alias": "Furosémide", "ingredient": "furosemide", "cat": "diuretic"},
+        {"alias": "Prednisone", "ingredient": "prednisone", "cat": "corticoid"},
+        {"alias": "Cortancyl", "ingredient": "prednisone", "cat": "corticoid"},
         
         # Vitamines
-        {"alias": "Vitamine C", "ingredient": "Acide Ascorbique", "cat": "vitamin"},
-        {"alias": "Vitamine D", "ingredient": "Cholécalciférol", "cat": "vitamin"},
-        {"alias": "Vitamine D3", "ingredient": "Cholécalciférol", "cat": "vitamin"},
-        {"alias": "Vitamine B12", "ingredient": "Cobalamine", "cat": "vitamin"},
+        {"alias": "Vitamine C", "ingredient": "acide ascorbique", "cat": "vitamin"},
+        {"alias": "Vitamine D", "ingredient": "cholecalciferol", "cat": "vitamin"},
+        {"alias": "Vitamine D3", "ingredient": "cholecalciferol", "cat": "vitamin"},
     ]
     
     for item in aliases:
@@ -128,7 +77,7 @@ def seed_product_aliases():
     
     try:
         db.session.commit()
-        print(f"✅ Seeded {len(aliases)} product aliases.")
+        print(f"✅ Seeded {len(aliases)} product aliases (normalized).")
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error seeding aliases: {e}")
