@@ -549,5 +549,8 @@ class ChatBotEngine:
             "• Interactions : 'Aspirine et Advil danger ?'\n"
             "• Ventes : 'Ventes du jour', 'Bilan des ventes'\n"
             "• Agenda : 'Planning de demain', 'Mes rendez-vous'\n"
-            "• Contact : 'Contact Dr Martin'"
+            "• Contact : 'Contact Dr Martin'\n"
+            "• RDV : 'RDV du jour' 'Agenda de la semaine prochaine'\n"
+            "• Ticket : 'Ticket #1234', 'Ticket sur imprimante'\n"
+            "• Garde : 'Garde du week-end', 'Garde demain'"
         )
