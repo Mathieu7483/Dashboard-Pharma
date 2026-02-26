@@ -108,6 +108,7 @@ function renderTable(products, isAdmin) {
 
         row.innerHTML = `
             <td>${p.name}</td>
+            <td>${p.dosage || 'N/A'}</td>
             <td>${p.active_ingredient || 'N/A'}</td>
             <td class="${p.stock < 10 ? 'text-danger fw-bold' : ''}">${p.stock}</td>
             <td>${parseFloat(p.price).toFixed(2)} €</td>
@@ -230,6 +231,7 @@ function setupEventListeners() {
         
         const payload = {
             name: formData.get('name').trim(),
+            dosage: formData.get('dosage').trim() || null,
             active_ingredient: formData.get('active_ingredient').trim(),
             stock: parseInt(formData.get('stock')),
             price: parseFloat(formData.get('price')),
