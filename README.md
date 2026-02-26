@@ -1,46 +1,44 @@
-<p align="center"\>
-<img src="https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png"\>
-</p>
-
 # 🚀 **README: Pharmacy-Dashboard - Inventory Management**
+
+<p align="center">
+<img src="[https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png](https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png)" alt="Dashboard Preview">
+</p>
 
 > **Warning: This dashboard is strictly for internal use by pharmacists for inventory management purposes. It does not handle direct customer interactions but processes personal and sensitive data.**
 
 ---
+## 📝 Project Description
 
-## 📝 **Project Description**
+The Pharmacy-Dashboard project is a responsive web application designed to optimize the management of pharmaceutical stocks and products.
 
-The **Pharmacy-Dashboard** project is a **responsive** web application designed to optimize the management of pharmaceutical stocks and products.
-
-1. **Real-time tracking** of inventory levels.
-2. **Automatic alerts** for low stock or expired products.
-3. **Synthesized visualization** of data via an ergonomic dashboard.
+1. Real-time tracking of inventory levels.
+2. Automatic alerts for low stock or expired products.
+3. Synthesized visualization of data via an ergonomic dashboard.
 
 ---
+## 🛡️ Legal Compliance and Data Security
 
-## 🛡️ **Legal Compliance and Data Security**
+🇪🇺 GDPR & French Law
+. Data Minimisation: Only strictly necessary data is collected.
+. Security by Design: All connections via HTTPS. Passwords must be hashed (Bcrypt).
+. Retention Period: Defined and limited retention for personal data.
 
-### 🇪🇺 **GDPR & French Law**
-
-* **Data Minimisation:** Only strictly necessary data is collected.
-* **Security by Design:** All connections via **HTTPS**. Passwords must be **hashed** (Bcrypt).
-* **Retention Period:** Defined and limited retention for personal data.
-
-> **🛑 Critical Point:** A **Data Protection Impact Assessment (DPIA)** is mandatory before any production deployment.
-
+🛑 Critical Point: A Data Protection Impact Assessment (DPIA) is mandatory before any production deployment.
 ---
 
 ## 🧱 **Technical Architecture**
 
 | Component | Technology | Role |
 | --- | --- | --- |
-| **Backend (API)** | **Python (Flask)** | Business logic and request handling. |
-| **ORM / DB Access** | **SQLAlchemy** | Object-Relational Mapping. |
-| **Frontend** | **HTML5, CSS3, JS** | Responsive User Interface. |
-| **Database** | **SQLite** | **Single-file embedded database** for portability and efficiency. |
+| **Backend (API)** | **Python (Flask)** | RESTful API with Facade Pattern. |
+| **Core Logic** | **NLU & NLP** | Custom Natural Language Unit for Chatbot interactions. |
+| **ORM / DB Access** | **SQLAlchemy** | Object-Oriented Mapping (OOP). |
+| **Frontend** | **HTML5, CSS3, JS** | Responsive Dashboard with Vanilla JS. |
+| **Database** | **SQLite** | Portability and ACID compliance. |
 
+### 📂 Directory structure
 
-```
+```text
 Directory structure:
 └── mathieu7483-dashboard-pharma/
     ├── README.md
@@ -118,76 +116,35 @@ Directory structure:
             └── seeder.py
 
 
+
 ```
-----
-## 📐 **Business Logic**
+
+---
+
+## 📐 **Business Logic & Design Patterns**
+
+### **Facade Pattern**
 
 The business logic is centered on the inventory lifecycle and the management of users (pharmacists).
+The project uses a **Facade Service** (`facade.py`). The API never communicates directly with the models. It goes through the facade, which centralizes complex operations (e.g., calculating sales statistics or checking drug interactions).
 
-### 🔗 **UML Diagrams (Classes/Sequence)**
+### **Simplified Class Mapping**
 
-**1. Class Diagram (Simplified)**
+* **User/Pharmacist**: Access management (RBAC).
+* **Product**: Stock, price, and alert thresholds.
+* **Interaction**: Contraindication knowledge base (NLU-ready).
+* **Sale/Ticket**: Transaction history and customer service requests.
 
-| **Stock** | **Product** | **Pharmacist (User)** | **Customer (Tracking)** |
-| :--- | :--- | :--- | :--- |
-| - *stock\_id : INT* | - *product\_id : INT* | - *pharmacist\_id : INT* | - *customer\_id : INT* |
-| - *entry\_date : DATE* | - *trade\_name : VARCHAR* | - *email : VARCHAR* (**UNIQUE**) | - *last\_name : VARCHAR* |
-| - *expiry\_date : DATE* | - *INN : VARCHAR* | - *password : HASH* | - *first\_name : VARCHAR* |
-| - *quantity : INT* | - *dosage : VARCHAR* | - *role : VARCHAR (Admin/User)* | - *address : VARCHAR* |
-| - *supplier : VARCHAR* | - *selling\_price : DECIMAL* | | - *phone : VARCHAR* |
-| - *product\_id (FK)* | | | - *email : VARCHAR* |
-| + *expiry\_alert()* | | + *authentication()* | |
-| + *low\_stock\_alert()* | | + *account\_management()* | |
+---
 
-**2. Sequence Diagram (Example: Adding Stock)**
+## 💾 **SQL Methodology (SQLite & SQLAlchemy)**
 
-1.  **Pharmacist** $\rightarrow$ **Frontend**: Request *POST /stock/add* (with product/quantity data).
-2.  **Frontend** $\rightarrow$ **API (Flask)**: Transmits the request.
-3.  **API (Flask)** $\rightarrow$ **DB (SQLAlchemy)**: Executes `SELECT` to check Product existence.
-4.  **DB** $\rightarrow$ **API**: Returns the status.
-5.  **API** $\rightarrow$ **DB**: Executes `INSERT INTO Stock` (new entry) or `UPDATE Stock` (quantity update).
-6.  **DB** $\rightarrow$ **API**: Returns status *201 Created*.
-7.  **API** $\rightarrow$ **Frontend**: Returns JSON confirmation.
-8.  **Frontend** $\rightarrow$ **Pharmacist**: Display success / dashboard update.
+The project adheres to **3NF** (Third Normal Form). Initialization is automated:
 
-----
-
-## 💾 **SQL Methodology (SQLite)**
-
-### 🎯 **Design Principles**
-
-The database is designed in **3NF** (Third Normal Form). Unlike PostgreSQL, SQLite is serverless and stores the entire database in a single `.db` file.
-
-#### 📜 **Query and Modeling Example (DDL - SQLite Syntax)**
-
-**1. Creating the `Product` table**
-
-```sql
-CREATE TABLE Product (
-    id_product INTEGER PRIMARY KEY AUTOINCREMENT,
-    trade_name VARCHAR(100) NOT NULL,
-    INN VARCHAR(150),
-    dosage VARCHAR(50),
-    form VARCHAR(50),
-    purchase_price DECIMAL(10, 2),
-    selling_price DECIMAL(10, 2),
-    safety_stock INTEGER NOT NULL DEFAULT 10
-);
-
-```
-
-**2. Creating the `Customer` table**
-
-```sql
-CREATE TABLE Customer (
-    id_customer INTEGER PRIMARY KEY AUTOINCREMENT,
-    last_name VARCHAR(50) NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
-    address VARCHAR(255),
-    phone VARCHAR(20),
-    email VARCHAR(100),
-    creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```python
+with app.app_context():
+    db.create_all()         # Create tables
+    seed_all_initial_data() # Fill the database
 
 ```
 
@@ -195,50 +152,37 @@ CREATE TABLE Customer (
 
 ## ⚙️ **Installation and Setup**
 
-### 1. **Prerequisites**
-
-* Python 3.x
-* SQLite3 (built-in with Python)
-* Valid **SSL/TLS Certificate** for HTTPS.
-
-### 2. **Environment Setup**
+### 1. **Environment Setup**
 
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
+source venv/bin/activate 
 pip install -r requirements.txt
 
 ```
 
-### 3. **Database Configuration**
-
-Configure your `.env` file to point to the SQLite file:
-
-```env
-DATABASE_URL="sqlite:///database/pharma_dashboard.db"
-SECRET_KEY="YOUR_VERY_LONG_AND_COMPLEX_SECRET_KEY"
-
-```
-
-### 4. **Launching the Application**
+### 2. **Launch & Initialization**
 
 ```bash
-# Development
-export FLASK_APP=run.py
-flask run
-
-# Production (Gunicorn)
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
+cd Server
+python3 run.py
 
 ```
-## ✒️ Author
 
-[Mathieu GODALIER](https://github.com/Mathieu7483) - Student at Holberton School
+* **API URL:** `http://127.0.0.1:5000`
+* **Auto-seed:** Test data (sales, products, interactions) is injected from `utils/data_seed.json`.
 
 ---
 
-## 📄 **License**
+## 🛡️ **Security Implementation**
 
-This project is licensed under the MIT License.
+* **Passwords:** Hashing via `Bcrypt`.
+* **Input Sanitization:** Protection against XSS/SQL injections via SQLAlchemy and query validators in the Chatbot.
+* **Context Awareness:** The chatbot uses the user ID to personalize responses without exposing sensitive data.
 
->>>>>>> Mathieu
+---
+
+## ✒️ Author
+
+**Mathieu GODALIER** - [GitHub](https://github.com/Mathieu7483)
+*Student at Holberton School*
