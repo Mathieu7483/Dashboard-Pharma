@@ -496,16 +496,21 @@ class ChatBotEngine:
         if results["products"]:
             output.append("💊 PRODUITS")
             for p in results["products"][:3]:
-                output.append(f"   - {p.name} ({p.stock} unités)")
+                output.append(f"   - {p.name} ({p.stock} unités) {p.price:.2f}€")
         if results["clients"]:
             output.append("\n👤 CLIENTS")
             for c in results["clients"][:3]:
-                output.append(f"   - {c.first_name} {c.last_name}")
+                output.append(f"    {c.first_name} {c.last_name}")
+                output.append(f"     📧 {c.email if c.email else 'Non renseigné'}")
+                output.append(f"     📞 {c.phone if c.phone else 'Non renseigné'}")
         if results["doctors"]:
             output.append("\n🩺 MÉDECINS")
             for d in results["doctors"][:3]:
-                output.append(f"   - Dr. {d.last_name}")
-        return "\n".join(output)
+                output.append(f"    Dr. {d.last_name} {d.first_name} ({d.specialty})")
+                output.append(f"     📧 {d.email if d.email else 'Non renseigné'}")
+                output.append(f"     📞 {d.phone if d.phone else 'Non renseigné'}")
+                              
+        return "\n".join(output)    
 
     # =========================================================================
     # UTILITIES
