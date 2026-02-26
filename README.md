@@ -1,7 +1,7 @@
 # 🚀 **README: Pharmacy-Dashboard - Inventory Management**
 
-<p align="center">
-<img src="[https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png](https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png)" alt="Dashboard Preview">
+<p align="center"\>
+<img src="https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png"\>
 </p>
 
 > **Warning: This dashboard is strictly for internal use by pharmacists for inventory management purposes. It does not handle direct customer interactions but processes personal and sensitive data.**
@@ -23,7 +23,7 @@ The Pharmacy-Dashboard project is a responsive web application designed to optim
 . Security by Design: All connections via HTTPS. Passwords must be hashed (Bcrypt).
 . Retention Period: Defined and limited retention for personal data.
 
-🛑 Critical Point: A Data Protection Impact Assessment (DPIA) is mandatory before any production deployment.
+### 🛑 Critical Point: A Data Protection Impact Assessment (DPIA) is mandatory before any production deployment.
 ---
 
 ## 🧱 **Technical Architecture**
