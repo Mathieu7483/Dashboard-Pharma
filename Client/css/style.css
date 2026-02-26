@@ -842,20 +842,36 @@ footer {
 }
 
 #products-table th {
-    text-align: center;
-    padding: 15px;
+    text-align: left;
+    padding: 12px 10px;
     border-bottom: 2px solid var(--color-primary);
     color: var(--color-primary);
     font-weight: 700;
+    white-space: nowrap;
 }
 
 #products-table td {
-    padding: 15px;
+    padding: 12px 10px;
     border-bottom: 1px solid #eee;
+    vertical-align: middle; /* Centre verticalement le contenu */
 }
 
 #products-table tr:hover {
     background-color: rgba(30, 144, 255, 0.02);
+}
+
+#products-table th:nth-child(4), #products-table td:nth-child(4),
+#products-table th:nth-child(5), #products-table td:nth-child(5),
+#products-table th:nth-child(6), #products-table td:nth-child(6) {
+    text-align: center;
+}
+
+#products-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap; 
 }
 
 .low-stock-row {
@@ -868,11 +884,13 @@ footer {
 }
 
 .btn-edit, .btn-delete {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-right: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    margin: 0;
+    min-width: 80px;
 }
 
 .btn-edit { background: var(--color-primary); color: white; }
@@ -973,6 +991,14 @@ footer {
     background-color: rgba(30, 144, 255, 0.04);
 }
 
+#clients-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+
 .btn-edit, .btn-delete {
     padding: 7px 12px;
     border: none;
@@ -1024,6 +1050,14 @@ footer {
     border-bottom: 1px solid #eee;
     font-size: 0.95rem;
     color: #444;
+}
+
+#doctors-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
 }
 
 .badge-specialty {
