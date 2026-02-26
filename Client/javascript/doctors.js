@@ -180,7 +180,8 @@ function setupSearch() {
         const filtered = window.allDoctors.filter(d => 
             d.first_name.toLowerCase().includes(query) || 
             d.last_name.toLowerCase().includes(query) || 
-            d.email.toLowerCase().includes(query)
+            d.email.toLowerCase().includes(query) ||
+            (d.specialty && d.specialty.toLowerCase().includes(query))
         );
         renderTable(filtered, isAdmin);
     });
