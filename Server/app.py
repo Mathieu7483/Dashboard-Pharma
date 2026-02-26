@@ -73,7 +73,7 @@ def create_app(config_class=DevelopmentConfig):
     with app.app_context():
         from models import (
             user, product, sale, client, doctor,
-            interaction, product_alias, calendar
+            interaction, product_alias, calendar, ticket,
         )
 
     return app
