@@ -1,0 +1,672 @@
+/* ==========================================================================
+   dashboard.css
+   Styles exclusifs à index.html (dashboard principal)
+   Dépend de : style.css
+   ========================================================================== */
+
+/* ==========================================================================
+   1. DASHBOARD GRID LAYOUT
+   ========================================================================== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 15px;
+    padding: 15px;
+    padding-bottom: 10px;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Placements des widgets dans la grille */
+.graph-day        { grid-column: 1; grid-row: 1; }
+.graph-month      { grid-column: 2; grid-row: 1; }
+.inventory-stock  { grid-column: 3; grid-row: 1; }
+.meds-team        { grid-column: 1; grid-row: 2 / 4; }
+.client-data      { grid-column: 2; grid-row: 2; }
+.doctor-data      { grid-column: 2; grid-row: 3; }
+.chatbot-widget   { grid-column: 3; grid-row: 2 / 4; }
+
+/* ==========================================================================
+   2. WIDGET SEARCH (mini input dans les widget-header)
+   ========================================================================== */
+.widget-search {
+    width: 120px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: width 0.3s;
+}
+
+.widget-search:focus {
+    width: 150px;
+    outline: none;
+    border-color: #1E90FF;
+}
+
+/* ==========================================================================
+   3. SCROLL CONTAINERS (widgets dashboard)
+   ========================================================================== */
+.scroll-container,
+.scroll-wrapper {
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.scroll-container::-webkit-scrollbar,
+.scroll-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb,
+.scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
+}
+
+/* ==========================================================================
+   4. CLIENT & DOCTOR WIDGETS (dashboard uniquement)
+   ========================================================================== */
+.client-data,
+.doctor-data {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.client-data .widget-header,
+.doctor-data .widget-header {
+    margin-bottom: 8px;
+}
+
+.client-data .widget-header h3,
+.doctor-data .widget-header h3 {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.client-data .kpi-value,
+.doctor-data .kpi-value {
+    font-size: 1.6rem !important;
+    margin: 3px 0 8px 0 !important;
+    line-height: 1.2;
+}
+
+#client-search-result,
+#doctor-search-result {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 180px;
+    padding-right: 5px;
+}
+
+#client-search-result .item-entry,
+#doctor-search-result .item-entry {
+    padding: 6px 0;
+    margin-bottom: 4px;
+}
+
+#client-search-result .item-entry .info,
+#doctor-search-result .item-entry .info {
+    line-height: 1.3;
+}
+
+#client-search-result .item-entry strong,
+#doctor-search-result .item-entry strong {
+    font-size: 0.9rem;
+}
+
+#client-search-result .item-entry small,
+#doctor-search-result .item-entry small {
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+#client-search-result::-webkit-scrollbar,
+#doctor-search-result::-webkit-scrollbar { width: 6px; }
+
+#client-search-result::-webkit-scrollbar-track,
+#doctor-search-result::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#client-search-result::-webkit-scrollbar-thumb,
+#doctor-search-result::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#client-search-result::-webkit-scrollbar-thumb:hover,
+#doctor-search-result::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ==========================================================================
+   5. MEDS-TEAM WIDGET (Team Notifications + Staff)
+   ========================================================================== */
+.meds-team {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    gap: 15px;
+}
+
+.meds-section {
+    flex: 0.8;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.meds-section h3 {
+    flex-shrink: 0;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+#admin-note-input {
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}
+
+#team-notif-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 140px;
+    padding-right: 5px;
+}
+
+.team-section {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.team-section h3 {
+    flex-shrink: 0;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.team-section .item-entry {
+    border-left: 4px solid #3498db;
+    background: #f8fbff;
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+#team-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 250px;
+    padding-right: 5px;
+}
+
+#team-notif-list::-webkit-scrollbar,
+#team-list::-webkit-scrollbar { width: 6px; }
+
+#team-notif-list::-webkit-scrollbar-track,
+#team-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#team-notif-list::-webkit-scrollbar-thumb,
+#team-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#team-notif-list::-webkit-scrollbar-thumb:hover,
+#team-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ==========================================================================
+   6. INVENTORY STOCK WIDGET (dashboard uniquement)
+   ========================================================================== */
+.inventory-stock {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.inventory-stock h3 {
+    flex-shrink: 0;
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.inventory-stock .kpi-value {
+    font-size: 1.6rem !important;
+    margin: 3px 0 !important;
+    line-height: 1.2;
+}
+
+.inventory-stock #stock-status-text {
+    flex-shrink: 0;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+
+.inventory-stock .widget-divider {
+    flex-shrink: 0;
+    margin: 8px 0;
+}
+
+.inventory-stock h3:last-of-type {
+    flex-shrink: 0;
+    font-size: 0.9rem;
+    margin: 3px 0;
+}
+
+#meds-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 180px;
+    padding-right: 5px;
+    margin-top: 3px;
+}
+
+#meds-list::-webkit-scrollbar { width: 6px; }
+
+#meds-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#meds-list::-webkit-scrollbar-thumb {
+    background: #ff6b6b;
+    border-radius: 10px;
+}
+
+#meds-list::-webkit-scrollbar-thumb:hover {
+    background: #ee5a52;
+}
+
+#meds-list .item-entry.critical {
+    border-left: 4px solid #e74c3c;
+    background: #ffebee;
+}
+
+#meds-list .item-entry.warning {
+    border-left: 4px solid #f39c12;
+    background: #fff8e1;
+}
+
+/* ==========================================================================
+   7. ORDER BUTTON (bouton commander stock bas)
+   ========================================================================== */
+.order-btn {
+    position: relative;
+    background: #dbdb34;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.order-btn:hover {
+    background: #b9b929;
+    transform: translateY(-1px);
+}
+
+.order-btn.urgent {
+    background: #e74c3c;
+}
+
+.order-btn.urgent:hover {
+    background: #c0392b;
+}
+
+.order-btn::after {
+    position: absolute;
+    bottom: 120%;
+    right: 0;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.order-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* ==========================================================================
+   8. DELETE NOTE BUTTON (Team Notifications)
+   ========================================================================== */
+.del-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.del-note:hover {
+    background: rgba(231, 76, 60, 0.15);
+    transform: scale(1.1);
+}
+
+.del-note:active {
+    transform: scale(0.95);
+}
+
+.del-note:hover::after {
+    content: " Delete";
+    font-size: 0.75rem;
+    margin-left: 6px;
+    color: #e74c3c;
+}
+
+/* ==========================================================================
+   9. TAG & BADGE (dashboard)
+   ========================================================================== */
+.tag-specialty {
+    background: #e8f4fd;
+    color: #3498db;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: inline-block;
+    margin: 3px 0;
+}
+
+/* ==========================================================================
+   10. CHART CONTAINERS
+   ========================================================================== */
+.chart-placeholder,
+.chart-container {
+    height: 200px;
+    position: relative;
+}
+
+/* ==========================================================================
+   11. CHATBOT WIDGET
+   ========================================================================== */
+.chatbot-widget {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+}
+
+#chat-window {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.message.bot {
+    background: #e8f4fd;
+    color: #2c3e50;
+}
+
+.message.user {
+    background: var(--color-primary);
+    color: white;
+    text-align: right;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 5px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+}
+
+.chat-input-area button {
+    padding: 10px 20px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.chat-input-area button:hover {
+    background: var(--color-secondary);
+}
+
+/* ==========================================================================
+   12. BOT AVATAR
+   ========================================================================== */
+.avatar-container {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    padding: 15px 0;
+    width: 100%;
+}
+
+.bot-avatar {
+    width: 85px;
+    height: 85px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
+    transition: transform 0.3s ease;
+}
+
+.bot-avatar:hover {
+    transform: scale(1.03);
+}
+
+.bot-avatar.thinking {
+    animation: simple-fade 2s infinite ease-in-out;
+}
+
+@keyframes simple-fade {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
+
+.mini-avatar {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    margin-right: 8px;
+    filter: grayscale(20%);
+}
+
+/* ==========================================================================
+   13. TICKET BUTTON & MODAL (dashboard)
+   ========================================================================== */
+#open-ticket-btn {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
+}
+
+#open-ticket-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(30, 144, 255, 0.4), 0 0 20px rgba(0, 255, 127, 0.3);
+    filter: brightness(1.1);
+}
+
+#open-ticket-btn:active {
+    transform: translateY(0);
+}
+
+/* Ticket modal — z-index rehaussé pour le dashboard */
+#ticket-modal.modal {
+    z-index: 2000;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+#ticket-modal .modal-content {
+    padding: 40px;
+    width: 90%;
+    max-width: 450px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+#ticket-modal .modal-content h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.close {
+    position: absolute;
+    right: 25px;
+    top: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close:hover {
+    color: var(--color-primary);
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e1e1e1;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(30, 144, 255, 0.1);
+}
+
+.btn-save {
+    width: 100%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+}
+
+.btn-save:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   14. RESPONSIVE DASHBOARD
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .graph-day, .graph-month, .inventory-stock,
+    .meds-team, .client-data, .doctor-data, .chatbot-widget {
+        grid-column: span 1;
+        grid-row: auto;
+    }
+
+    .search-box input {
+        width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+
+    #team-notif-list,
+    #team-list,
+    #meds-list {
+        max-height: 120px;
+    }
+
+    .inventory-stock .kpi-value {
+        font-size: 1.5rem !important;
+    }
+}
