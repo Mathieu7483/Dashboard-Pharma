@@ -1,0 +1,335 @@
+/* ==========================================================================
+   pages.css — inventory.html, clients.html, doctors.html
+   Depend of : style.css
+   ========================================================================== */
+
+/* ==========================================================================
+   INVENTORY & TABLES MANAGEMENT
+   ========================================================================== */
+.inventory-page-content {
+    overflow-y: auto !important;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.inventory-container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+#products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#products-table th {
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 2px solid var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#products-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+#products-table tr:hover {
+    background-color: rgba(30, 144, 255, 0.02);
+}
+
+#products-table th:nth-child(4), #products-table td:nth-child(4),
+#products-table th:nth-child(5), #products-table td:nth-child(5),
+#products-table th:nth-child(6), #products-table td:nth-child(6) {
+    text-align: center;
+}
+
+#products-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap; 
+}
+
+.low-stock-row {
+    background-color: rgba(255, 69, 0, 0.05); 
+}
+
+.text-danger {
+    color: #ff4500;
+    font-weight: bold;
+}
+
+.btn-edit, .btn-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    margin: 0;
+    min-width: 80px;
+}
+
+.btn-edit { background: var(--color-primary); color: white; }
+.btn-delete { background: #ff4757; color: white; }
+
+#product-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#product-form input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+#product-form input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
+}
+
+/* ==========================================================================
+   CLIENT MANAGEMENT
+   ========================================================================== */
+.client-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+#clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#clients-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--color-secondary);
+    color: var(--color-primary);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+}
+
+#clients-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+#clients-table tr:hover {
+    background-color: rgba(30, 144, 255, 0.04);
+}
+
+#clients-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+
+.btn-edit, .btn-delete {
+    padding: 7px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    color: white;
+}
+
+.btn-edit { background: var(--color-primary); }
+.btn-delete { background: #ff4757; }
+
+.btn-edit:hover, .btn-delete:hover {
+    transform: scale(1.1);
+}
+
+/* ==========================================================================
+   DOCTOR MANAGEMENT
+   ========================================================================== */
+.doctor-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+}
+
+#doctors-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#doctors-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+}
+
+#doctors-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+#doctors-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+
+.badge-specialty {
+    background: #e8f4fd;
+    color: var(--color-primary);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+    border: 1px solid rgba(30, 144, 255, 0.2);
+}
+
+#doctors-table tr:hover {
+    background-color: rgba(30, 144, 255, 0.04);
+}
+
+/* ==========================================================================
+   UNIFIED FORM STYLING 
+   ========================================================================== */
+#product-form,
+#client-form,
+#doctor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#product-form input,
+#client-form input,
+#doctor-form input,
+#product-form select,
+#client-form select,
+#doctor-form select,
+#product-form textarea,
+#client-form textarea,
+#doctor-form textarea {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Open Sans', sans-serif;
+    transition: all 0.3s ease;
+}
+
+#product-form input:focus,
+#client-form input:focus,
+#doctor-form input:focus,
+#product-form select:focus,
+#client-form select:focus,
+#doctor-form select:focus,
+#product-form textarea:focus,
+#client-form textarea:focus,
+#doctor-form textarea:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
+}
+
+.btn-sell {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-sell:hover {
+    background-color: #218838;
+}
+
+.qty-input {
+    width: 60px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.fw-bold { font-weight: bold; }
+
+
+.search-bar.widget input#inventory-search,
+.search-bar.widget input#clients-search,
+.search-bar.widget input#doctors-search {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    border: 3px solid rgba(30, 144, 255, 0.2);
+    border-radius: 15px;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-bar.widget input#inventory-search:focus,
+.search-bar.widget input#clients-search:focus,
+.search-bar.widget input#doctors-search:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 10px 25px rgba(0, 255, 127, 0.2);
+    background-color: #fff;
+}
+
+.search-bar.widget input#inventory-search::placeholder,
+.search-bar.widget input#clients-search::placeholder,
+.search-bar.widget input#doctors-search::placeholder {
+    font-size: 1.1rem;
+    color: #bbb;
+    font-weight: 400;
+}
