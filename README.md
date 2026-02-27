@@ -59,6 +59,8 @@ Directory structure:
     │   ├── css/
     │   │   ├── auth.css
     │   │   ├── calendar.css
+    │   │   ├── dashboard.css
+    │   │   ├── pages.css
     │   │   ├── settings.css
     │   │   └── style.css
     │   └── javascript/
@@ -121,6 +123,7 @@ Directory structure:
             ├── seed_aliases.py
             ├── seed_sales.py
             └── seeder.py
+
 
 
 
@@ -233,6 +236,28 @@ Populate the product_aliases table with common commercial names from `utils/seed
 * **Context Awareness:** The chatbot uses the user ID to personalize responses without exposing sensitive data.
 
 ---
+
+## 🛠️ **Technical Documentation**
+To gain a deeper understanding of the project, its architecture, and its technical choices, please consult the following documents:
+* [Link to MVP Documentation](https://github.com/Mathieu7483/Portfolio)
+  
+Technical Documentation: In-depth analysis of the data structures, API logic, and object-oriented programming (OOP) frameworks used.
+* [Link to Technical Documentation](https://github.com/Mathieu7483/Portfolio/blob/main/documentation.md) (Mockup, Diagrams, design architecture ...)
+
+---
+
+## 📺 **Demonstration (Video Snippet)**
+
+[!TIP] Here's a quick overview of the main features in action.
+
+If the video doesn't display, you can watch it directly via this link.
+* [Youtube link to see how it works](https://youtu.be/1NeusZb_IBs)
+
+* [Youtube link to see how it works - second link ](https://youtu.be/emE1aqvT92M)
+
+* [Youtube link to see how it works- third link](https://youtu.be/jvJfjzumzgM)
+
+
 
 ## ✒️ Author
 
