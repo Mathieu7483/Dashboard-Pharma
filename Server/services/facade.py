@@ -1,179 +1,449 @@
-from typing import Optional, List, Dict
+from database.data_manager import db, bcrypt
+from sqlalchemy import func, or_, desc
 from models.user import UserModel
 from models.product import ProductModel
-from models.sale import SaleModel
-from database.data_manager import db
+from models.sale import SaleModel, SaleItemModel
+from models.client import ClientModel
+from models.doctor import DoctorModel
+from models.calendar import CalendarEvent
+from models.interaction import InteractionModel
+from models.note import Note
+from models.ticket import Ticket
+from datetime import datetime, UTC
 
 class FacadeService:
     """
-    Provides a simplified interface for business logic and basic CRUD access.
+    Service layer (Facade) handling all business logic and database interactions (CRUD).
+    Standardized to SQLAlchemy 2.0 syntax.
     """
 
-    # --- Shared Read Methods (Internal use) ---
-
-    def _get_entity(self, model_class, entity_id: int):
-        """Generic method to retrieve an entity by ID."""
-        return model_class.query.get(entity_id)
-
-    def _get_all_entities(self, model_class):
-        """Generic method to retrieve all entities."""
-        return model_class.query.all()
+    # --- USER CRUD & AUTHENTICATION METHODS ---
     
-    def _get_by_attribute(self, model_class, attribute_name: str, value: str):
-        """Generic method to retrieve an entity by an attribute (e.g., name, email)."""
-        return model_class.query.filter_by(**{attribute_name: value}).first()
+    def get_user_by_username(self, username):
+        return db.session.execute(
+            db.select(UserModel).filter_by(username=username)
+        ).scalar_one_or_none()
 
-    # ======================================================================
-    # USER CRUD
-    # ======================================================================
+    def get_user_by_email(self, email):
+        return db.session.execute(
+            db.select(UserModel).filter_by(email=email)
+        ).scalar_one_or_none()
 
-    def create_user(self, username: str, email: str, password: str, is_admin: bool = False) -> Optional[UserModel]:
-        """Creates a new user, hashes the password, and saves it."""
-        if UserModel.query.filter_by(username=username).first():
-            return None # User already exists
+    def create_user(self, username, email, password, first_name=None, last_name=None, address=None, is_admin=False):
+        if self.get_user_by_username(username):
+            return "Username already exists."
+        if self.get_user_by_email(email):
+            return "Email address already in use."
+
+        try:
+            new_user = UserModel(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                address=address,
+                is_admin=is_admin
+            )
+            return new_user if new_user.save_to_db() else "Integrity error."
+        except Exception as e:
+            print(f"Error creating user: {e}") 
+            return None
+
+    def authenticate_user(self, username, password):
+        user = self.get_user_by_username(username)
+        if user and user.check_password(password):
+            return user
+        return None
+
+    def get_all_users(self):
+        return db.session.execute(db.select(UserModel)).scalars().all()
         
-        new_user = UserModel(username=username, email=email, is_admin=is_admin)
-        new_user.set_password(password) # Uses UserModel's secured method
-        new_user.save_to_db() # Uses method inherited from BaseModel
-        return new_user
+    def get_user_by_id(self, user_id):
+        return db.session.get(UserModel, user_id)
 
-    def get_user_by_id(self, user_id: int) -> Optional[UserModel]:
-        """Retrieves a user by their ID."""
-        return self._get_entity(UserModel, user_id)
-
-    def get_user_by_username(self, username: str) -> Optional[UserModel]:
-        """Retrieves a user by their username."""
-        return self._get_by_attribute(UserModel, 'username', username)
-
-    def get_all_users(self) -> List[UserModel]:
-        """Retrieves a list of all users."""
-        return self._get_all_entities(UserModel)
-
-    def update_user_profile(self, user_id: int, data: Dict) -> Optional[UserModel]:
-        """Updates authorized fields by a user or an administrator."""
+    def update_user(self, user_id, data):
         user = self.get_user_by_id(user_id)
-        if not user:
-            return None
+        if user:
+            if 'password' in data:
+                user.set_password(data['password'])
+                del data['password']
+            for key, value in data.items():
+                if hasattr(user, key):
+                    setattr(user, key, value)
+            return user if user.save_to_db() else None
+        return None
 
-        # Update logic (applies data to the model)
-        if 'email' in data:
-            user.email = data['email']
-        if 'is_admin' in data:
-            user.is_admin = data['is_admin'] # Requires administrator check in the API layer
-
-        user.save_to_db()
-        return user
-
-    def delete_user(self, user_id: int) -> bool:
-        """Deletes a user."""
+    def delete_user(self, user_id):
         user = self.get_user_by_id(user_id)
-        if not user:
-            return False
-        user.delete_from_db()
-        return True
-
-    # ======================================================================
-    # PRODUCT CRUD
-    # ======================================================================
-
-    def create_product(self, name: str, stock: int, price: float, user_id: int) -> ProductModel:
-        """Creates a new product."""
-        new_product = ProductModel(name=name, stock=stock, price=price, user_id=user_id)
-        new_product.save_to_db()
-        return new_product
-
-    def get_product_by_id(self, product_id: int) -> Optional[ProductModel]:
-        """Retrieves a product by its ID."""
-        return self._get_entity(ProductModel, product_id)
-
-    def get_all_products(self) -> List[ProductModel]:
-        """Retrieves all products."""
-        return self._get_all_entities(ProductModel)
+        return user.delete_from_db() if user else False
+        
+    # --- PRODUCT CRUD METHODS ---
     
-    def get_product_by_name(self, product_name: str) -> Optional[ProductModel]:
-        """Retrieves a product by its exact name."""
-        return self._get_by_attribute(ProductModel, 'name', product_name)
-
-    def search_products_by_name(self, search_term: str) -> List[ProductModel]:
-        """Searches for products whose name contains the specified term."""
-        return ProductModel.query.filter(
-            ProductModel.name.ilike(f'%{search_term}%')
-        ).all()
-
-    def update_product(self, product_id: int, data: Dict) -> Optional[ProductModel]:
-        """Updates an existing product."""
-        product = self.get_product_by_id(product_id)
-        if not product:
-            return None
-        
-        # Simple attribute update
-        if 'name' in data: product.name = data['name']
-        if 'stock' in data: product.stock = data['stock']
-        if 'price' in data: product.price = data['price']
-        
-        product.save_to_db()
-        return product
-
-    def delete_product(self, product_id: int) -> bool:
-        """Deletes a product."""
-        product = self.get_product_by_id(product_id)
-        if not product:
-            return False
-        product.delete_from_db()
-        return True
-
-    # ======================================================================
-    # SALE CRUD
-    # ======================================================================
-
-    # Note: Sale CRUD methods are often more complex (purchase process)
+    def get_all_products(self):
+        return db.session.execute(db.select(ProductModel)).scalars().all()
     
-    def create_sale(self, product_id: int, quantity: int, user_id: int) -> Optional[SaleModel]:
-        """
-        Records a sale (complex business logic: stock verification, recording, update).
-        """
-        product = self.get_product_by_id(product_id)
-        
-        # Business logic: Stock verification before sale
-        if not product or product.stock < quantity:
+    def get_all_products_detailed(self, user_id=None):
+        stmt = db.select(ProductModel).order_by(ProductModel.name)
+        if user_id:
+            stmt = stmt.filter(ProductModel.user_id == user_id)
+        return db.session.execute(stmt).scalars().all()
+
+    def get_product_by_id(self, product_id):
+        return db.session.get(ProductModel, product_id)
+
+    def get_product_by_name(self, name):
+        return db.session.execute(
+            db.select(ProductModel).filter_by(name=name)
+        ).scalar_one_or_none()
+
+    def create_product(self, name, active_ingredient, dosage, stock, price, is_prescription_only, user_id):
+        try:
+            new_product = ProductModel(
+                name=name, active_ingredient=active_ingredient, dosage=dosage, 
+                stock=stock, price=price, is_prescription_only=is_prescription_only, user_id=user_id
+            )
+            return new_product if new_product.save_to_db() else None
+        except Exception as e:
+            print(f"Error creating product: {e}")
             return None
-            
-        total_price = product.price * quantity
-        
-        # 1. Update product stock (Transaction)
-        product.stock -= quantity
-        product.save_to_db()
-        
-        # 2. Create sale record (Transaction)
-        new_sale = SaleModel(
-            product_id=product_id,
-            quantity=quantity,
-            total_price=total_price,
-            user_id=user_id
-        )
-        new_sale.save_to_db()
-        
-        return new_sale
 
-    def get_sale_by_id(self, sale_id: int) -> Optional[SaleModel]:
-        """Retrieves a sale by its ID."""
-        return self._get_entity(SaleModel, sale_id)
-
-    def get_all_sales(self) -> List[SaleModel]:
-        """Retrieves all sales."""
-        return self._get_all_entities(SaleModel)
-        
-    def delete_sale(self, sale_id: int) -> bool:
-        """Deletes a sale record (often restricted to admins)."""
-        sale = self.get_sale_by_id(sale_id)
-        if not sale:
-            return False
-            
-        # Business logic: Restore stock upon sale cancellation
-        product = self.get_product_by_id(sale.product_id)
+    def update_product(self, product_id, data):
+        product = self.get_product_by_id(product_id)
         if product:
-             product.stock += sale.quantity
-             product.save_to_db()
+            for key, value in data.items():
+                if hasattr(product, key):
+                    setattr(product, key, value)
+            return product if product.save_to_db() else None
+        return None
+
+    def delete_product(self, product_id):
+        product = self.get_product_by_id(product_id)
+        return product.delete_from_db() if product else False
         
-        sale.delete_from_db()
-        return True
+    # --- SALE METHODS ---
+    
+    def get_all_sales(self, user_id=None):
+        stmt = db.select(SaleModel).order_by(desc(SaleModel.sale_date))
+        if user_id:
+            stmt = stmt.filter(SaleModel.user_id == user_id)
+        return db.session.execute(stmt).scalars().all()
+        
+    def get_sale_by_id(self, sale_id):
+        return db.session.get(SaleModel, sale_id)
+
+    def process_sale(self, client_id, doctor_id, items_data, user_id, created_at=None):
+        if not items_data:
+            raise ValueError("No items provided for sale.")
+        
+        total_amount = 0
+        validated_items = []
+    
+        for item in items_data:
+            product = self.get_product_by_id(item['product_id'])
+            if not product:
+                raise ValueError(f"Product not found: {item['product_id']}")
+            if product.stock < item['quantity']:
+                raise ValueError(f"Insufficient stock for {product.name}")
+            if product.is_prescription_only and not doctor_id: 
+                raise ValueError(f"Prescription required for {product.name}")
+        
+            total_amount += product.price * item['quantity']
+            validated_items.append({'product': product, 'quantity': item['quantity'], 'price': product.price})
+
+        try:
+            new_sale = SaleModel(
+                user_id=user_id, 
+                client_id=client_id, 
+                doctor_id=doctor_id,
+                prescription_provided=bool(doctor_id), 
+                total_amount=total_amount,
+                sale_date=created_at  # <--- Ajout crucial
+            )
+            db.session.add(new_sale)
+            db.session.flush()  # Get new_sale.id before committing
+
+            for item_data in validated_items:
+                item_data['product'].stock -= item_data['quantity']
+                db.session.add(SaleItemModel(
+                    sale_id=new_sale.id, product_id=item_data['product'].id,
+                    quantity=item_data['quantity'], price_at_sale=item_data['price']
+                ))
+            
+            db.session.commit()
+            return new_sale
+        except Exception as e:
+            db.session.rollback()
+            raise ValueError(f"Sale failed: {str(e)}")
+
+
+# --- ANALYTICS METHODS ---
+
+    def get_sales_revenue_stats(self):
+        """
+        Calculate total sales revenue grouped by date.
+        """
+
+        stmt = (
+            db.select(
+                func.date(SaleModel.sale_date).label('date'),
+                func.sum(SaleModel.total_amount).label('total')
+            )
+            .group_by(func.date(SaleModel.sale_date))
+            .order_by(func.date(SaleModel.sale_date))
+        )
+        results = db.session.execute(stmt).all()
+        return {
+            "labels": [str(r.date) for r in results],
+            "values": [float(r.total) for r in results]
+        }
+
+    def get_stock_alerts(self):
+        """fetch products with low stock (<=10 units)."""
+        stmt = db.select(ProductModel).filter(ProductModel.stock <= 10)
+        return db.session.execute(stmt).scalars().all()
+    
+    def get_daily_stats(self):
+        today = datetime.now(UTC).strftime('%Y-%m-%d')
+        
+        stmt = (
+            db.select(
+                func.strftime('%H', SaleModel.sale_date).label('hour'),
+                func.sum(SaleModel.total_amount).label('revenue'),
+                func.count(SaleModel.id).label('sale_count')
+            )
+            .filter(func.strftime('%Y-%m-%d', SaleModel.sale_date) == today)
+            .group_by('hour')
+            .order_by('hour')
+        )
+        return db.session.execute(stmt).all()
+
+    def get_monthly_stats(self):
+        first_day = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0).strftime('%Y-%m-%d')
+    
+        stmt = (
+            db.select(
+                func.strftime('%Y-%m-%d', SaleModel.sale_date).label('day'),
+                func.sum(SaleModel.total_amount).label('revenue'),
+                func.count(SaleModel.id).label('sale_count') # <--- AJOUTE CETTE LIGNE
+         )
+            .filter(SaleModel.sale_date >= first_day)
+            .group_by('day')
+            .order_by('day')
+     )
+        return db.session.execute(stmt).all()
+    
+
+    # --- CLIENT CRUD METHODS ---
+    
+    def get_all_clients(self):
+        return db.session.execute(db.select(ClientModel)).scalars().all()
+    
+    def get_client_by_id(self, client_id):
+        return db.session.get(ClientModel, client_id)
+
+    def get_client_by_last_name(self, last_name):
+        return db.session.execute(db.select(ClientModel).filter_by(last_name=last_name)).scalar_one_or_none()
+    
+    def create_client(self, first_name, last_name, email,phone, address, user_id):
+        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email,phone=phone, address=address, user_id=user_id)
+        return new_client if new_client.save_to_db() else None
+
+    def search_clients(self, query):
+        stmt = db.select(ClientModel).filter(
+            (ClientModel.first_name.ilike(f"%{query}%")) | 
+            (ClientModel.last_name.ilike(f"%{query}%")) |
+            (ClientModel.email.ilike(f"%{query}%"))
+     ).limit(20)
+        return db.session.execute(stmt).scalars().all()
+    
+    def update_client(self, client_id, data):
+        client = self.get_client_by_id(client_id)
+        if client:
+            for key, value in data.items():
+                if hasattr(client, key):
+                    setattr(client, key, value)
+            return client if client.save_to_db() else None
+        return None
+    
+    def delete_client(self, client_id):
+        client = self.get_client_by_id(client_id)
+        return client.delete_from_db() if client else False
+    
+        
+    # --- DOCTOR CRUD METHODS ---
+    
+    def get_all_doctors(self):
+        return db.session.execute(db.select(DoctorModel)).scalars().all()
+    
+    def get_doctor_by_id(self, doctor_id):
+        return db.session.get(DoctorModel, doctor_id)
+
+    def search_doctors(self, query):
+        stmt = db.select(DoctorModel).filter(
+            (DoctorModel.first_name.ilike(f"%{query}%")) | 
+            (DoctorModel.last_name.ilike(f"%{query}%")) |
+            (DoctorModel.specialty.ilike(f"%{query}%")) |
+            (DoctorModel.email.ilike(f"%{query}%"))
+        ).limit(20)
+        return db.session.execute(stmt).scalars().all()
+
+    def create_doctor(self, first_name, last_name, email, address, specialty, phone, user_id):
+        new_doctor = DoctorModel(
+            first_name=first_name, last_name=last_name, email=email, 
+            address=address, specialty=specialty, phone=phone, user_id=user_id
+        )
+        return new_doctor if new_doctor.save_to_db() else None
+    
+    def update_doctor(self, doctor_id, data):
+        doctor = self.get_doctor_by_id(doctor_id)
+        if doctor:
+            for key, value in data.items():
+                if hasattr(doctor, key):
+                    setattr(doctor, key, value)
+            return doctor if doctor.save_to_db() else None
+        return None
+    
+    def delete_doctor(self, doctor_id):
+        doctor = self.get_doctor_by_id(doctor_id)
+        return doctor.delete_from_db() if doctor else False
+
+
+    # --- INTERACTION METHODS ---
+    def get_interaction(self, ingredient_a, ingredient_b):
+        """
+        Queries the database for an interaction between two active ingredients.
+        Standardized to SQLAlchemy 2.0 syntax.
+        """
+        stmt = (
+            db.select(InteractionModel)
+            .where(
+                or_(
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_b}%")),
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) & 
+                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_a}%"))
+                )
+            )
+        )
+        # We use scalar_one_or_none() to get a single object or None
+        return db.session.execute(stmt).scalar_one_or_none()
+
+    # --- NOTES METHODS ---
+    def get_all_notes(self):
+        stmt = db.select(Note).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+    
+    def get_notes_by_user(self, user_id):
+        stmt = db.select(Note).filter_by(user_id=user_id).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+    
+    def get_note_by_id(self, note_id):
+        return db.session.get(Note, note_id)
+    
+    def create_note(self, user_id, text):
+        try:
+            new_note = Note(user_id=user_id, text=text)
+            return new_note if new_note.save_to_db() else None
+        except Exception as e:
+            print(f"Error creating note: {e}")
+            return None
+        
+    def update_note_text(self, note_id, new_text):
+        note = self.get_note_by_id(note_id)
+        if note:
+            note.update_text(new_text)
+            return note
+        return None
+    
+    def delete_note(self, note_id):
+        note = self.get_note_by_id(note_id)
+        
+        if not note:
+            print(f"Delete failed: Note {note_id} not found.")
+            return False
+
+        try:
+            note.delete() 
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting note {note_id}: {e}")
+            return False
+    
+    
+    # --- TICKET CRUD METHODS ---
+    def get_all_tickets(self, user_id=None):
+        """
+        Fetch tickets. If user_id is provided, only fetch tickets for that user.
+        If None, fetch all (for Admin).
+        """
+        stmt = db.select(Ticket).order_by(desc(Ticket.created_at))
+        if user_id:
+            stmt = stmt.filter(Ticket.user_id == user_id)
+        return db.session.execute(stmt).scalars().all()
+
+    def get_ticket_by_id(self, ticket_id):
+        str_id = str(ticket_id) 
+        return db.session.get(Ticket, str_id)
+       
+    def create_ticket(self, user_id, subject, description, priority='medium'):
+        try:
+            new_ticket = Ticket(
+                user_id=user_id,
+                subject=subject,
+                description=description,
+                priority=priority
+            )
+            db.session.add(new_ticket)
+            db.session.commit()
+            return new_ticket
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error creating ticket: {e}")
+            return None
+
+    def update_ticket(self, ticket_id, data):
+        """
+        Generic update for tickets. Handles both User updates (subject/desc)
+        and Admin updates (status/admin_note).
+        """
+        ticket = self.get_ticket_by_id(ticket_id)
+        if ticket:
+            for key, value in data.items():
+                if hasattr(ticket, key):
+                    setattr(ticket, key, value)
+            try:
+                db.session.commit()
+                return ticket
+            except Exception as e:
+                db.session.rollback()
+                return None
+        return None
+    
+    def delete_ticket(self, ticket_id):
+        ticket = self.get_ticket_by_id(ticket_id)
+        if ticket:
+            try:
+                db.session.delete(ticket)
+                db.session.commit()
+                return True
+            except Exception as e:
+                db.session.rollback()
+                return False
+        return False
+
+
+# --- CALENDAR METHOD ---
+    def get_events_by_date(self, date_str):
+        """
+        fetch events (RDV) for a specific date. This can be used to populate the calendar view.
+        """
+        from models.calendar import CalendarEvent
+        
+        stmt = (
+            db.select(CalendarEvent)
+            .filter(func.date(CalendarEvent.start_time) == date_str)
+            .order_by(CalendarEvent.start_time)
+        )
+        return db.session.execute(stmt).scalars().all()

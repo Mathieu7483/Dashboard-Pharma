@@ -1,0 +1,455 @@
+/* ==========================================================================
+   1. DESIGN SYSTEM & VARIABLES
+   ========================================================================== */
+:root {
+    --color-primary: #1E90FF;
+    --color-secondary: #00FF7F;
+    --color-background-start: #FFFFFF;
+    --color-background-mid: #E0FFFF;
+    --color-background-end: #F0FFF0;
+    --color-text-dark: #333;
+    --sidebar-width: 260px;
+    --topbar-height: 70px;
+    --footer-height: 60px;
+    --glow-effect: 0 10px 30px rgba(0, 0, 0, 0.1), 
+                   0 0 15px rgba(30, 144, 255, 0.4), 
+                   0 0 30px rgba(0, 255, 127, 0.3);
+}
+
+/* ==========================================================================
+   2. RESET & BASE
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    color: var(--color-text-dark);
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--color-background-start), var(--color-background-mid), var(--color-background-end));
+    background-attachment: fixed;
+}
+
+/* ==========================================================================
+   3. LAYOUT STRUCTURE
+   ========================================================================== */
+.app-wrapper {
+    display: flex; 
+    width: 100%;
+    height: 100vh;
+}
+
+.content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column; 
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   4. SIDEBAR
+   ========================================================================== */
+.sidebar {
+    width: var(--sidebar-width);
+    background: white;
+    border-right: 1px solid rgba(30, 144, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.05);
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.sidebar-nav {
+    flex: 1;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+}
+
+.sidebar-nav a {
+    display: block;
+    padding: 15px 25px;
+    color: var(--color-text-dark);
+    text-decoration: none;
+    font-weight: 600;
+    transition: 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+    color: var(--color-primary);
+    background: rgba(30, 144, 255, 0.05);
+    border-left: 5px solid var(--color-secondary);
+}
+
+.sidebar-nav a.active {
+    padding-left: 20px;
+}
+
+.sidebar-nav a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0;
+    background: rgba(30, 144, 255, 0.05);
+    transition: width 0.3s ease;
+    z-index: -1;
+}
+
+.sidebar-nav a:hover::before {
+    width: 100%;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+/* Fix for navbar loaded dynamically */
+#navbar-placeholder {
+    display: contents;
+}
+
+#navbar-placeholder .sidebar {
+    position: sticky;
+    top: 0;
+    left: 0;
+}
+
+/* ==========================================================================
+   5. TOP BAR & USER UI
+   ========================================================================== */
+.top-bar {
+    height: var(--topbar-height);
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 30px;
+    backdrop-filter: blur(5px);
+    flex-shrink: 0;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.search-box input {
+    padding: 12px 20px;
+    border-radius: 25px;
+    border: 1px solid #ddd;
+    width: 350px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-box input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(30, 144, 255, 0.3);
+}
+
+.avatar {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 4px 10px rgba(0,0,0,0.2);
+    border: 2px solid white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+.btn-logout-top {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
+}
+
+.btn-logout-top:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(30, 144, 255, 0.4), 0 0 20px rgba(0, 255, 127, 0.3);
+    filter: brightness(1.1);
+}
+
+.btn-logout-top:active {
+    transform: translateY(0);
+}
+
+/* ==========================================================================
+   6. CONTENT SECTIONS
+   ========================================================================== */
+.content-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ==========================================================================
+   7. SHARED WIDGET BASE
+   ========================================================================== */
+.widget {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid rgba(30, 144, 255, 0.2);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.widget:hover {
+    box-shadow: var(--glow-effect);
+    transform: translateY(-2px);
+    border-color: var(--color-secondary);
+    filter: brightness(1.02);
+    backdrop-filter: blur(10px);
+}
+
+.widget h3 {
+    margin-bottom: 15px;
+    color: var(--color-text-dark);
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.widget-divider {
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    margin: 10px 0;
+}
+
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--color-primary);
+    margin: 10px 0;
+}
+
+/* ==========================================================================
+   8. SHARED BUTTONS
+   ========================================================================== */
+.btn-secondary {
+    background: #ddd;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #ccc;
+    transform: translateY(-1px);
+}
+
+.btn-edit,
+.btn-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    margin: 0;
+    min-width: 80px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    color: white;
+}
+
+.btn-edit  { background: var(--color-primary); }
+.btn-delete { background: #ff4757; }
+
+.btn-edit:hover,
+.btn-delete:hover {
+    transform: scale(1.1);
+}
+
+/* ==========================================================================
+   9. SHARED ITEM LIST & ENTRY
+   ========================================================================== */
+.item-list {
+    list-style: none;
+    padding: 0;
+}
+
+.item-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9em;
+}
+
+.item-entry strong {
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.item-entry small {
+    display: block;
+    color: #7f8c8d;
+    line-height: 1.4;
+}
+
+.item-entry .info {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.item-entry label,
+label.item-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.item-entry input[type="checkbox"],
+label.item-entry input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   10. SHARED MODAL BASE
+   ========================================================================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 15px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: var(--glow-effect);
+    animation: slideIn 0.4s ease;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); }
+    to   { transform: translateY(0); }
+}
+
+/* ==========================================================================
+   11. FOOTER
+   ========================================================================== */
+footer {
+    padding: 8px 30px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #888;
+    background: transparent;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    flex-shrink: 0;
+    height: 35px;
+}
+
+/* ==========================================================================
+   12. RESPONSIVE GLOBAL
+   ========================================================================== */
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        overflow: auto;
+    }
+
+    .app-wrapper {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+
+    .content-area {
+        height: auto;
+    }
+
+    .top-bar {
+        padding: 0 15px;
+    }
+
+    .search-box {
+        display: none;
+    }
+}
