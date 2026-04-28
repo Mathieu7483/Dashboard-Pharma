@@ -355,6 +355,7 @@ async function fetchTickets() {
             throw new Error(`Fetch failed: ${response.status}`);
         }
         const tickets     = await response.json();
+        console.log('🎫 Tickets reçus:', tickets);
         window.allTickets = tickets;
         renderTicketTable(tickets);
         updateStats(window.allUsers || [], tickets);
