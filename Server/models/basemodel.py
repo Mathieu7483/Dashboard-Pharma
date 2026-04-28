@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from database.data_manager import db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import func
@@ -13,20 +14,34 @@ class BaseModel(db.Model):
 
     # primary key UUID
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+=======
+from database import data_manager as db
+from sqlalchemy.exc import IntegrityError
+
+
+class BaseModel(db.Model):
+    __abstract__ = True
+
+    id = db.Column(db.Integer, primary_key=True)
+>>>>>>> main
 
     def __repr__(self):
         return f"<{self.__class__.__name__} id={self.id}>"
 
     def save_to_db(self):
+<<<<<<< HEAD
         """
         Ajoute et valide l'instance dans la base de données.
         Gère les IntegrityError (conflits d'unicité, clés étrangères) et les erreurs générales.
         """
+=======
+>>>>>>> main
         try:
             db.session.add(self)
             db.session.commit()
             return True
         except IntegrityError as e:
+<<<<<<< HEAD
             # constraint violation (e.g., unique constraint, foreign key constraint)
             db.session.rollback()
             # inform about the specific integrity error
@@ -34,14 +49,23 @@ class BaseModel(db.Model):
             return False
         except Exception as e:
             # other unexpected errors
+=======
+            db.session.rollback()
+            print(f"Error saving {self}: {e}")
+            return False
+        except Exception as e:
+>>>>>>> main
             db.session.rollback()
             print(f"Unexpected error saving {self}: {e}")
             return False
 
     def delete_from_db(self):
+<<<<<<< HEAD
         """
         Supprime l'instance de la base de données de manière sécurisée.
         """
+=======
+>>>>>>> main
         try:
             db.session.delete(self)
             db.session.commit()
@@ -50,6 +74,7 @@ class BaseModel(db.Model):
             db.session.rollback()
             print(f"Error deleting {self}: {e}")
             return False
+<<<<<<< HEAD
 
 # --- 2. TIMESTAMP FUNCTIONALITY ---
 class TimeStampedModel(BaseModel):
@@ -73,3 +98,8 @@ class PersonModel(TimeStampedModel):
     last_name = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(120), nullable=True) 
     address = db.Column(db.String(255), nullable=True)
+=======
+            db.session.delete(self)
+            db.session.commit()
+            return True    
+>>>>>>> main
