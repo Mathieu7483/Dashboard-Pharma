@@ -46,7 +46,7 @@ function authHeaders(token) {
 }
 
 // ============================================
-// 2bis. VALIDATION HELPERS
+// 2bis. VALIDATION MAIL HELPERS
 // ============================================
 function isValidEmail(email) {
     // Format standard : quelque-chose@domaine.extension
