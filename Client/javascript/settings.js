@@ -46,6 +46,16 @@ function authHeaders(token) {
 }
 
 // ============================================
+// 2bis. VALIDATION HELPERS
+// ============================================
+function isValidEmail(email) {
+    // Format standard : quelque-chose@domaine.extension
+    // Validation de confort côté client — la validation de référence reste côté backend (email-validator)
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return re.test(email);
+}
+
+// ============================================
 // 3. INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -237,8 +247,14 @@ function setupEventListeners() {
             const { token } = getAuthInfo();
             const userId    = document.getElementById('edit-user-id').value;
             const password  = document.getElementById('edit-password').value.trim();
+            const email     = document.getElementById('edit-email').value.trim();
+
+            // Email obligatoire et doit être valide, même en édition
+            if (!email) return alert('⚠️ Email requis !');
+            if (!isValidEmail(email)) return alert('⚠️ Adresse email invalide !');
+
             const payload   = {
-                email:      document.getElementById('edit-email').value.trim() || null,
+                email,
                 first_name: document.getElementById('edit-first-name').value.trim() || null,
                 last_name:  document.getElementById('edit-last-name').value.trim() || null,
                 is_admin:   document.getElementById('edit-is-admin').checked
@@ -261,8 +277,11 @@ function setupEventListeners() {
             const username   = document.getElementById('create-username').value.trim();
             const email      = document.getElementById('create-email').value.trim();
             const password   = document.getElementById('create-password').value.trim();
+
             if (!username || !email || !password) return alert('⚠️ All fields required!');
+            if (!isValidEmail(email)) return alert('⚠️ Adresse email invalide !');
             if (password.length < 6) return alert('⚠️ Password min 6 chars!');
+
             const payload = {
                 username, email, password,
                 first_name: document.getElementById('create-first-name').value.trim() || null,
