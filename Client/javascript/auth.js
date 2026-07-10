@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- DOM Elements ---
     const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
     const statusMessage = document.getElementById('status-message');
 
     // --- UI Feedback ---
@@ -51,23 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.style.display = 'none';
         statusMessage.textContent = '';
     }
-
-    // --- View Switching Logic ---
-    const toggleView = (showLogin) => {
-        clearMessage();
-        loginForm.style.display = showLogin ? 'block' : 'none';
-        registerForm.style.display = showLogin ? 'none' : 'block';
-    };
-
-    document.querySelector('#login-form .toggle-link a')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleView(false);
-    });
-
-    document.querySelector('#register-form .toggle-link a')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleView(true);
-    });
 
     // --- Password Visibility Toggle ---
     document.querySelectorAll('.password-toggle').forEach(button => {
@@ -107,48 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessage("Login successful! Redirecting...", false);
                 setTimeout(() => window.location.href = 'index.html', 1200);
             } else {
-                showMessage(data.msg || "Authentication failed. Please check your credentials.");
+                showMessage(data.message || data.msg || "Authentication failed. Please check your credentials.");
             }
         } catch (err) {
             showMessage("Server unreachable. Please check if the Flask backend is running.");
-        }
-    });
-
-    // --- REGISTER SUBMIT ---
-    registerForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearMessage();
-
-        const password = document.getElementById('register-password').value;
-        const confirm = document.getElementById('register-password-confirm').value;
-
-        if (password !== confirm) {
-            showMessage("Passwords do not match.");
-            return;
-        }
-
-        const payload = {
-            username: document.getElementById('register-username').value,
-            email: document.getElementById('register-email').value,
-            password: password
-        };
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.status === 201) {
-                showMessage("Account created successfully! You can now login.", false);
-                setTimeout(() => toggleView(true), 2000);
-            } else {
-                const data = await response.json();
-                showMessage(data.msg || "Registration failed. Username or Email might already exist.");
-            }
-        } catch (err) {
-            showMessage("Connection error. Could not reach the registration service.");
         }
     });
 });
