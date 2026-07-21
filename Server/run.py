@@ -18,4 +18,4 @@ with app.app_context():
 print("\n--- 🚀 Starting Pharma Server ---")
 print("Documentation: http://127.0.0.1:5000/docs")
 
-app.run(debug=True, port=5000)
+app.run(debug=False, port=5000)
