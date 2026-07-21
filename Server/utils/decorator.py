@@ -14,7 +14,3 @@ def admin_required():
             abort(403, message="Access Forbidden: Administrative privileges required.")
         return decorator
     return wrapper
-
-
-#admin login : Mathieu
-#admin password : Admin@1234
