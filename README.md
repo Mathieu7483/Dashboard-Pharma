@@ -59,6 +59,8 @@ Directory structure:
     │   ├── css/
     │   │   ├── auth.css
     │   │   ├── calendar.css
+    │   │   ├── dashboard.css
+    │   │   ├── pages.css
     │   │   ├── settings.css
     │   │   └── style.css
     │   └── javascript/
