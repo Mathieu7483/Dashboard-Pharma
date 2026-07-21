@@ -81,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            console.log(data);
 
             if (response.ok) {
                 CookieManager.set('access_token', data.access_token, 1);
