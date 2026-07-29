@@ -12,8 +12,6 @@ from models.doctor import DoctorModel
 from models.interaction import InteractionModel
 from utils.seed_aliases import seed_product_aliases
 from utils.seed_sales import seed_product_sales
-
-
 from utils.text_norm import normalize as _norm
 
 
@@ -165,107 +163,100 @@ def _seed_csv_inventory(admin_id):
 
 def _seed_medical_interactions():
     """
-    Populates the interaction table for medication safety logic.
+    Populates the interaction table using ansm_interactions.csv (Thésaurus ANSM).
+    Falls back to a default set if the CSV file is not present.
     """
     if InteractionModel.query.first():
         print("Interaction data already exists. Skipping...")
         return
 
-    conflicts = [
-        # ── CARDIO / ANTICOAGULANTS ───────────────────────────────────────────
-        {"a": "Warfarine",    "b": "Acide Acetylsalicylique", "sev": "Critical",
-         "desc": "Risque majeur d'hemorragie interne (cumul anticoagulant + antiagregeant)."},
-        {"a": "Warfarine",    "b": "Rivaroxaban",             "sev": "Critical",
-         "desc": "Doublon anticoagulant : risque vital d'hemorragie."},
-        {"a": "Warfarine",    "b": "Ibuprofene",              "sev": "Critical",
-         "desc": "Risque hemorragique severe (lesion gastrique par l'AINS)."},
-        {"a": "Warfarine",    "b": "Diclofenac",              "sev": "Critical",
-         "desc": "Risque hemorragique severe."},
-        {"a": "Warfarine",    "b": "Clopidogrel",             "sev": "High",
-         "desc": "Risque hemorragique augmente (cumul anticoagulant + antiagregeant)."},
-        {"a": "Rivaroxaban",  "b": "Acide Acetylsalicylique", "sev": "Critical",
-         "desc": "Association dangereuse : risque de saignement incontrole."},
-        {"a": "Clopidogrel",  "b": "Acide Acetylsalicylique", "sev": "High",
-         "desc": "Risque de saignement augmente (necessite surveillance medicale)."},
-        {"a": "Clopidogrel",  "b": "Omeprazole",              "sev": "Moderate",
-         "desc": "Reduction de l'efficacite protectrice du Clopidogrel (risque d'infarctus)."},
-        {"a": "Clopidogrel",  "b": "Esomeprazole",            "sev": "Moderate",
-         "desc": "Diminution de l'effet antiagregeant."},
+    current_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(current_dir, 'ansm_interactions.csv')
 
-        # ── AINS & CORTICOIDES ────────────────────────────────────────────────
-        {"a": "Ibuprofene",   "b": "Acide Acetylsalicylique", "sev": "High",
-         "desc": "Risque d'ulcere gastrique et perte d'effet protecteur cardiaque de l'aspirine."},
-        {"a": "Ibuprofene",   "b": "Naproxene",               "sev": "High",
-         "desc": "Doublon d'AINS : toxicite renale et digestive accrue."},
-        {"a": "Ibuprofene",   "b": "Ketoprofene",             "sev": "High",
-         "desc": "Toxicite digestive severe."},
-        {"a": "Ibuprofene",   "b": "Prednisone",              "sev": "High",
-         "desc": "Risque massif d'ulcere et d'hemorragie digestive."},
-        {"a": "Diclofenac",   "b": "Prednisone",              "sev": "High",
-         "desc": "Association gastro-lesive severe."},
-        {"a": "Furosemide",   "b": "Ibuprofene",              "sev": "High",
-         "desc": "Insuffisance renale aigue par reduction du flux sanguin renal."},
-        {"a": "Furosemide",   "b": "Naproxene",               "sev": "High",
-         "desc": "Risque d'insuffisance renale."},
-        {"a": "Captopril",    "b": "Ibuprofene",              "sev": "High",
-         "desc": "L'AINS bloque l'effet antihypertenseur et menace les reins."},
-        {"a": "Enalapril",    "b": "Ibuprofene",              "sev": "High",
-         "desc": "Risque d'insuffisance renale (Triple Whammy avec diuretiques)."},
+    conflicts = []
 
-        # ── DIABETE ───────────────────────────────────────────────────────────
-        {"a": "Metformine",   "b": "Prednisone",              "sev": "Moderate",
-         "desc": "Le corticoide augmente la glycemie, s'opposant a l'antidiabetique."},
-        {"a": "Insuline Lispro", "b": "Alcool",              "sev": "High",
-         "desc": "Risque d'hypoglycemie severe et imprevisible."},
-        {"a": "Gliclazide",   "b": "Alcool",                  "sev": "High",
-         "desc": "Effet antabuse et risque d'hypoglycemie."},
-        {"a": "Sitagliptine", "b": "Insuline Lispro",         "sev": "Moderate",
-         "desc": "Surveillance accrue de la glycemie (risque d'hypoglycemie)."},
+    # 1. Tentative de chargement depuis le fichier CSV du Thésaurus ANSM
+    if os.path.exists(csv_path):
+        print(f"📖 Chargement des interactions depuis : {csv_path}")
+        try:
+            with open(csv_path, mode='r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    conflicts.append({
+                        "a": row['ingredient_a'],
+                        "b": row['ingredient_b'],
+                        "sev": row['severity'],
+                        "desc": row['description']
+                    })
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la lecture du CSV ANSM ({e}), bascule sur les données par défaut.")
 
-        # ── PSYCHOTROPES & ANALGESIQUES ───────────────────────────────────────
-        {"a": "Tramadol",     "b": "Alprazolam",              "sev": "Critical",
-         "desc": "Risque de depression respiratoire, sedation profonde et coma."},
-        {"a": "Tramadol",     "b": "Bromazepam",              "sev": "Critical",
-         "desc": "Association sedative dangereuse."},
-        {"a": "Tramadol",     "b": "Escitalopram",            "sev": "High",
-         "desc": "Risque de syndrome serotoninergique (agitation, fievre, confusion)."},
-        {"a": "Zolpidem",     "b": "Alprazolam",              "sev": "Critical",
-         "desc": "Somnolence extreme, risque d'accident et d'arret respiratoire."},
-        {"a": "Zopiclone",    "b": "Diazepam",                "sev": "Critical",
-         "desc": "Potentialisation reciproque de la sedation."},
-        {"a": "Cyamemazine",  "b": "Tramadol",                "sev": "High",
-         "desc": "Risque de convulsions augmente."},
+    # 2. Fallback sur le jeu de règles par défaut si pas de CSV disponible
+    if not conflicts:
+        print("ℹ️ Utilisation du jeu d'interactions ANSM par défaut.")
+        conflicts = [
+            # CARDIO / ANTICOAGULANTS
+            {"a": "Warfarine", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Risque majeur d'hemorragie interne (cumul anticoagulant + antiagregeant)."},
+            {"a": "Warfarine", "b": "Rivaroxaban", "sev": "Critical", "desc": "Doublon anticoagulant : risque vital d'hemorragie."},
+            {"a": "Warfarine", "b": "Ibuprofene", "sev": "Critical", "desc": "Risque hemorragique severe (lesion gastrique par l'AINS)."},
+            {"a": "Warfarine", "b": "Diclofenac", "sev": "Critical", "desc": "Risque hemorragique severe."},
+            {"a": "Warfarine", "b": "Clopidogrel", "sev": "High", "desc": "Risque hemorragique augmente (cumul anticoagulant + antiagregeant)."},
+            {"a": "Rivaroxaban", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Association dangereuse : risque de saignement incontrole."},
+            {"a": "Clopidogrel", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque de saignement augmente (necessite surveillance medicale)."},
+            {"a": "Clopidogrel", "b": "Omeprazole", "sev": "Moderate", "desc": "Reduction de l'efficacite protectrice du Clopidogrel (risque d'infarctus)."},
+            {"a": "Clopidogrel", "b": "Esomeprazole", "sev": "Moderate", "desc": "Diminution de l'effet antiagregeant."},
 
-        # ── ANTIBIOTIQUES ─────────────────────────────────────────────────────
-        {"a": "Amoxicilline", "b": "Methotrexate",            "sev": "High",
-         "desc": "L'antibiotique reduit l'elimination du methotrexate (toxicite)."},
-        {"a": "Ciprofloxacine", "b": "Theophylline",          "sev": "High",
-         "desc": "Surdosage de theophylline (tremblements, palpitations)."},
-        {"a": "Clarithromycine", "b": "Simvastatine",         "sev": "Critical",
-         "desc": "Risque de rhabdomyolyse (destruction des muscles)."},
-        {"a": "Azithromycine", "b": "Amiodarone",             "sev": "Critical",
-         "desc": "Troubles du rythme cardiaque graves."},
+            # AINS & CORTICOIDES
+            {"a": "Ibuprofene", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque d'ulcere gastrique et perte d'effet protecteur cardiaque de l'aspirine."},
+            {"a": "Ibuprofene", "b": "Naproxene", "sev": "High", "desc": "Doublon d'AINS : toxicite renale et digestive accrue."},
+            {"a": "Ibuprofene", "b": "Ketoprofene", "sev": "High", "desc": "Toxicite digestive severe."},
+            {"a": "Ibuprofene", "b": "Prednisone", "sev": "High", "desc": "Risque massif d'ulcere et d'hemorragie digestive."},
+            {"a": "Diclofenac", "b": "Prednisone", "sev": "High", "desc": "Association gastro-lesive severe."},
+            {"a": "Furosemide", "b": "Ibuprofene", "sev": "High", "desc": "Insuffisance renale aigue par reduction du flux sanguin renal."},
+            {"a": "Furosemide", "b": "Naproxene", "sev": "High", "desc": "Risque d'insuffisance renale."},
+            {"a": "Captopril", "b": "Ibuprofene", "sev": "High", "desc": "L'AINS bloque l'effet antihypertenseur et menace les reins."},
+            {"a": "Enalapril", "b": "Ibuprofene", "sev": "High", "desc": "Risque d'insuffisance renale (Triple Whammy avec diuretiques)."},
 
-        # ── AUTRES ────────────────────────────────────────────────────────────
-        {"a": "Spironolactone", "b": "Captopril",             "sev": "High",
-         "desc": "Risque d'hyperkaliemie mortelle (exces de potassium)."},
-        {"a": "Spironolactone", "b": "Valsartan",             "sev": "High",
-         "desc": "Risque cardiaque par exces de potassium."},
-        {"a": "Amiodarone",   "b": "Levofloxacine",           "sev": "Critical",
-         "desc": "Risque majeur de torsades de pointe (coeur)."},
-    ]
+            # DIABETE
+            {"a": "Metformine", "b": "Prednisone", "sev": "Moderate", "desc": "Le corticoide augmente la glycemie, s'opposant a l'antidiabetique."},
+            {"a": "Insuline Lispro", "b": "Alcool", "sev": "High", "desc": "Risque d'hypoglycemie severe et imprevisible."},
+            {"a": "Gliclazide", "b": "Alcool", "sev": "High", "desc": "Effet antabuse et risque d'hypoglycemie."},
+            {"a": "Sitagliptine", "b": "Insuline Lispro", "sev": "Moderate", "desc": "Surveillance accrue de la glycemie (risque d'hypoglycemie)."},
 
+            # PSYCHOTROPES & ANALGESIQUES
+            {"a": "Tramadol", "b": "Alprazolam", "sev": "Critical", "desc": "Risque de depression respiratoire, sedation profonde et coma."},
+            {"a": "Tramadol", "b": "Bromazepam", "sev": "Critical", "desc": "Association sedative dangereuse."},
+            {"a": "Tramadol", "b": "Escitalopram", "sev": "High", "desc": "Risque de syndrome serotoninergique (agitation, fievre, confusion)."},
+            {"a": "Zolpidem", "b": "Alprazolam", "sev": "Critical", "desc": "Somnolence extreme, risque d'accident et d'arret respiratoire."},
+            {"a": "Zopiclone", "b": "Diazepam", "sev": "Critical", "desc": "Potentialisation reciproque de la sedation."},
+            {"a": "Cyamemazine", "b": "Tramadol", "sev": "High", "desc": "Risque de convulsions augmente."},
+
+            # ANTIBIOTIQUES
+            {"a": "Amoxicilline", "b": "Methotrexate", "sev": "High", "desc": "L'antibiotique reduit l'elimination du methotrexate (toxicite)."},
+            {"a": "Ciprofloxacine", "b": "Theophylline", "sev": "High", "desc": "Surdosage de theophylline (tremblements, palpitations)."},
+            {"a": "Clarithromycine", "b": "Simvastatine", "sev": "Critical", "desc": "Risque de rhabdomyolyse (destruction des muscles)."},
+            {"a": "Azithromycine", "b": "Amiodarone", "sev": "Critical", "desc": "Troubles du rythme cardiaque graves."},
+
+            # AUTRES
+            {"a": "Spironolactone", "b": "Captopril", "sev": "High", "desc": "Risque d'hyperkaliemie mortelle (exces de potassium)."},
+            {"a": "Spironolactone", "b": "Valsartan", "sev": "High", "desc": "Risque cardiaque par exces de potassium."},
+            {"a": "Amiodarone", "b": "Levofloxacine", "sev": "Critical", "desc": "Risque majeur de torsades de pointe (coeur)."},
+        ]
+
+    # 3. Insertion normalisée en BDD
+    inserted_count = 0
     for c in conflicts:
         db.session.add(InteractionModel(
-            ingredient_a=_norm(c["a"]).lower(),
-            ingredient_b=_norm(c["b"]).lower(),
-            severity=c["sev"].lower(),
-            description=c["desc"]
+            ingredient_a=_norm(c["a"]).lower().strip(),
+            ingredient_b=_norm(c["b"]).lower().strip(),
+            severity=c["sev"].lower().strip(),
+            description=c["desc"].strip()
         ))
+        inserted_count += 1
 
     try:
         db.session.commit()
-        print(f"✅ Success: {len(conflicts)} interactions seedées proprement.")
+        print(f"✅ Success: {inserted_count} interactions seedées proprement.")
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error: {e}")
+        print(f"❌ Error during interactions seeding: {e}")
