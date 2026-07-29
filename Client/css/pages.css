@@ -333,3 +333,72 @@
     color: #bbb;
     font-weight: 400;
 }
+
+/* ==========================================================================
+   ANSM REFERENTIAL SEARCH (inventory product form)
+   ========================================================================== */
+.ansm-search-wrapper {
+    position: relative;
+}
+
+.ansm-search-wrapper input#ansm-search-input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.ansm-search-wrapper input#ansm-search-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
+}
+
+.ansm-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 50;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+}
+
+.ansm-result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85em;
+    border-bottom: 1px solid #f0f0f0;
+    color: #444;
+}
+
+.ansm-result-item:last-child {
+    border-bottom: none;
+}
+
+.ansm-result-item:hover {
+    background: rgba(30, 144, 255, 0.05);
+}
+
+.ansm-result-item small {
+    display: block;
+    color: #888;
+    margin-top: 2px;
+}
+
+.ansm-linked-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: #eef7ee;
+    border-radius: 8px;
+    font-size: 0.85em;
+}
