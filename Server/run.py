@@ -23,8 +23,6 @@ with app.app_context():
 print("\n--- 🚀 Starting Pharma Server ---")
 print(f"🌐 Application Front: http://{HOST}:{FRONTEND_PORT}/Client/auth.html")
 print(f"📚 Documentation API:  http://{HOST}:{BACKEND_PORT}/docs\n")
-app.run(debug=False, port=5000)
 
 if __name__ == "__main__":
     app.run(debug=True, host=HOST, port=BACKEND_PORT)
->>>>>>> 083b8bd (feat: Implement ANSM referential for pharmaceutical specialties)
