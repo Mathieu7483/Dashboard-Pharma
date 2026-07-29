@@ -1,18 +1,13 @@
 from app import create_app
 from database.data_manager import db
 from utils.seeder import seed_all_initial_data
-from utils.migrate_ansm_fields import ensure_ansm_columns
 
 app = create_app()
-
-HOST = "127.0.0.1"
-BACKEND_PORT = 5000
-FRONTEND_PORT = 3000
 
 with app.app_context():
     print("\n--- 🔧 Database Initialization ---")
     db.create_all()
-    ensure_ansm_columns()
+
     print("--- 🌱 Seeding Process ---")
     try:
         seed_all_initial_data()
@@ -21,8 +16,8 @@ with app.app_context():
         print(f"❌ Seeding failed: {str(e)}")
 
 print("\n--- 🚀 Starting Pharma Server ---")
-print(f"🌐 Application Front: http://{HOST}:{FRONTEND_PORT}/Client/auth.html")
-print(f"📚 Documentation API:  http://{HOST}:{BACKEND_PORT}/docs\n")
+print("Documentation: http://127.0.0.1:5000/docs")
 
 if __name__ == "__main__":
-    app.run(debug=True, host=HOST, port=BACKEND_PORT)
+    # use_reloader=False évite de relancer le Seeding 2 fois au démarrage
+    app.run(host="0.0.0.0", debug=True, port=5000, use_reloader=False)

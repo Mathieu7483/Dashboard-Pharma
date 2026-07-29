@@ -67,10 +67,10 @@ def create_app(config_class=DevelopmentConfig):
         from models import (
             user, product, sale, client, doctor,
             interaction, product_alias, calendar, ticket,
-            specialite, composition,
+            specialite, composition, interaction_ansm,
         )
 
-    from utils.scheduler import start_ansm_scheduler
-    start_ansm_scheduler(app)
+    #from utils.scheduler import start_ansm_scheduler
+    #start_ansm_scheduler(app)
 
     return app
