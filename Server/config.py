@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import timedelta
 
 # --- 1. Path Configuration ---
@@ -12,12 +13,18 @@ if not os.path.exists(DATABASE_FOLDER):
 
 
 class Config:
-    # Global security and JWT settings
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key')
+    # Global security and JWT settings (Min 32 bytes for SHA256)
+    SECRET_KEY = os.environ.get(
+        'SECRET_KEY', 
+        'pharma_dashboard_super_secret_key_2026_dev_mode_32bytes'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # JWT Configuration
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your_jwt_secret_key')
+    JWT_SECRET_KEY = os.environ.get(
+        'JWT_SECRET_KEY', 
+        'pharma_dashboard_jwt_access_secret_key_secure_2026'
+    )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     # ... (other JWT settings)
 
