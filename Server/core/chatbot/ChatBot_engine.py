@@ -13,13 +13,12 @@ from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.sale import SaleModel
 from models.interaction import InteractionModel
-from models.product_alias import ProductAliasModel
 from models.ticket import Ticket
 from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
-import unicodedata
 import re
 from services.facade import FacadeService
+
 
 class ChatBotEngine:
 
@@ -31,11 +30,6 @@ class ChatBotEngine:
             "semaine", "prochaine", "prochain",
             "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
         }
-
-    def _norm(self, s: str) -> str:
-        """Normalize string: lowercase and remove accents."""
-        if not s: return ""
-        return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower().strip()
 
     # =========================================================================
     # MAIN ENTRY POINT
@@ -58,10 +52,10 @@ class ChatBotEngine:
         if any(trigger in clean_text for trigger in profile_triggers):
             if not user_id:
                 return {
-                    "intent": "auth_check", 
+                    "intent": "auth_check",
                     "reply": "Je ne parviens pas à vous identifier. Assurez-vous d'être connecté."
                 }
-            
+
             user = self.facade.get_user_by_id(user_id)
             if user:
                 display_name = f"{user.first_name} {user.last_name}".strip()
@@ -155,7 +149,7 @@ class ChatBotEngine:
     # =========================================================================
 
     def _handle_interaction_check(self, entity_list: list) -> str:
-        """Handles drug interaction checking logic."""
+        """Vérifie les interactions, en gérant les produits multi-substances (ex: Augmentin)."""
         if len(entity_list) < 2:
             return (
                 "Veuillez mentionner au moins DEUX produits pour vérifier leur compatibilité.\n\n"
@@ -164,22 +158,23 @@ class ChatBotEngine:
                 "   - 'Doliprane avec Advil danger ?'"
             )
 
-        resolved, display_names = [], []
-        for name in entity_list:
-            ingredient, display = self._resolve_to_active_ingredient(name)
-            resolved.append(self._norm(ingredient))
-            display_names.append(display)
+        resolved = [self.facade.resolve_substances(name) for name in entity_list]
+        display_names = [d for d, _ in resolved]
 
         conflicts = []
         for i in range(len(resolved)):
             for j in range(i + 1, len(resolved)):
-                result = self.facade.get_interaction(resolved[i], resolved[j])
-                if result:
-                    conflicts.append({
-                        "interaction": result, 
-                        "name_a": display_names[i], 
-                        "name_b": display_names[j]
-                    })
+                name_a, subs_a = resolved[i]
+                name_b, subs_b = resolved[j]
+                seen = set()
+                for sa in subs_a:
+                    for sb in subs_b:
+                        if sa == sb or (sa, sb) in seen or (sb, sa) in seen:
+                            continue
+                        result = self.facade.get_interaction(sa, sb)
+                        if result:
+                            seen.add((sa, sb))
+                            conflicts.append({"interaction": result, "name_a": name_a, "name_b": name_b})
 
         if not conflicts:
             return (
@@ -189,7 +184,7 @@ class ChatBotEngine:
             )
 
         severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🛑"}
-        
+
         output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n", f"Analyse pour : {' + '.join(display_names)}\n"]
         for c in conflicts:
             ix = c["interaction"]
@@ -336,7 +331,7 @@ class ChatBotEngine:
             output = [f"📋 Ventes du jour ({now.strftime('%d/%m/%Y')})\n"]
             for s in sales:
                 output.append(f"Ticket #{str(s.id)[:8]}... - {s.total_amount:.2f} € - {s.sale_date.strftime('%H:%M')}")
-            
+
             output.append(f"\nTotal transactions : {len(sales)}")
             output.append(f"CA journalier : {sum(s.total_amount for s in sales):.2f} €")
             return "\n".join(output)
@@ -377,7 +372,7 @@ class ChatBotEngine:
             ticket = db.session.execute(db.select(Ticket).where(Ticket.subject.ilike(f"%{search_term}%"))).scalar_one_or_none()
         if not ticket:
             return f"Ticket '{search_term}' introuvable."
-        
+
         output = [
             f"🎫 Ticket {ticket.id[:8]}...",
             f"   Sujet : {ticket.subject}",
@@ -458,26 +453,24 @@ class ChatBotEngine:
         """Formatting helper for calendar events with multi-day support."""
         label = e.title or e.type.capitalize()
         assigned = (e.assigned_user.username if e.assigned_user else "Non assigné")
-        
-        # Format dates to FR
+
         start_dt_fr = datetime.strptime(e.start_date, '%Y-%m-%d').strftime('%d/%m/%Y')
         end_dt_fr   = datetime.strptime(e.end_date, '%Y-%m-%d').strftime('%d/%m/%Y')
-        
-        # Logic: If the event ends on a different day, show both dates
+
         if e.start_date == e.end_date:
             time_info = f"Le {start_dt_fr} de {e.start_time} à {e.end_time}"
         else:
             time_info = f"Du {start_dt_fr} ({e.start_time}) au {end_dt_fr} ({e.end_time})"
-            
+
         lines = [
             f"📍 {label}",
             f"   {time_info}",
             f"   Assigné : {assigned}"
         ]
-        
+
         if e.notes:
             lines.append(f"   Note : {e.notes}")
-            
+
         lines.append("")
         return lines
 
@@ -509,23 +502,12 @@ class ChatBotEngine:
                 output.append(f"    Dr. {d.last_name} {d.first_name} ({d.specialty})")
                 output.append(f"     📧 {d.email if d.email else 'Non renseigné'}")
                 output.append(f"     📞 {d.phone if d.phone else 'Non renseigné'}")
-                              
-        return "\n".join(output)    
+
+        return "\n".join(output)
 
     # =========================================================================
     # UTILITIES
     # =========================================================================
-
-    def _resolve_to_active_ingredient(self, product_name: str) -> tuple:
-        """Resolves trade names to active ingredients using aliases."""
-        name = product_name.strip()
-        try:
-            alias = db.session.execute(db.select(ProductAliasModel).where(ProductAliasModel.alias.ilike(name))).scalars().first()
-            if alias: return alias.active_ingredient, name
-            product = db.session.execute(db.select(ProductModel).where(ProductModel.name.ilike(f"%{name}%"))).scalars().first()
-            if product: return product.active_ingredient, product.name
-            return name.capitalize(), name.capitalize()
-        except: return name.capitalize(), name.capitalize()
 
     def _search_database(self, model, search_term: str) -> list:
         """Helper to search specific model in DB."""

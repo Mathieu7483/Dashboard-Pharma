@@ -4,22 +4,16 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_restx import Api
 from flask_cors import CORS
-
 from config import DevelopmentConfig
 from database.data_manager import db, bcrypt, jwt
-
 load_dotenv()
-
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
-
     basedir     = os.path.abspath(os.path.dirname(__file__))
     database_dir = os.path.join(basedir, 'database')
-
     if not os.path.exists(database_dir):
         os.makedirs(database_dir)
-
     app.config['JWT_SECRET_KEY']              = os.getenv('JWT_SECRET_KEY', 'dev-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES']    = timedelta(minutes=30)
     app.config['SQLALCHEMY_DATABASE_URI']     = os.getenv(
@@ -27,12 +21,10 @@ def create_app(config_class=DevelopmentConfig):
         'sqlite:///' + os.path.join(database_dir, 'database.sqlite')
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     CORS(app)
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-
     authorizations = {
         'apikey': {'type': 'apiKey', 'in': 'header', 'name': 'Authorization'}
     }
@@ -45,7 +37,6 @@ def create_app(config_class=DevelopmentConfig):
         authorizations=authorizations,
         security='apikey'
     )
-
     from api.users        import users_ns
     from api.products     import products_ns
     from api.sales        import sales_ns
@@ -58,7 +49,7 @@ def create_app(config_class=DevelopmentConfig):
     from api.notes        import notes_ns
     from api.tickets      import tickets_ns
     from api.calendar_events import calendar_ns
-
+    from api.specialites  import specialites_ns
     api.add_namespace(auth_ns,      path='/auth')
     api.add_namespace(users_ns,     path='/users')
     api.add_namespace(products_ns,  path='/products')
@@ -71,11 +62,15 @@ def create_app(config_class=DevelopmentConfig):
     api.add_namespace(notes_ns,     path='/notes')
     api.add_namespace(tickets_ns,   path='/tickets')
     api.add_namespace(calendar_ns,  path='/calendar')
-
+    api.add_namespace(specialites_ns, path='/specialites')
     with app.app_context():
         from models import (
             user, product, sale, client, doctor,
             interaction, product_alias, calendar, ticket,
+            specialite, composition,
         )
+
+    from utils.scheduler import start_ansm_scheduler
+    start_ansm_scheduler(app)
 
     return app
