@@ -14,6 +14,8 @@ product_model = inventory_ns.model('Product', {
     'stock': fields.Integer(description='Stock quantity'),
     'price': fields.Float(description='Price'),
     'is_prescription_only': fields.Boolean(description='Prescription required'),
+    'cis': fields.String(description='Code CIS ANSM lié'),
+    'cip13': fields.String(description='Code CIP13 de la boîte en stock'),
     'user_id': fields.String(description='User ID')
 })
 

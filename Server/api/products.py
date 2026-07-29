@@ -17,7 +17,9 @@ product_input_model = products_ns.model('ProductInput', {
     'dosage': fields.String(required=False, description='The dosage form and strength'),
     'stock': fields.Integer(required=True, description='Current stock quantity', min=0),
     'price': fields.Float(required=True, description='Selling price per unit', min=0.01),
-    'is_prescription_only': fields.Boolean(required=False, default=False, description='Requires a prescription')
+    'is_prescription_only': fields.Boolean(required=False, default=False, description='Requires a prescription'),
+    'cis': fields.String(required=False, description='Code CIS ANSM lié (optionnel)'),
+    'cip13': fields.String(required=False, description='Code CIP13 de la présentation en stock (optionnel)')
 })
 
 # Model for product update (PUT) - FIX for 400 errors: Fields are NOT required
@@ -27,7 +29,9 @@ product_update_model = products_ns.model('ProductUpdate', {
     'dosage': fields.String(required=False, description='The dosage form and strength'),
     'stock': fields.Integer(required=False, description='Current stock quantity', min=0),
     'price': fields.Float(required=False, description='Selling price per unit', min=0.01),
-    'is_prescription_only': fields.Boolean(required=False, description='Requires a prescription')
+    'is_prescription_only': fields.Boolean(required=False, description='Requires a prescription'),
+    'cis': fields.String(required=False, description='Code CIS ANSM lié (optionnel)'),
+    'cip13': fields.String(required=False, description='Code CIP13 de la présentation en stock (optionnel)')
 })
 
 # Model for serialization and output of product data
@@ -39,7 +43,9 @@ product_output_model = products_ns.model('ProductOutput', {
     'stock': fields.Integer(description='Current stock quantity'),
     'price': fields.Float(description='Selling price per unit'),
     'is_prescription_only': fields.Boolean(description='Requires a prescription'),
-    'user_id': fields.String(description='ID of the user who last updated this product') 
+    'user_id': fields.String(description='ID of the user who last updated this product'),
+    'cis': fields.String(required=False, description='Code CIS ANSM lié (optionnel)'),
+    'cip13': fields.String(required=False, description='Code CIP13 de la présentation en stock (optionnel)')
 })
 
 # --- SECURE RESOURCE 1: Product List (GET, POST) ---
@@ -83,7 +89,9 @@ class ProductList(Resource):
                 stock=data['stock'],
                 price=data['price'],
                 is_prescription_only=data.get('is_prescription_only', False),
-                user_id=current_user_id
+                user_id=current_user_id,
+                cis=data.get('cis'),
+                cip13=data.get('cip13'),
             )
         except Exception:
             products_ns.abort(500, message="Product creation failed due to an internal error.")

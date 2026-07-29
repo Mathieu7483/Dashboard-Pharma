@@ -14,9 +14,7 @@ from utils.seed_aliases import seed_product_aliases
 from utils.seed_sales import seed_product_sales
 
 
-def _norm(s: str) -> str:
-    """Normalise un nom d'ingredient : supprime accents, garde la casse."""
-    return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii")
+from utils.text_norm import normalize as _norm
 
 
 def seed_all_initial_data():

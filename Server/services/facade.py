@@ -2,6 +2,7 @@ from database.data_manager import db, bcrypt
 from sqlalchemy import func, or_, desc
 from models.user import UserModel
 from models.product import ProductModel
+from models.product_alias import ProductAliasModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
@@ -9,7 +10,11 @@ from models.calendar import CalendarEvent
 from models.interaction import InteractionModel
 from models.note import Note
 from models.ticket import Ticket
+from models.specialite import SpecialiteModel
+from models.composition import CompositionModel
+from utils.text_norm import normalize
 from datetime import datetime, UTC
+
 
 class FacadeService:
     """
@@ -18,7 +23,7 @@ class FacadeService:
     """
 
     # --- USER CRUD & AUTHENTICATION METHODS ---
-    
+
     def get_user_by_username(self, username):
         return db.session.execute(
             db.select(UserModel).filter_by(username=username)
@@ -47,7 +52,7 @@ class FacadeService:
             )
             return new_user if new_user.save_to_db() else "Integrity error."
         except Exception as e:
-            print(f"Error creating user: {e}") 
+            print(f"Error creating user: {e}")
             return None
 
     def authenticate_user(self, username, password):
@@ -58,7 +63,7 @@ class FacadeService:
 
     def get_all_users(self):
         return db.session.execute(db.select(UserModel)).scalars().all()
-        
+
     def get_user_by_id(self, user_id):
         return db.session.get(UserModel, user_id)
 
@@ -77,12 +82,12 @@ class FacadeService:
     def delete_user(self, user_id):
         user = self.get_user_by_id(user_id)
         return user.delete_from_db() if user else False
-        
+
     # --- PRODUCT CRUD METHODS ---
-    
+
     def get_all_products(self):
         return db.session.execute(db.select(ProductModel)).scalars().all()
-    
+
     def get_all_products_detailed(self, user_id=None):
         stmt = db.select(ProductModel).order_by(ProductModel.name)
         if user_id:
@@ -97,11 +102,13 @@ class FacadeService:
             db.select(ProductModel).filter_by(name=name)
         ).scalar_one_or_none()
 
-    def create_product(self, name, active_ingredient, dosage, stock, price, is_prescription_only, user_id):
+    def create_product(self, name, active_ingredient, dosage, stock, price, is_prescription_only, user_id,
+                        cis=None, cip13=None):
         try:
             new_product = ProductModel(
-                name=name, active_ingredient=active_ingredient, dosage=dosage, 
-                stock=stock, price=price, is_prescription_only=is_prescription_only, user_id=user_id
+                name=name, active_ingredient=active_ingredient, dosage=dosage,
+                stock=stock, price=price, is_prescription_only=is_prescription_only, user_id=user_id,
+                cis=cis, cip13=cip13
             )
             return new_product if new_product.save_to_db() else None
         except Exception as e:
@@ -120,48 +127,48 @@ class FacadeService:
     def delete_product(self, product_id):
         product = self.get_product_by_id(product_id)
         return product.delete_from_db() if product else False
-        
+
     # --- SALE METHODS ---
-    
+
     def get_all_sales(self, user_id=None):
         stmt = db.select(SaleModel).order_by(desc(SaleModel.sale_date))
         if user_id:
             stmt = stmt.filter(SaleModel.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
-        
+
     def get_sale_by_id(self, sale_id):
         return db.session.get(SaleModel, sale_id)
 
     def process_sale(self, client_id, doctor_id, items_data, user_id, created_at=None):
         if not items_data:
             raise ValueError("No items provided for sale.")
-        
+
         total_amount = 0
         validated_items = []
-    
+
         for item in items_data:
             product = self.get_product_by_id(item['product_id'])
             if not product:
                 raise ValueError(f"Product not found: {item['product_id']}")
             if product.stock < item['quantity']:
                 raise ValueError(f"Insufficient stock for {product.name}")
-            if product.is_prescription_only and not doctor_id: 
+            if product.is_prescription_only and not doctor_id:
                 raise ValueError(f"Prescription required for {product.name}")
-        
+
             total_amount += product.price * item['quantity']
             validated_items.append({'product': product, 'quantity': item['quantity'], 'price': product.price})
 
         try:
             new_sale = SaleModel(
-                user_id=user_id, 
-                client_id=client_id, 
+                user_id=user_id,
+                client_id=client_id,
                 doctor_id=doctor_id,
-                prescription_provided=bool(doctor_id), 
+                prescription_provided=bool(doctor_id),
                 total_amount=total_amount,
-                sale_date=created_at  # <--- Ajout crucial
+                sale_date=created_at
             )
             db.session.add(new_sale)
-            db.session.flush()  # Get new_sale.id before committing
+            db.session.flush()
 
             for item_data in validated_items:
                 item_data['product'].stock -= item_data['quantity']
@@ -169,21 +176,16 @@ class FacadeService:
                     sale_id=new_sale.id, product_id=item_data['product'].id,
                     quantity=item_data['quantity'], price_at_sale=item_data['price']
                 ))
-            
+
             db.session.commit()
             return new_sale
         except Exception as e:
             db.session.rollback()
             raise ValueError(f"Sale failed: {str(e)}")
 
-
-# --- ANALYTICS METHODS ---
+    # --- ANALYTICS METHODS ---
 
     def get_sales_revenue_stats(self):
-        """
-        Calculate total sales revenue grouped by date.
-        """
-
         stmt = (
             db.select(
                 func.date(SaleModel.sale_date).label('date'),
@@ -199,13 +201,11 @@ class FacadeService:
         }
 
     def get_stock_alerts(self):
-        """fetch products with low stock (<=10 units)."""
         stmt = db.select(ProductModel).filter(ProductModel.stock <= 10)
         return db.session.execute(stmt).scalars().all()
-    
+
     def get_daily_stats(self):
         today = datetime.now(UTC).strftime('%Y-%m-%d')
-        
         stmt = (
             db.select(
                 func.strftime('%H', SaleModel.sale_date).label('hour'),
@@ -220,43 +220,42 @@ class FacadeService:
 
     def get_monthly_stats(self):
         first_day = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0).strftime('%Y-%m-%d')
-    
         stmt = (
             db.select(
                 func.strftime('%Y-%m-%d', SaleModel.sale_date).label('day'),
                 func.sum(SaleModel.total_amount).label('revenue'),
-                func.count(SaleModel.id).label('sale_count') # <--- AJOUTE CETTE LIGNE
-         )
+                func.count(SaleModel.id).label('sale_count')
+            )
             .filter(SaleModel.sale_date >= first_day)
             .group_by('day')
             .order_by('day')
-     )
+        )
         return db.session.execute(stmt).all()
-    
 
     # --- CLIENT CRUD METHODS ---
-    
+
     def get_all_clients(self):
         return db.session.execute(db.select(ClientModel)).scalars().all()
-    
+
     def get_client_by_id(self, client_id):
         return db.session.get(ClientModel, client_id)
 
     def get_client_by_last_name(self, last_name):
         return db.session.execute(db.select(ClientModel).filter_by(last_name=last_name)).scalar_one_or_none()
-    
-    def create_client(self, first_name, last_name, email,phone, address, user_id):
-        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email,phone=phone, address=address, user_id=user_id)
+
+    def create_client(self, first_name, last_name, email, phone, address, user_id):
+        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email, phone=phone,
+                                  address=address, user_id=user_id)
         return new_client if new_client.save_to_db() else None
 
     def search_clients(self, query):
         stmt = db.select(ClientModel).filter(
-            (ClientModel.first_name.ilike(f"%{query}%")) | 
+            (ClientModel.first_name.ilike(f"%{query}%")) |
             (ClientModel.last_name.ilike(f"%{query}%")) |
             (ClientModel.email.ilike(f"%{query}%"))
-     ).limit(20)
+        ).limit(20)
         return db.session.execute(stmt).scalars().all()
-    
+
     def update_client(self, client_id, data):
         client = self.get_client_by_id(client_id)
         if client:
@@ -265,23 +264,22 @@ class FacadeService:
                     setattr(client, key, value)
             return client if client.save_to_db() else None
         return None
-    
+
     def delete_client(self, client_id):
         client = self.get_client_by_id(client_id)
         return client.delete_from_db() if client else False
-    
-        
+
     # --- DOCTOR CRUD METHODS ---
-    
+
     def get_all_doctors(self):
         return db.session.execute(db.select(DoctorModel)).scalars().all()
-    
+
     def get_doctor_by_id(self, doctor_id):
         return db.session.get(DoctorModel, doctor_id)
 
     def search_doctors(self, query):
         stmt = db.select(DoctorModel).filter(
-            (DoctorModel.first_name.ilike(f"%{query}%")) | 
+            (DoctorModel.first_name.ilike(f"%{query}%")) |
             (DoctorModel.last_name.ilike(f"%{query}%")) |
             (DoctorModel.specialty.ilike(f"%{query}%")) |
             (DoctorModel.email.ilike(f"%{query}%"))
@@ -290,11 +288,11 @@ class FacadeService:
 
     def create_doctor(self, first_name, last_name, email, address, specialty, phone, user_id):
         new_doctor = DoctorModel(
-            first_name=first_name, last_name=last_name, email=email, 
+            first_name=first_name, last_name=last_name, email=email,
             address=address, specialty=specialty, phone=phone, user_id=user_id
         )
         return new_doctor if new_doctor.save_to_db() else None
-    
+
     def update_doctor(self, doctor_id, data):
         doctor = self.get_doctor_by_id(doctor_id)
         if doctor:
@@ -303,13 +301,13 @@ class FacadeService:
                     setattr(doctor, key, value)
             return doctor if doctor.save_to_db() else None
         return None
-    
+
     def delete_doctor(self, doctor_id):
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
 
-
     # --- INTERACTION METHODS ---
+
     def get_interaction(self, ingredient_a, ingredient_b):
         """
         Queries the database for an interaction between two active ingredients.
@@ -319,28 +317,90 @@ class FacadeService:
             db.select(InteractionModel)
             .where(
                 or_(
-                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) & 
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) &
                     (InteractionModel.ingredient_b.ilike(f"%{ingredient_b}%")),
-                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) & 
+                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) &
                     (InteractionModel.ingredient_b.ilike(f"%{ingredient_a}%"))
                 )
             )
         )
-        # We use scalar_one_or_none() to get a single object or None
         return db.session.execute(stmt).scalar_one_or_none()
 
+    # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
+
+    def find_specialite_by_name(self, term: str, limit: int = 5):
+        """Recherche une spécialité ANSM par nom (insensible accents/casse)."""
+        norm_term = normalize(term)
+        if not norm_term:
+            return []
+        stmt = (
+            db.select(SpecialiteModel)
+            .where(SpecialiteModel.search_name.ilike(f"%{norm_term}%"))
+            .order_by(func.length(SpecialiteModel.denomination))
+            .limit(limit)
+        )
+        return db.session.execute(stmt).scalars().all()
+
+    def get_specialite_by_cis(self, cis: str):
+        return db.session.get(SpecialiteModel, cis)
+
+    def get_active_substances(self, cis: str) -> list:
+        """Substances actives (SA) normalisées d'une spécialité ANSM."""
+        stmt = db.select(CompositionModel.denomination_substance).where(
+            CompositionModel.cis == cis, CompositionModel.nature_composant == 'SA'
+        )
+        return [normalize(r) for r in db.session.execute(stmt).scalars().all()]
+
+    def resolve_substances(self, term: str) -> tuple:
+        """
+        Résout un nom libre vers (nom_affichage, [substances_actives_normalisées]).
+
+        Ordre de priorité :
+        1. Alias métier (product_aliases)
+        2. Stock local (composition ANSM détaillée si lié à un CIS, sinon active_ingredient brut)
+        3. Référentiel ANSM (fallback pour un médicament hors stock)
+        4. Terme brut si rien trouvé
+        """
+        name = term.strip()
+
+        alias = db.session.execute(
+            db.select(ProductAliasModel).where(ProductAliasModel.alias.ilike(name))
+        ).scalars().first()
+        if alias:
+            return name, [normalize(alias.active_ingredient)]
+
+        product = db.session.execute(
+            db.select(ProductModel).where(ProductModel.name.ilike(f"%{name}%"))
+        ).scalars().first()
+        if product:
+            if product.cis:
+                substances = self.get_active_substances(product.cis)
+                if substances:
+                    return product.name, substances
+            return product.name, [normalize(product.active_ingredient)]
+
+        specialite = self.find_specialite_by_name(name, limit=1)
+        if specialite:
+            spe = specialite[0]
+            substances = self.get_active_substances(spe.cis)
+            if substances:
+                return spe.denomination, substances
+
+        return name.capitalize(), [normalize(name)]
+
     # --- NOTES METHODS ---
+
     def get_all_notes(self):
         stmt = db.select(Note).order_by(desc(Note.created_at))
         return db.session.execute(stmt).scalars().all()
-    
+
     def get_notes_by_user(self, user_id):
         stmt = db.select(Note).filter_by(user_id=user_id).order_by(desc(Note.created_at))
         return db.session.execute(stmt).scalars().all()
-    
+
     def get_note_by_id(self, note_id):
         return db.session.get(Note, note_id)
-    
+
     def create_note(self, user_id, text):
         try:
             new_note = Note(user_id=user_id, text=text)
@@ -348,45 +408,39 @@ class FacadeService:
         except Exception as e:
             print(f"Error creating note: {e}")
             return None
-        
+
     def update_note_text(self, note_id, new_text):
         note = self.get_note_by_id(note_id)
         if note:
             note.update_text(new_text)
             return note
         return None
-    
+
     def delete_note(self, note_id):
         note = self.get_note_by_id(note_id)
-        
         if not note:
             print(f"Delete failed: Note {note_id} not found.")
             return False
-
         try:
-            note.delete() 
+            note.delete()
             return True
         except Exception as e:
             db.session.rollback()
             print(f"Error deleting note {note_id}: {e}")
             return False
-    
-    
+
     # --- TICKET CRUD METHODS ---
+
     def get_all_tickets(self, user_id=None):
-        """
-        Fetch tickets. If user_id is provided, only fetch tickets for that user.
-        If None, fetch all (for Admin).
-        """
         stmt = db.select(Ticket).order_by(desc(Ticket.created_at))
         if user_id:
             stmt = stmt.filter(Ticket.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
 
     def get_ticket_by_id(self, ticket_id):
-        str_id = str(ticket_id) 
+        str_id = str(ticket_id)
         return db.session.get(Ticket, str_id)
-       
+
     def create_ticket(self, user_id, subject, description, priority='medium'):
         try:
             new_ticket = Ticket(
@@ -404,10 +458,6 @@ class FacadeService:
             return None
 
     def update_ticket(self, ticket_id, data):
-        """
-        Generic update for tickets. Handles both User updates (subject/desc)
-        and Admin updates (status/admin_note).
-        """
         ticket = self.get_ticket_by_id(ticket_id)
         if ticket:
             for key, value in data.items():
@@ -416,11 +466,11 @@ class FacadeService:
             try:
                 db.session.commit()
                 return ticket
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
                 return None
         return None
-    
+
     def delete_ticket(self, ticket_id):
         ticket = self.get_ticket_by_id(ticket_id)
         if ticket:
@@ -428,19 +478,15 @@ class FacadeService:
                 db.session.delete(ticket)
                 db.session.commit()
                 return True
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
                 return False
         return False
 
+    # --- CALENDAR METHOD ---
 
-# --- CALENDAR METHOD ---
     def get_events_by_date(self, date_str):
-        """
-        fetch events (RDV) for a specific date. This can be used to populate the calendar view.
-        """
         from models.calendar import CalendarEvent
-        
         stmt = (
             db.select(CalendarEvent)
             .filter(func.date(CalendarEvent.start_time) == date_str)

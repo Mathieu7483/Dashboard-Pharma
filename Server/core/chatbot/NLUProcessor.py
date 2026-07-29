@@ -7,6 +7,7 @@ import re
 import unicodedata
 from typing import Dict, List
 import spacy
+from utils.text_norm import normalize as _shared_normalize
 
 
 class NLUProcessor:
@@ -220,8 +221,7 @@ class NLUProcessor:
         from models.product import ProductModel
         from database.data_manager import db
 
-        def _norm(s: str) -> str:
-            return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower()
+        _norm = _shared_normalize
 
         try:
             rows = db.session.execute(
@@ -393,7 +393,7 @@ class NLUProcessor:
 
     def _normalize(self, text: str) -> str:
         """Removes accents for matching (e.g., 'ibuprofène' -> 'ibuprofene')."""
-        return unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode("ascii").lower()
+        return _shared_normalize(text)
 
     def _extract_entities(self, doc, original_text: str) -> List[str]:
         """
