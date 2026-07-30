@@ -18,6 +18,7 @@ from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
 import re
 from services.facade import FacadeService
+from utils.checker import check_drug_interaction
 
 
 class ChatBotEngine:
@@ -149,7 +150,7 @@ class ChatBotEngine:
     # =========================================================================
 
     def _handle_interaction_check(self, entity_list: list) -> str:
-        """Vérifie les interactions, en gérant les produits multi-substances (ex: Augmentin)."""
+        """Vérifie les interactions entre produits en utilisant utils.checker."""
         if len(entity_list) < 2:
             return (
                 "Veuillez mentionner au moins DEUX produits pour vérifier leur compatibilité.\n\n"
@@ -158,41 +159,49 @@ class ChatBotEngine:
                 "   - 'Doliprane avec Advil danger ?'"
             )
 
-        resolved = [self.facade.resolve_substances(name) for name in entity_list]
-        display_names = [d for d, _ in resolved]
-
         conflicts = []
-        for i in range(len(resolved)):
-            for j in range(i + 1, len(resolved)):
-                name_a, subs_a = resolved[i]
-                name_b, subs_b = resolved[j]
-                seen = set()
-                for sa in subs_a:
-                    for sb in subs_b:
-                        if sa == sb or (sa, sb) in seen or (sb, sa) in seen:
-                            continue
-                        result = self.facade.get_interaction(sa, sb)
-                        if result:
-                            seen.add((sa, sb))
-                            conflicts.append({"interaction": result, "name_a": name_a, "name_b": name_b})
+        # Analyse toutes les paires d'entités extraites
+        for i in range(len(entity_list)):
+            for j in range(i + 1, len(entity_list)):
+                prod_a = entity_list[i]
+                prod_b = entity_list[j]
+                
+                # Appel direct du checker robuste
+                result = check_drug_interaction(prod_a, prod_b)
+                if result and result.get("has_interaction"):
+                    conflicts.append({
+                        "result": result,
+                        "name_a": prod_a,
+                        "name_b": prod_b
+                    })
 
         if not conflicts:
             return (
                 "✅ Aucune interaction connue détectée.\n\n"
-                f"Produits analysés : {' + '.join(display_names)}\n\n"
+                f"Produits analysés : {' + '.join(entity_list)}\n\n"
                 "⚠️ Toujours consulter un pharmacien ou la base Vidal."
             )
 
-        severity_emoji = {"low": "⚠️", "moderate": "🟠", "high": "🔴", "critical": "🛑"}
+        severity_emoji = {
+            "low": "⚠️", "faible": "⚠️",
+            "moderate": "🟠", "moyen": "🟠", "moyenne": "🟠",
+            "high": "🔴", "grave": "🔴", "haute": "🔴",
+            "critical": "🛑", "critique": "🛑"
+        }
 
-        output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n", f"Analyse pour : {' + '.join(display_names)}\n"]
+        output = ["🚨 ALERTE INTERACTION MÉDICAMENTEUSE\n", f"Analyse pour : {' + '.join(entity_list)}\n"]
         for c in conflicts:
-            ix = c["interaction"]
-            emoji = severity_emoji.get(ix.severity.lower(), "⚠️")
+            res = c["result"]
+            sev = str(res.get("severity", "moderate")).lower()
+            emoji = severity_emoji.get(sev, "⚠️")
+            
+            ing_a = res.get("ingredient_a", c["name_a"])
+            ing_b = res.get("ingredient_b", c["name_b"])
+
             output += [
-                f"{emoji} {c['name_a']} + {c['name_b']}",
-                f"Sévérité : {ix.severity.upper()}",
-                f"Détails : {ix.description}",
+                f"{emoji} {c['name_a']} ({ing_a}) + {c['name_b']} ({ing_b})",
+                f"Sévérité : {sev.upper()}",
+                f"Détails : {res.get('description', 'Pas de description disponible.')}",
                 "---\n"
             ]
         output.append("⚠️ IMPORTANT : Avis médical requis avant délivrance.")
