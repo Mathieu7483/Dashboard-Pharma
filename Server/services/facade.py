@@ -2,7 +2,6 @@ from database.data_manager import db, bcrypt
 from sqlalchemy import func, or_, desc
 from models.user import UserModel
 from models.product import ProductModel
-from models.product_alias import ProductAliasModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
