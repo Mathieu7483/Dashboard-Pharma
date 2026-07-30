@@ -1,30 +1,38 @@
 import csv
-import io
-import requests
+import os
 from datetime import datetime, UTC
 from database.data_manager import db
 from models.specialite import SpecialiteModel
 from models.composition import CompositionModel
 from utils.text_norm import normalize
 
-ANSM_BASE = "https://base-donnees-publique.medicaments.gouv.fr/download/file"
+# Emplacement de tes fichiers locaux
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCES = {
-    "CIS": f"{ANSM_BASE}/CIS_bdpm.txt",
-    "COMPO": f"{ANSM_BASE}/CIS_COMPO_bdpm.txt",
+    "CIS": os.path.join(BASE_DIR, "CIS.txt"),
+    "COMPO": os.path.join(BASE_DIR, "COMPO.txt"),
 }
 
 
-def _fetch_lines(url: str) -> list:
-    resp = requests.get(url, timeout=60)
-    resp.raise_for_status()
-    resp.encoding = "iso-8859-1"
-    reader = csv.reader(io.StringIO(resp.text), delimiter="\t")
-    return list(reader)
+def _read_local_file(filepath: str) -> list:
+    """Lit un fichier texte local encodé en ISO-8859-1 (spécifique aux fichiers ANSM)."""
+    if not os.path.exists(filepath):
+        # Cherche également dans le dossier utils/ au cas où
+        alt_path = os.path.join(BASE_DIR, "utils", os.path.basename(filepath))
+        if os.path.exists(alt_path):
+            filepath = alt_path
+        else:
+            raise FileNotFoundError(f"❌ Fichier introuvable : {filepath}")
+
+    print(f"📖 Lecture du fichier : {filepath}")
+    with open(filepath, "r", encoding="iso-8859-1") as f:
+        reader = csv.reader(f, delimiter="\t")
+        return list(reader)
 
 
 def sync_specialites():
-    """Upsert des spécialités (CIS_bdpm.txt)."""
-    rows = _fetch_lines(SOURCES["CIS"])
+    """Upsert des spécialités à partir de CIS.txt."""
+    rows = _read_local_file(SOURCES["CIS"])
     seen_cis = set()
     created, updated = 0, 0
 
@@ -36,7 +44,7 @@ def sync_specialites():
             continue
         seen_cis.add(cis)
 
-        spe = SpecialiteModel.query.get(cis)
+        spe = db.session.get(SpecialiteModel, cis)
         if not spe:
             spe = SpecialiteModel(cis=cis)
             db.session.add(spe)
@@ -53,13 +61,13 @@ def sync_specialites():
         spe.search_name = normalize(row[1])
 
     db.session.commit()
-    print(f"✅ Spécialités : {created} créées, {updated} mises à jour ({len(seen_cis)} au total ANSM).")
+    print(f"✅ Spécialités : {created} créées, {updated} mises à jour ({len(seen_cis)} au total).")
     return seen_cis
 
 
 def sync_compositions():
-    """Remplace intégralement la table (plus simple/fiable qu'un diff ligne à ligne)."""
-    rows = _fetch_lines(SOURCES["COMPO"])
+    """Remplace intégralement la table compositions à partir de COMPO.txt."""
+    rows = _read_local_file(SOURCES["COMPO"])
     known_cis = {c[0] for c in db.session.query(SpecialiteModel.cis).all()}
 
     CompositionModel.query.delete()
@@ -73,16 +81,18 @@ def sync_compositions():
             continue
 
         substance = row[3].strip()
-        db.session.add(CompositionModel(
-            cis=cis,
-            code_substance=row[2].strip(),
-            denomination_substance=substance,
-            dosage_substance=row[4].strip(),
-            reference_dosage=row[5].strip(),
-            nature_composant=row[6].strip(),
-            numero_liaison=row[7].strip(),
-            search_substance=normalize(substance),
-        ))
+        db.session.add(
+            CompositionModel(
+                cis=cis,
+                code_substance=row[2].strip(),
+                denomination_substance=substance,
+                dosage_substance=row[4].strip(),
+                reference_dosage=row[5].strip(),
+                nature_composant=row[6].strip(),
+                numero_liaison=row[7].strip(),
+                search_substance=normalize(substance),
+            )
+        )
         inserted += 1
 
         if inserted % 5000 == 0:
@@ -93,16 +103,14 @@ def sync_compositions():
 
 
 def run_full_sync():
-    print(f"\n--- 🔄 Resync ANSM démarrée ({datetime.now(UTC).isoformat()}) ---")
+    print(f"\n--- 🔄 Importation ANSM démarrée ({datetime.now(UTC).isoformat()}) ---")
     sync_specialites()
     sync_compositions()
 
-    # Rafraîchit le dictionnaire d'entités du chatbot après resync
-    try:
-        from core.chatbot.NLUProcessor import NLUProcessor
-        # Si l'app garde une instance globale du NLU, on la rafraîchit ici.
-        # À adapter selon comment l'instance est exposée dans ton app.py.
-    except Exception:
-        pass
 
-    print("--- ✅ Resync ANSM terminée ---\n")
+if __name__ == "__main__":
+    from app import create_app
+
+    app = create_app()
+    with app.app_context():
+        run_full_sync()
