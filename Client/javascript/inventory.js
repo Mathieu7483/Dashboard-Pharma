@@ -192,11 +192,11 @@ function setupEventListeners() {
     const form = document.getElementById('product-form');
 
     document.getElementById('add-product-btn').onclick = () => {
-        form.reset();
-        form.removeAttribute('data-product-id');
-        unlinkAnsm();
-        modal.style.display = 'block';
-    };
+    form.reset();
+    form.removeAttribute('data-product-id');
+    unlinkAnsm(); // Réinitialise le code CIS et masque le badge
+    modal.style.display = 'block';
+};
 
     document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; };
     document.querySelector('.btn-logout-top')?.addEventListener('click', logoutUser);
@@ -332,17 +332,36 @@ async function searchAnsm(term) {
 
 function selectAnsmSpecialite(spe) {
     if (!spe) return;
+
+    // 1. Stocker le code CIS dans le champ caché
     document.getElementById('product-cis').value = spe.cis;
     document.getElementById('ansm-search-input').value = '';
     document.getElementById('ansm-results').style.display = 'none';
 
+    // 2. Cibler le formulaire
     const form = document.getElementById('product-form');
-    const ingredientField = form.querySelector('[name="active_ingredient"]');
-    if (!ingredientField.value) {
-        ingredientField.value = (spe.active_ingredients || []).join(' / ');
+
+    // 3. Pré-remplir la dénomination / Nom du produit
+    if (spe.denomination) {
+        form.querySelector('[name="name"]').value = spe.denomination;
     }
 
-    document.getElementById('ansm-linked-text').textContent = `🔗 Lié à : ${spe.denomination}`;
+    // 4. Pré-remplir la Substance Active (s'il y en a une dans l'objet)
+    const ingredientField = form.querySelector('[name="active_ingredient"]');
+    if (spe.active_ingredients && spe.active_ingredients.length > 0) {
+        ingredientField.value = Array.isArray(spe.active_ingredients) 
+            ? spe.active_ingredients.join(' / ') 
+            : spe.active_ingredients;
+    }
+
+    // 5. Pré-remplir la Forme / Dosage si disponible
+    if (spe.forme_pharmaceutique) {
+        const dosageField = form.querySelector('[name="dosage"]');
+        dosageField.value = spe.forme_pharmaceutique;
+    }
+
+    // 6. Afficher le badge de confirmation du lien ANSM
+    document.getElementById('ansm-linked-text').textContent = `🔗 Lié à : ${spe.denomination} (CIS: ${spe.cis})`;
     document.getElementById('ansm-linked-badge').style.display = 'block';
 }
 

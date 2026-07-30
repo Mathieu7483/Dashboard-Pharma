@@ -13,6 +13,7 @@ from models.interaction import InteractionModel
 from utils.seed_aliases import seed_product_aliases
 from utils.seed_sales import seed_product_sales
 from utils.text_norm import normalize as _norm
+from models.interaction_ansm import InteractionAnsmModel
 
 
 def seed_all_initial_data():
@@ -163,100 +164,138 @@ def _seed_csv_inventory(admin_id):
 
 def _seed_medical_interactions():
     """
-    Populates the interaction table using ansm_interactions.csv (Thésaurus ANSM).
-    Falls back to a default set if the CSV file is not present.
+    1. Populates InteractionModel with curated/fallback rules.
+    2. Populates InteractionAnsmModel using ansm_interactions_precise.csv (Thésaurus ANSM complet).
     """
-    if InteractionModel.query.first():
-        print("Interaction data already exists. Skipping...")
-        return
+    # -------------------------------------------------------------------
+    # PARTIE 1 : Table prioritaire (InteractionModel)
+    # -------------------------------------------------------------------
+    if not InteractionModel.query.first():
+        current_dir = os.path.dirname(__file__)
+        csv_path = os.path.join(current_dir, 'ansm_interactions.csv')
+        conflicts = []
 
-    current_dir = os.path.dirname(__file__)
-    csv_path = os.path.join(current_dir, 'ansm_interactions.csv')
+        if os.path.exists(csv_path):
+            print(f"📖 Chargement des interactions prioritaires depuis : {csv_path}")
+            try:
+                with open(csv_path, mode='r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        conflicts.append({
+                            "a": row['ingredient_a'],
+                            "b": row['ingredient_b'],
+                            "sev": row['severity'],
+                            "desc": row['description']
+                        })
+            except Exception as e:
+                print(f"⚠️ Erreur CSV prioritaire ({e}), bascule sur le jeu par défaut.")
 
-    conflicts = []
+        if not conflicts:
+            print("ℹ️ Utilisation du jeu d'interactions prioritaires par défaut.")
+            conflicts = [
+                # CARDIO / ANTICOAGULANTS
+                {"a": "Warfarine", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Risque majeur d'hemorragie interne (cumul anticoagulant + antiagregeant)."},
+                {"a": "Warfarine", "b": "Rivaroxaban", "sev": "Critical", "desc": "Doublon anticoagulant : risque vital d'hemorragie."},
+                {"a": "Warfarine", "b": "Ibuprofene", "sev": "Critical", "desc": "Risque hemorragique severe (lesion gastrique par l'AINS)."},
+                {"a": "Warfarine", "b": "Diclofenac", "sev": "Critical", "desc": "Risque hemorragique severe."},
+                {"a": "Warfarine", "b": "Clopidogrel", "sev": "High", "desc": "Risque hemorragique augmente (cumul anticoagulant + antiagregeant)."},
+                {"a": "Rivaroxaban", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Association dangereuse : risque de saignement incontrole."},
+                {"a": "Clopidogrel", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque de saignement augmente (necessite surveillance medicale)."},
+                {"a": "Clopidogrel", "b": "Omeprazole", "sev": "Moderate", "desc": "Reduction de l'efficacite protectrice du Clopidogrel (risque d'infarctus)."},
+                {"a": "Clopidogrel", "b": "Esomeprazole", "sev": "Moderate", "desc": "Diminution de l'effet antiagregeant."},
+                # AINS & CORTICOIDES
+                {"a": "Ibuprofene", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque d'ulcere gastrique et perte d'effet protecteur cardiaque de l'aspirine."},
+                {"a": "Ibuprofene", "b": "Naproxene", "sev": "High", "desc": "Doublon d'AINS : toxicite renale et digestive accrue."},
+                {"a": "Ibuprofene", "b": "Ketoprofene", "sev": "High", "desc": "Toxicite digestive severe."},
+                {"a": "Ibuprofene", "b": "Prednisone", "sev": "High", "desc": "Risque massif d'ulcere et d'hemorragie digestive."},
+                {"a": "Diclofenac", "b": "Prednisone", "sev": "High", "desc": "Association gastro-lesive severe."},
+                {"a": "Furosemide", "b": "Ibuprofene", "sev": "High", "desc": "Insuffisance renale aigue par reduction du flux sanguin renal."},
+                {"a": "Furosemide", "b": "Naproxene", "sev": "High", "desc": "Risque d'insuffisance renale."},
+                {"a": "Captopril", "b": "Ibuprofene", "sev": "High", "desc": "L'AINS bloque l'effet antihypertenseur et menace les reins."},
+                {"a": "Enalapril", "b": "Ibuprofene", "sev": "High", "desc": "Risque d'insuffisance renale (Triple Whammy avec diuretiques)."},
+                # DIABETE
+                {"a": "Metformine", "b": "Prednisone", "sev": "Moderate", "desc": "Le corticoide augmente la glycemie, s'opposant a l'antidiabetique."},
+                {"a": "Insuline Lispro", "b": "Alcool", "sev": "High", "desc": "Risque d'hypoglycemie severe et imprevisible."},
+                {"a": "Gliclazide", "b": "Alcool", "sev": "High", "desc": "Effet antabuse et risque d'hypoglycemie."},
+                {"a": "Sitagliptine", "b": "Insuline Lispro", "sev": "Moderate", "desc": "Surveillance accrue de la glycemie (risque d'hypoglycemie)."},
+                # PSYCHOTROPES & ANALGESIQUES
+                {"a": "Tramadol", "b": "Alprazolam", "sev": "Critical", "desc": "Risque de depression respiratoire, sedation profonde et coma."},
+                {"a": "Tramadol", "b": "Bromazepam", "sev": "Critical", "desc": "Association sedative dangereuse."},
+                {"a": "Tramadol", "b": "Escitalopram", "sev": "High", "desc": "Risque de syndrome serotoninergique (agitation, fievre, confusion)."},
+                {"a": "Zolpidem", "b": "Alprazolam", "sev": "Critical", "desc": "Somnolence extreme, risque d'accident et d'arret respiratoire."},
+                {"a": "Zopiclone", "b": "Diazepam", "sev": "Critical", "desc": "Potentialisation reciproque de la sedation."},
+                {"a": "Cyamemazine", "b": "Tramadol", "sev": "High", "desc": "Risque de convulsions augmente."},
+                # ANTIBIOTIQUES
+                {"a": "Amoxicilline", "b": "Methotrexate", "sev": "High", "desc": "L'antibiotique reduit l'elimination du methotrexate (toxicite)."},
+                {"a": "Ciprofloxacine", "b": "Theophylline", "sev": "High", "desc": "Surdosage de theophylline (tremblements, palpitations)."},
+                {"a": "Clarithromycine", "b": "Simvastatine", "sev": "Critical", "desc": "Risque de rhabdomyolyse (destruction des muscles)."},
+                {"a": "Azithromycine", "b": "Amiodarone", "sev": "Critical", "desc": "Troubles du rythme cardiaque graves."},
+                # AUTRES
+                {"a": "Spironolactone", "b": "Captopril", "sev": "High", "desc": "Risque d'hyperkaliemie mortelle (exces de potassium)."},
+                {"a": "Spironolactone", "b": "Valsartan", "sev": "High", "desc": "Risque cardiaque par exces de potassium."},
+                {"a": "Amiodarone", "b": "Levofloxacine", "sev": "Critical", "desc": "Risque majeur de torsades de pointe (coeur)."},
+            ]
 
-    # 1. Tentative de chargement depuis le fichier CSV du Thésaurus ANSM
-    if os.path.exists(csv_path):
-        print(f"📖 Chargement des interactions depuis : {csv_path}")
+        for c in conflicts:
+            db.session.add(InteractionModel(
+                ingredient_a=_norm(c["a"]).lower().strip(),
+                ingredient_b=_norm(c["b"]).lower().strip(),
+                severity=c["sev"].lower().strip(),
+                description=c["desc"].strip()
+            ))
+
         try:
-            with open(csv_path, mode='r', encoding='utf-8') as f:
+            db.session.commit()
+            print(f"✅ Success: {len(conflicts)} interactions prioritaires seedées.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Erreur lors du seeding des interactions prioritaires: {e}")
+    else:
+        print("Interaction (prioritaires) data already exists. Skipping...")
+
+    # -------------------------------------------------------------------
+    # PARTIE 2 : Référentiel complet ANSM (InteractionAnsmModel)
+    # -------------------------------------------------------------------
+    if not InteractionAnsmModel.query.first():
+        current_dir = os.path.dirname(__file__)
+        ansm_precise_path = os.path.join(current_dir, 'ansm_interactions_precise.csv')
+
+        if not os.path.exists(ansm_precise_path):
+            print(f"⚠️ Fichier introuvable pour le Thésaurus ANSM : {ansm_precise_path}")
+            return
+
+        print(f"📖 Chargement du Thésaurus ANSM complet depuis : {ansm_precise_path}")
+        ansm_count = 0
+        try:
+            with open(ansm_precise_path, mode='r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    conflicts.append({
-                        "a": row['ingredient_a'],
-                        "b": row['ingredient_b'],
-                        "sev": row['severity'],
-                        "desc": row['description']
-                    })
+                    sub_a = row.get('substance_a', row.get('ingredient_a', '')).strip()
+                    sub_b = row.get('substance_b', row.get('ingredient_b', '')).strip()
+
+                    if not sub_a or not sub_b:
+                        continue
+
+                    norm_a = _norm(sub_a).lower().strip()
+                    norm_b = _norm(sub_b).lower().strip()
+
+                    db.session.add(InteractionAnsmModel(
+                        substance_a=sub_a,
+                        substance_b=sub_b,
+                        substance_a_norm=norm_a,
+                        substance_b_norm=norm_b,
+                        severity=row.get('severity', 'high').lower().strip(),
+                        ansm_codes=row.get('ansm_codes', ''),
+                        mechanism=row.get('mechanism', row.get('description', '')),
+                        conduct=row.get('conduct', ''),
+                        source_page=int(row['source_page']) if row.get('source_page') and row['source_page'].isdigit() else None
+                    ))
+                    ansm_count += 1
+
+            db.session.commit()
+            print(f"✅ Success: {ansm_count} interactions ANSM complètes seedées.")
         except Exception as e:
-            print(f"⚠️ Erreur lors de la lecture du CSV ANSM ({e}), bascule sur les données par défaut.")
-
-    # 2. Fallback sur le jeu de règles par défaut si pas de CSV disponible
-    if not conflicts:
-        print("ℹ️ Utilisation du jeu d'interactions ANSM par défaut.")
-        conflicts = [
-            # CARDIO / ANTICOAGULANTS
-            {"a": "Warfarine", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Risque majeur d'hemorragie interne (cumul anticoagulant + antiagregeant)."},
-            {"a": "Warfarine", "b": "Rivaroxaban", "sev": "Critical", "desc": "Doublon anticoagulant : risque vital d'hemorragie."},
-            {"a": "Warfarine", "b": "Ibuprofene", "sev": "Critical", "desc": "Risque hemorragique severe (lesion gastrique par l'AINS)."},
-            {"a": "Warfarine", "b": "Diclofenac", "sev": "Critical", "desc": "Risque hemorragique severe."},
-            {"a": "Warfarine", "b": "Clopidogrel", "sev": "High", "desc": "Risque hemorragique augmente (cumul anticoagulant + antiagregeant)."},
-            {"a": "Rivaroxaban", "b": "Acide Acetylsalicylique", "sev": "Critical", "desc": "Association dangereuse : risque de saignement incontrole."},
-            {"a": "Clopidogrel", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque de saignement augmente (necessite surveillance medicale)."},
-            {"a": "Clopidogrel", "b": "Omeprazole", "sev": "Moderate", "desc": "Reduction de l'efficacite protectrice du Clopidogrel (risque d'infarctus)."},
-            {"a": "Clopidogrel", "b": "Esomeprazole", "sev": "Moderate", "desc": "Diminution de l'effet antiagregeant."},
-
-            # AINS & CORTICOIDES
-            {"a": "Ibuprofene", "b": "Acide Acetylsalicylique", "sev": "High", "desc": "Risque d'ulcere gastrique et perte d'effet protecteur cardiaque de l'aspirine."},
-            {"a": "Ibuprofene", "b": "Naproxene", "sev": "High", "desc": "Doublon d'AINS : toxicite renale et digestive accrue."},
-            {"a": "Ibuprofene", "b": "Ketoprofene", "sev": "High", "desc": "Toxicite digestive severe."},
-            {"a": "Ibuprofene", "b": "Prednisone", "sev": "High", "desc": "Risque massif d'ulcere et d'hemorragie digestive."},
-            {"a": "Diclofenac", "b": "Prednisone", "sev": "High", "desc": "Association gastro-lesive severe."},
-            {"a": "Furosemide", "b": "Ibuprofene", "sev": "High", "desc": "Insuffisance renale aigue par reduction du flux sanguin renal."},
-            {"a": "Furosemide", "b": "Naproxene", "sev": "High", "desc": "Risque d'insuffisance renale."},
-            {"a": "Captopril", "b": "Ibuprofene", "sev": "High", "desc": "L'AINS bloque l'effet antihypertenseur et menace les reins."},
-            {"a": "Enalapril", "b": "Ibuprofene", "sev": "High", "desc": "Risque d'insuffisance renale (Triple Whammy avec diuretiques)."},
-
-            # DIABETE
-            {"a": "Metformine", "b": "Prednisone", "sev": "Moderate", "desc": "Le corticoide augmente la glycemie, s'opposant a l'antidiabetique."},
-            {"a": "Insuline Lispro", "b": "Alcool", "sev": "High", "desc": "Risque d'hypoglycemie severe et imprevisible."},
-            {"a": "Gliclazide", "b": "Alcool", "sev": "High", "desc": "Effet antabuse et risque d'hypoglycemie."},
-            {"a": "Sitagliptine", "b": "Insuline Lispro", "sev": "Moderate", "desc": "Surveillance accrue de la glycemie (risque d'hypoglycemie)."},
-
-            # PSYCHOTROPES & ANALGESIQUES
-            {"a": "Tramadol", "b": "Alprazolam", "sev": "Critical", "desc": "Risque de depression respiratoire, sedation profonde et coma."},
-            {"a": "Tramadol", "b": "Bromazepam", "sev": "Critical", "desc": "Association sedative dangereuse."},
-            {"a": "Tramadol", "b": "Escitalopram", "sev": "High", "desc": "Risque de syndrome serotoninergique (agitation, fievre, confusion)."},
-            {"a": "Zolpidem", "b": "Alprazolam", "sev": "Critical", "desc": "Somnolence extreme, risque d'accident et d'arret respiratoire."},
-            {"a": "Zopiclone", "b": "Diazepam", "sev": "Critical", "desc": "Potentialisation reciproque de la sedation."},
-            {"a": "Cyamemazine", "b": "Tramadol", "sev": "High", "desc": "Risque de convulsions augmente."},
-
-            # ANTIBIOTIQUES
-            {"a": "Amoxicilline", "b": "Methotrexate", "sev": "High", "desc": "L'antibiotique reduit l'elimination du methotrexate (toxicite)."},
-            {"a": "Ciprofloxacine", "b": "Theophylline", "sev": "High", "desc": "Surdosage de theophylline (tremblements, palpitations)."},
-            {"a": "Clarithromycine", "b": "Simvastatine", "sev": "Critical", "desc": "Risque de rhabdomyolyse (destruction des muscles)."},
-            {"a": "Azithromycine", "b": "Amiodarone", "sev": "Critical", "desc": "Troubles du rythme cardiaque graves."},
-
-            # AUTRES
-            {"a": "Spironolactone", "b": "Captopril", "sev": "High", "desc": "Risque d'hyperkaliemie mortelle (exces de potassium)."},
-            {"a": "Spironolactone", "b": "Valsartan", "sev": "High", "desc": "Risque cardiaque par exces de potassium."},
-            {"a": "Amiodarone", "b": "Levofloxacine", "sev": "Critical", "desc": "Risque majeur de torsades de pointe (coeur)."},
-        ]
-
-    # 3. Insertion normalisée en BDD
-    inserted_count = 0
-    for c in conflicts:
-        db.session.add(InteractionModel(
-            ingredient_a=_norm(c["a"]).lower().strip(),
-            ingredient_b=_norm(c["b"]).lower().strip(),
-            severity=c["sev"].lower().strip(),
-            description=c["desc"].strip()
-        ))
-        inserted_count += 1
-
-    try:
-        db.session.commit()
-        print(f"✅ Success: {inserted_count} interactions seedées proprement.")
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Error during interactions seeding: {e}")
+            db.session.rollback()
+            print(f"❌ Erreur lors du seeding du Thésaurus ANSM: {e}")
+    else:
+        print("InteractionAnsm data already exists. Skipping...")

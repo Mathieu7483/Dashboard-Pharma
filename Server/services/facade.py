@@ -329,64 +329,42 @@ class FacadeService:
     # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
 
     def find_specialite_by_name(self, term: str, limit: int = 5):
-        """Recherche une spécialité ANSM par nom (insensible accents/casse)."""
-        norm_term = normalize(term)
-        if not norm_term:
+        """
+        Recherche une spécialité ANSM par nom (insensible aux accents/casse) 
+        OU par code CIS si le terme est numérique.
+        """
+        clean_term = term.strip()
+        if not clean_term:
             return []
-        stmt = (
-            db.select(SpecialiteModel)
-            .where(SpecialiteModel.search_name.ilike(f"%{norm_term}%"))
-            .order_by(func.length(SpecialiteModel.denomination))
-            .limit(limit)
-        )
+
+        # Normalisation du texte pour la recherche par nom
+        norm_term = normalize(clean_term)
+
+        # Si le terme saisie correspond à un code CIS (chiffres uniquement)
+        if clean_term.isdigit():
+            stmt = (
+                db.select(SpecialiteModel)
+                .where(
+                    or_(
+                        SpecialiteModel.cis.ilike(f"%{clean_term}%"),
+                        SpecialiteModel.search_name.ilike(f"%{norm_term}%")
+                    )
+                )
+                .order_by(func.length(SpecialiteModel.denomination))
+                .limit(limit)
+            )
+        else:
+            stmt = (
+                db.select(SpecialiteModel)
+                .where(SpecialiteModel.search_name.ilike(f"%{norm_term}%"))
+                .order_by(func.length(SpecialiteModel.denomination))
+                .limit(limit)
+            )
+
         return db.session.execute(stmt).scalars().all()
 
     def get_specialite_by_cis(self, cis: str):
         return db.session.get(SpecialiteModel, cis)
-
-    def get_active_substances(self, cis: str) -> list:
-        """Substances actives (SA) normalisées d'une spécialité ANSM."""
-        stmt = db.select(CompositionModel.denomination_substance).where(
-            CompositionModel.cis == cis, CompositionModel.nature_composant == 'SA'
-        )
-        return [normalize(r) for r in db.session.execute(stmt).scalars().all()]
-
-    def resolve_substances(self, term: str) -> tuple:
-        """
-        Résout un nom libre vers (nom_affichage, [substances_actives_normalisées]).
-
-        Ordre de priorité :
-        1. Alias métier (product_aliases)
-        2. Stock local (composition ANSM détaillée si lié à un CIS, sinon active_ingredient brut)
-        3. Référentiel ANSM (fallback pour un médicament hors stock)
-        4. Terme brut si rien trouvé
-        """
-        name = term.strip()
-
-        alias = db.session.execute(
-            db.select(ProductAliasModel).where(ProductAliasModel.alias.ilike(name))
-        ).scalars().first()
-        if alias:
-            return name, [normalize(alias.active_ingredient)]
-
-        product = db.session.execute(
-            db.select(ProductModel).where(ProductModel.name.ilike(f"%{name}%"))
-        ).scalars().first()
-        if product:
-            if product.cis:
-                substances = self.get_active_substances(product.cis)
-                if substances:
-                    return product.name, substances
-            return product.name, [normalize(product.active_ingredient)]
-
-        specialite = self.find_specialite_by_name(name, limit=1)
-        if specialite:
-            spe = specialite[0]
-            substances = self.get_active_substances(spe.cis)
-            if substances:
-                return spe.denomination, substances
-
-        return name.capitalize(), [normalize(name)]
 
     # --- NOTES METHODS ---
 
