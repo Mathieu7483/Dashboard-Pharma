@@ -10,7 +10,6 @@ from models.product import ProductModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.interaction import InteractionModel
-from utils.seed_aliases import seed_product_aliases
 from utils.seed_sales import seed_product_sales
 from utils.text_norm import normalize as _norm
 from models.interaction_ansm import InteractionAnsmModel
@@ -32,7 +31,6 @@ def seed_all_initial_data():
     _seed_csv_inventory(admin.id)
     _seed_medical_interactions()
     seed_product_sales()
-    seed_product_aliases()
 
     print("--- ✅ Seeding Process Completed ---\n")
 
