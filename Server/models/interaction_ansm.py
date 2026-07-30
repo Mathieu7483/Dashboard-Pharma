@@ -17,14 +17,29 @@ class InteractionAnsmModel(db.Model):
     substance_b = db.Column(db.String(255), nullable=False)
     substance_a_norm = db.Column(db.String(255), index=True)
     substance_b_norm = db.Column(db.String(255), index=True)
-    severity = db.Column(db.String(20))        # critical / high / moderate / low
+    _severity = db.Column("severity", db.String(20))  # critical / high / moderate / low
     ansm_codes = db.Column(db.String(30))       # ex: "CI;PE"
     mechanism = db.Column(db.Text)
     conduct = db.Column(db.Text)
     source_page = db.Column(db.Integer)
 
     @property
-    def description(self):
+    def severity(self) -> str:
+        """
+        Harmonise la sévérité avec la majuscule initiale de InteractionModel
+        (ex: 'high' -> 'High', 'critical' -> 'Critical').
+        """
+        if not self._severity:
+            return "High"
+        return self._severity.strip().capitalize()
+
+    @severity.setter
+    def severity(self, value: str):
+        """Permet de définir la sévérité en nettoyant la valeur."""
+        self._severity = value.strip().lower() if value else None
+
+    @property
+    def description(self) -> str:
         """
         Expose la même interface que InteractionModel.description, pour que
         ChatBot_engine._handle_interaction_check() n'ait RIEN à changer
