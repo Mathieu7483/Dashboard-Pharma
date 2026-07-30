@@ -308,25 +308,49 @@ class FacadeService:
 
     # --- INTERACTION METHODS ---
 
-    def get_interaction(self, ingredient_a, ingredient_b):
+    def normalize_ingredient(self, ingredient: str) -> str:
+        """Nettoie et supprime les accents/espaces pour la recherche SQL."""
+        if not ingredient:
+            return ""
+        import unidecode
+        return unidecode.unidecode(ingredient).upper().strip()
+
+    def get_interaction(self, ingredient_a: str, ingredient_b: str):
         """
-        Queries the database for an interaction between two active ingredients.
-        Standardized to SQLAlchemy 2.0 syntax.
+        Recherche une interaction croisée entre deux substances distinctes.
+        Normalise le texte pour éviter les pièges d'accents.
         """
+        ing_a = self.normalize_ingredient(ingredient_a)
+        ing_b = self.normalize_ingredient(ingredient_b)
+
+        # Deux substances identiques = surdosage (géré au niveau métier, pas en BDD ANSM)
+        if ing_a == ing_b:
+            return None
+
         stmt = (
             db.select(InteractionModel)
             .where(
                 or_(
-                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_a}%")) &
-                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_b}%")),
-                    (InteractionModel.ingredient_a.ilike(f"%{ingredient_b}%")) &
-                    (InteractionModel.ingredient_b.ilike(f"%{ingredient_a}%"))
+                    (InteractionModel.ingredient_a.ilike(f"%{ing_a}%")) & (InteractionModel.ingredient_b.ilike(f"%{ing_b}%")),
+                    (InteractionModel.ingredient_a.ilike(f"%{ing_b}%")) & (InteractionModel.ingredient_b.ilike(f"%{ing_a}%"))
                 )
             )
         )
-        return db.session.execute(stmt).scalar_one_or_none()
+        return db.session.execute(stmt).scalars().first()
 
     # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
+
+    def get_substances_by_cis(self, cis: str) -> list[str]:
+        """
+        Récupère la liste des désignations des substances actives pour un code CIS donné.
+        Ex: CIS d'Actron -> ['ACIDE ACETYLSALICYLIQUE', 'PARACETAMOL', 'CAFEINE']
+        """
+        stmt = (
+            db.select(CompositionModel.denomination_substance)
+            .where(CompositionModel.cis == cis)
+        )
+        results = db.session.execute(stmt).scalars().all()
+        return [r.strip() for r in results if r]
 
     def find_specialite_by_name(self, term: str, limit: int = 5):
         """
@@ -337,10 +361,8 @@ class FacadeService:
         if not clean_term:
             return []
 
-        # Normalisation du texte pour la recherche par nom
         norm_term = normalize(clean_term)
 
-        # Si le terme saisie correspond à un code CIS (chiffres uniquement)
         if clean_term.isdigit():
             stmt = (
                 db.select(SpecialiteModel)
