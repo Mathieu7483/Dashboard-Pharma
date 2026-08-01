@@ -18,7 +18,7 @@ from models.calendar import CalendarEvent
 from core.chatbot.NLUProcessor import NLUProcessor
 import re
 from services.facade import FacadeService
-from utils.checker import check_drug_interaction
+
 
 
 class ChatBotEngine:
@@ -167,7 +167,7 @@ class ChatBotEngine:
                 prod_b = entity_list[j]
                 
                 # Appel direct du checker robuste
-                result = check_drug_interaction(prod_a, prod_b)
+                result = self.facade.check_drug_interaction(prod_a, prod_b)
                 if result and result.get("has_interaction"):
                     conflicts.append({
                         "result": result,
