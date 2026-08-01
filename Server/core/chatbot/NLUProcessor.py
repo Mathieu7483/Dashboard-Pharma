@@ -95,8 +95,8 @@ class NLUProcessor:
             "check_interaction": {
                 "keywords": [
                     "incompatible", "interaction", "melange", "melanger",
-                    "ensemble", "combiner", "conflit",
-                    "compatible", "contre-indication", "associer", "puis-je", "peut-on",
+                    "ensemble", "combiner", "conflit", "danger", "risque", "incompatibilité", "incompatible",
+                    "compatible", "compatibles", "contre-indication", "associer", "puis-je", "peut-on",
                     "mix", "together", "combine", "contraindication", "can i take", "conflict",
                 ],
                 "priority": 10
@@ -257,6 +257,35 @@ class NLUProcessor:
                 "confidence": 0.95,
                 "language": lang
             }
+        
+        # 💊 Extraction directe pour les requêtes d'interaction — contourne spaCy,
+        # qui tague mal les noms de molécules rares (ex: "cannabidiol", "millepertuis").
+        interaction_keywords = [
+            "interaction", "compatible", "incompatible", "melanger", "melange",
+            "ensemble", "danger", "risque", "puis-je", "peut-on", "associer",
+            "mix", "combine", "together", "safe to take", "can i take",
+        ]
+        has_interaction_kw = any(kw in text_lower for kw in interaction_keywords)
+        conj_parts = re.split(r"\s+(?:et|avec|\+|&)\s+", text, flags=re.IGNORECASE)
+
+        if has_interaction_kw and len(conj_parts) >= 2:
+            candidates = []
+            for part in conj_parts:
+                clean = part
+                for kw in interaction_keywords:
+                    clean = re.sub(rf"\b{re.escape(kw)}\b", "", clean, flags=re.IGNORECASE)
+                clean = clean.strip(" ?!.,;:")
+                if len(clean) >= 3 and clean.lower() not in self.stop_entities:
+                    candidates.append(clean.capitalize())
+            candidates = self._deduplicate_entities(candidates)
+            if len(candidates) >= 2:
+                return {
+                    "intent": "check_interaction",
+                    "entity": candidates[0],
+                    "entity_list": candidates,
+                    "confidence": 0.9,
+                    "language": lang
+                }
 
         # NLU Pipeline
         nlp = (self.nlp_en if lang == "en" and self.nlp_en else self.nlp_fr)
@@ -447,7 +476,13 @@ class NLUProcessor:
         for intent_name, config in self.intent_patterns.items():
             score = 0
             for kw in config["keywords"]:
-                if kw in text_lower or kw in tokens_lemma:
+                # Mot-clés courts (<=3 lettres, ex: "ca", "dr") : exiger une
+                # frontière de mot, sinon un simple "in" génère des faux
+                # positifs (ex: "ca" matche à l'intérieur de "cannabidiol").
+                if len(kw) <= 3:
+                    if re.search(rf"\b{re.escape(kw)}\b", text_lower):
+                        score += config["priority"]
+                elif kw in text_lower or kw in tokens_lemma:
                     score += config["priority"]
             if score > 0:
                 if intent_name == "get_sales_summary" and any(w in text_lower for w in ["aujourd'hui", "jour", "today"]):
