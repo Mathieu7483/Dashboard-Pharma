@@ -377,6 +377,12 @@ class FacadeService:
         1. Stock local (ProductModel) — priorité, c'est ce que la pharmacie vend réellement
         2. Référentiel ANSM (SpecialiteModel + compositions)
         3. Fallback : le terme nettoyé tel quel
+
+        Le terme nettoyé est TOUJOURS ajouté en plus, même si 1 ou 2 ont donné
+        un résultat : le Thésaurus ANSM utilise parfois un nom générique court
+        (ex: "millepertuis") alors que la composition BDPM utilise la
+        dénomination pharmaceutique complète (ex: "extrait sec de la sommité
+        fleurie de millepertuis"), qui ne matche jamais par ilike simple.
         """
         if not term:
             return []
@@ -385,6 +391,8 @@ class FacadeService:
         clean_base = re.sub(r'\b\d+\s*(mg|g|ml|mcg|ui|gtt)?\b', '', clean_term).strip()
         if not clean_base:
             return []
+
+        resolved = []
 
         # 1. Stock local
         prod = db.session.execute(
@@ -397,24 +405,32 @@ class FacadeService:
         ).scalars().first()
 
         if prod and prod.active_ingredient and prod.active_ingredient.lower() != 'n/a':
-            return _split_ingredients(prod.active_ingredient)
+            resolved = _split_ingredients(prod.active_ingredient)
 
-        # 2. Référentiel ANSM — comparaison sur la colonne normalisée des deux côtés
-        spec = db.session.execute(
-            db.select(SpecialiteModel).where(SpecialiteModel.search_name.ilike(f"%{clean_base}%"))
-        ).scalars().first()
+        # 2. Référentiel ANSM
+        if not resolved:
+            spec = db.session.execute(
+                db.select(SpecialiteModel).where(SpecialiteModel.search_name.ilike(f"%{clean_base}%"))
+            ).scalars().first()
 
-        if spec:
-            subs = [
-                c.denomination_substance.strip().lower()
-                for c in spec.compositions
-                if getattr(c, 'nature_composant', 'SA') == 'SA' and c.denomination_substance
-            ]
-            if subs:
-                return subs
+            if spec:
+                subs = [
+                    c.denomination_substance.strip().lower()
+                    for c in spec.compositions
+                    if getattr(c, 'nature_composant', 'SA') == 'SA' and c.denomination_substance
+                ]
+                if subs:
+                    resolved = subs
 
-        # 3. Fallback
-        return [clean_base]
+        # 3. Fallback si rien trouvé du tout
+        if not resolved:
+            resolved = [clean_base]
+
+        # Toujours garder le terme utilisateur en secours
+        if clean_base not in resolved:
+            resolved.append(clean_base)
+
+        return resolved
 
     def get_interaction(self, ingredient_a: str, ingredient_b: str):
         """
