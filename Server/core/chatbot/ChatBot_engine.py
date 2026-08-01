@@ -195,8 +195,8 @@ class ChatBotEngine:
             sev = str(res.get("severity", "moderate")).lower()
             emoji = severity_emoji.get(sev, "⚠️")
             
-            ing_a = res.get("ingredient_a", c["name_a"])
-            ing_b = res.get("ingredient_b", c["name_b"])
+            ing_a = res.get("substance_a", c["name_a"])
+            ing_b = res.get("substance_b", c["name_b"])
 
             output += [
                 f"{emoji} {c['name_a']} ({ing_a}) + {c['name_b']} ({ing_b})",
@@ -230,8 +230,8 @@ class ChatBotEngine:
         if not entities:
             return "Quel produit cherchez-vous ?"
         product = db.session.execute(
-            db.select(ProductModel).where(ProductModel.name.ilike(f"%{entities[0]}%"))
-        ).scalar_one_or_none()
+            db.select(ProductModel).where(ProductModel.name.ilike(f"%{entities[0]}%")).order_by(ProductModel.name)
+        ).scalars().first()
         if not product:
             return f"Produit '{entities[0]}' introuvable."
         rx = "Sur ordonnance" if product.is_prescription_only else "Vente libre"
@@ -248,8 +248,8 @@ class ChatBotEngine:
         if not entities:
             return "Quel médicament souhaitez-vous vérifier ?"
         product = db.session.execute(
-            db.select(ProductModel).where(ProductModel.name.ilike(f"%{entities[0]}%"))
-        ).scalar_one_or_none()
+            db.select(ProductModel).where(ProductModel.name.ilike(f"%{entities[0]}%")).order_by(ProductModel.name)
+        ).scalars().first()
         if not product:
             return f"Produit '{entities[0]}' introuvable."
         if product.is_prescription_only:
