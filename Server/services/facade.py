@@ -1,5 +1,6 @@
+import re
 from database.data_manager import db, bcrypt
-from sqlalchemy import func, or_, desc
+from sqlalchemy import func, or_, and_, desc
 from models.user import UserModel
 from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
@@ -7,12 +8,70 @@ from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.calendar import CalendarEvent
 from models.interaction import InteractionModel
+from models.interaction_ansm import InteractionAnsmModel
 from models.note import Note
 from models.ticket import Ticket
 from models.specialite import SpecialiteModel
 from models.composition import CompositionModel
 from utils.text_norm import normalize
 from datetime import datetime, UTC
+
+
+# ==============================================================================
+# INTERACTION RESOLUTION — constantes et helpers (ex utils/checker.py)
+# ==============================================================================
+
+COMMON_SALTS = [
+    r'\bbromhydrate de\b', r'\bchlorhydrate de\b', r'\bsulfate de\b',
+    r'\bsodium\b', r'\bpotassium\b', r'\bmaleate de\b', r'\bdihydrate\b',
+    r'\bphosphate de\b', r'\bmesilate de\b', r'\btartrate de\b', r'\bacetate de\b'
+]
+
+# Dictionnaire de correspondance DCI -> Classe Thérapeutique ANSM
+# (évite de devoir toucher à la BDD pour les grandes familles du thésaurus)
+ANSM_CLASS_MAPPING = {
+    "citalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "escitalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "fluoxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "paroxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "sertraline": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "tramadol": ["TRAMADOL", "OPIOÏDES"],
+    "ibuprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "ketoprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "aspirine": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "krameria": ["HEMOSTATIQUES"],
+}
+
+
+def _clean_substance_name(substance: str) -> str:
+    text = substance.lower()
+    for salt in COMMON_SALTS:
+        text = re.sub(salt, '', text)
+    return text.strip()
+
+
+def _expand_substance_terms(substance: str) -> list:
+    """
+    Prend une molécule (ex: 'citalopram') et retourne :
+    1. La molécule elle-même
+    2. Les classes thérapeutiques ANSM associées, si connues
+    """
+    clean_sub = _clean_substance_name(substance)
+    terms = [clean_sub]
+    for dci, classes in ANSM_CLASS_MAPPING.items():
+        if dci in clean_sub:
+            terms.extend(classes)
+    return list(set(terms))
+
+
+def _split_ingredients(raw_str: str) -> list:
+    """Découpe les chaînes multi-composants (ex: 'paracétamol / codéine')."""
+    if not raw_str:
+        return []
+    temp_str = raw_str
+    for delim in [",", "/", "+", ";"]:
+        temp_str = temp_str.replace(delim, "|")
+    return [ing.strip().lower() for ing in temp_str.split("|") if ing.strip()]
 
 
 class FacadeService:
@@ -305,57 +364,156 @@ class FacadeService:
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
 
-    # --- INTERACTION METHODS ---
+    # ==========================================================================
+    # INTERACTION METHODS — point d'entrée unique pour le chatbot
+    # ==========================================================================
 
-    def normalize_ingredient(self, ingredient: str) -> str:
-        """Nettoie et supprime les accents/espaces pour la recherche SQL."""
-        if not ingredient:
-            return ""
-        import unidecode
-        return unidecode.unidecode(ingredient).upper().strip()
+    def resolve_substances(self, term: str) -> list:
+        """
+        Identifie toutes les substances actives associées à un terme libre
+        (nom de marque, DCI, produit du stock...).
+
+        Ordre de résolution :
+        1. Stock local (ProductModel) — priorité, c'est ce que la pharmacie vend réellement
+        2. Référentiel ANSM (SpecialiteModel + compositions)
+        3. Fallback : le terme nettoyé tel quel
+        """
+        if not term:
+            return []
+
+        clean_term = normalize(term).lower().strip()
+        clean_base = re.sub(r'\b\d+\s*(mg|g|ml|mcg|ui|gtt)?\b', '', clean_term).strip()
+        if not clean_base:
+            return []
+
+        # 1. Stock local
+        prod = db.session.execute(
+            db.select(ProductModel).where(
+                or_(
+                    ProductModel.name.ilike(f"%{clean_base}%"),
+                    ProductModel.active_ingredient.ilike(f"%{clean_base}%")
+                )
+            )
+        ).scalars().first()
+
+        if prod and prod.active_ingredient and prod.active_ingredient.lower() != 'n/a':
+            return _split_ingredients(prod.active_ingredient)
+
+        # 2. Référentiel ANSM — comparaison sur la colonne normalisée des deux côtés
+        spec = db.session.execute(
+            db.select(SpecialiteModel).where(SpecialiteModel.search_name.ilike(f"%{clean_base}%"))
+        ).scalars().first()
+
+        if spec:
+            subs = [
+                c.denomination_substance.strip().lower()
+                for c in spec.compositions
+                if getattr(c, 'nature_composant', 'SA') == 'SA' and c.denomination_substance
+            ]
+            if subs:
+                return subs
+
+        # 3. Fallback
+        return [clean_base]
 
     def get_interaction(self, ingredient_a: str, ingredient_b: str):
         """
-        Recherche une interaction croisée entre deux substances distinctes.
-        Normalise le texte pour éviter les pièges d'accents.
+        Cherche une interaction déjà connue entre DEUX SUBSTANCES (pas des
+        noms de marque — utiliser resolve_substances() en amont).
+        Priorité à InteractionModel (curatée), fallback InteractionAnsmModel
+        (thésaurus complet).
         """
-        ing_a = self.normalize_ingredient(ingredient_a)
-        ing_b = self.normalize_ingredient(ingredient_b)
-
-        # Deux substances identiques = surdosage (géré au niveau métier, pas en BDD ANSM)
-        if ing_a == ing_b:
+        norm_a = normalize(ingredient_a).lower().strip()
+        norm_b = normalize(ingredient_b).lower().strip()
+        if not norm_a or not norm_b or norm_a == norm_b:
             return None
 
-        stmt = (
-            db.select(InteractionModel)
-            .where(
-                or_(
-                    (InteractionModel.ingredient_a.ilike(f"%{ing_a}%")) & (InteractionModel.ingredient_b.ilike(f"%{ing_b}%")),
-                    (InteractionModel.ingredient_a.ilike(f"%{ing_b}%")) & (InteractionModel.ingredient_b.ilike(f"%{ing_a}%"))
-                )
+        stmt = db.select(InteractionModel).where(
+            or_(
+                and_(InteractionModel.ingredient_a.ilike(f"%{norm_a}%"), InteractionModel.ingredient_b.ilike(f"%{norm_b}%")),
+                and_(InteractionModel.ingredient_a.ilike(f"%{norm_b}%"), InteractionModel.ingredient_b.ilike(f"%{norm_a}%"))
             )
         )
-        return db.session.execute(stmt).scalars().first()
+        result = db.session.execute(stmt).scalars().first()
+        if result:
+            return result
+
+        stmt_ansm = (
+            db.select(InteractionAnsmModel)
+            .where(
+                or_(
+                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_a}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_b}%")),
+                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_b}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_a}%"))
+                )
+            )
+            .order_by(func.length(InteractionAnsmModel.substance_a_norm) + func.length(InteractionAnsmModel.substance_b_norm))
+        )
+        return db.session.execute(stmt_ansm).scalars().first()
+
+    def check_drug_interaction(self, term_a: str, term_b: str) -> dict:
+        """
+        Point d'entrée UNIQUE pour le chatbot : prend deux noms libres
+        (marque, DCI, produit du stock...) et retourne un verdict complet.
+        """
+        subs_a = self.resolve_substances(term_a)
+        subs_b = self.resolve_substances(term_b)
+
+        if not subs_a or not subs_b:
+            return {
+                "has_interaction": False,
+                "term_a": term_a, "term_b": term_b,
+                "substances_a": subs_a, "substances_b": subs_b,
+                "message": "Impossible de déterminer les substances actives."
+            }
+
+        for sa in subs_a:
+            clean_sa = _clean_substance_name(sa)
+            terms_a = _expand_substance_terms(sa)
+
+            for sb in subs_b:
+                clean_sb = _clean_substance_name(sb)
+
+                # A. Alerte surdosage (même substance des deux côtés)
+                if normalize(clean_sa).lower() == normalize(clean_sb).lower() and clean_sa != "n/a":
+                    return {
+                        "has_interaction": True,
+                        "severity": "Critical",
+                        "description": f"Risque de surdosage : les deux traitements contiennent du {clean_sa.title()}.",
+                        "substance_a": clean_sa, "substance_b": clean_sb,
+                        "term_a": term_a, "term_b": term_b
+                    }
+
+                # B. Recherche croisée (curatée + thésaurus ANSM), avec expansion de classe
+                terms_b = _expand_substance_terms(sb)
+                for ta in terms_a:
+                    for tb in terms_b:
+                        interaction = self.get_interaction(ta, tb)
+                        if interaction:
+                            return {
+                                "has_interaction": True,
+                                "severity": interaction.severity,
+                                "description": interaction.description,
+                                "substance_a": clean_sa, "substance_b": clean_sb,
+                                "term_a": term_a, "term_b": term_b
+                            }
+
+        return {
+            "has_interaction": False,
+            "term_a": term_a, "term_b": term_b,
+            "substances_a": subs_a, "substances_b": subs_b,
+            "message": "Aucune interaction trouvée dans les bases disponibles."
+        }
 
     # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
 
-    def get_substances_by_cis(self, cis: str) -> list[str]:
-        """
-        Récupère la liste des désignations des substances actives pour un code CIS donné.
-        Ex: CIS d'Actron -> ['ACIDE ACETYLSALICYLIQUE', 'PARACETAMOL', 'CAFEINE']
-        """
-        stmt = (
-            db.select(CompositionModel.denomination_substance)
-            .where(CompositionModel.cis == cis)
-        )
+    def get_substances_by_cis(self, cis: str) -> list:
+        """Substances actives pour un code CIS donné."""
+        stmt = db.select(CompositionModel.denomination_substance).where(CompositionModel.cis == cis)
         results = db.session.execute(stmt).scalars().all()
         return [r.strip() for r in results if r]
 
     def find_specialite_by_name(self, term: str, limit: int = 5):
-        """
-        Recherche une spécialité ANSM par nom (insensible aux accents/casse) 
-        OU par code CIS si le terme est numérique.
-        """
+        """Recherche une spécialité ANSM par nom ou par code CIS."""
         clean_term = term.strip()
         if not clean_term:
             return []
@@ -365,12 +523,7 @@ class FacadeService:
         if clean_term.isdigit():
             stmt = (
                 db.select(SpecialiteModel)
-                .where(
-                    or_(
-                        SpecialiteModel.cis.ilike(f"%{clean_term}%"),
-                        SpecialiteModel.search_name.ilike(f"%{norm_term}%")
-                    )
-                )
+                .where(or_(SpecialiteModel.cis.ilike(f"%{clean_term}%"), SpecialiteModel.search_name.ilike(f"%{norm_term}%")))
                 .order_by(func.length(SpecialiteModel.denomination))
                 .limit(limit)
             )
@@ -381,7 +534,6 @@ class FacadeService:
                 .order_by(func.length(SpecialiteModel.denomination))
                 .limit(limit)
             )
-
         return db.session.execute(stmt).scalars().all()
 
     def get_specialite_by_cis(self, cis: str):
