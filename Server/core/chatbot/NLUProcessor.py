@@ -1,3 +1,4 @@
+
 """
 Server/core/chatbot/NLUProcessor.py
 Bilingual NLU (FR/EN) for Pharmacy Management
@@ -257,7 +258,7 @@ class NLUProcessor:
                 "confidence": 0.95,
                 "language": lang
             }
-        
+
         # 💊 Extraction directe pour les requêtes d'interaction — contourne spaCy,
         # qui tague mal les noms de molécules rares (ex: "cannabidiol", "millepertuis").
         interaction_keywords = [
@@ -269,14 +270,20 @@ class NLUProcessor:
         conj_parts = re.split(r"\s+(?:et|avec|\+|&)\s+", text, flags=re.IGNORECASE)
 
         if has_interaction_kw and len(conj_parts) >= 2:
+            # Mots à exclure de l'entité extraite : mots-clés d'interaction,
+            # stop words habituels, et variantes fléchies (pluriel/accord)
+            # qui ne sont pas dans interaction_keywords/stop_entities tel quel
+            # (ex: "compatibles" au pluriel, absent de la liste "compatible").
+            terminator_words = set(interaction_keywords) | self.stop_entities | {
+                "compatibles", "dangereux", "dangereuse", "possible",
+            }
             candidates = []
             for part in conj_parts:
-                clean = part
-                for kw in interaction_keywords:
-                    clean = re.sub(rf"\b{re.escape(kw)}\b", "", clean, flags=re.IGNORECASE)
-                clean = clean.strip(" ?!.,;:")
-                if len(clean) >= 3 and clean.lower() not in self.stop_entities:
-                    candidates.append(clean.capitalize())
+                tokens = re.findall(r"[\w'’-]+", part)
+                kept = [t for t in tokens if self._normalize(t) not in terminator_words]
+                clean = " ".join(kept).strip(" ?!.,;:")
+                if len(clean) >= 3:
+                    candidates.append(clean.title())
             candidates = self._deduplicate_entities(candidates)
             if len(candidates) >= 2:
                 return {
