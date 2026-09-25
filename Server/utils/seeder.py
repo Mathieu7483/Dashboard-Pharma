@@ -131,16 +131,18 @@ def _seed_json_data(admin_id):
 def _seed_csv_inventory(admin_id):
     """Imports products from the CSV file into the database."""
     current_dir = os.path.dirname(__file__)
-    csv_path = os.path.abspath(os.path.join(current_dir, '..', 'utils', 'initial_inventory.csv'))
+    csv_path = os.path.join(current_dir, 'initial_inventory.csv')
 
     if not os.path.exists(csv_path):
-        print(f"Warning: CSV not found at {csv_path}")
+        print(f"❌ Warning: CSV not found at {csv_path}")
         return
 
     try:
         with open(csv_path, mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             product_count = 0
+            skipped_count = 0
+            
             for row in reader:
                 if not ProductModel.query.filter_by(name=row['name']).first():
                     db.session.add(ProductModel(
@@ -153,11 +155,19 @@ def _seed_csv_inventory(admin_id):
                         user_id=admin_id
                     ))
                     product_count += 1
+                else:
+                    skipped_count += 1
+
             db.session.commit()
-            print(f"Success: {product_count} products imported from CSV.")
+            
+            if product_count > 0:
+                print(f"✅ Success: {product_count} new products imported from CSV.")
+            else:
+                print(f"ℹ️ Inventory already seeded ({skipped_count} products already present). Skipping...")
+
     except Exception as e:
         db.session.rollback()
-        print(f"Error during CSV seeding: {e}")
+        print(f"❌ Error during CSV seeding: {e}")
 
 
 def _seed_medical_interactions():
