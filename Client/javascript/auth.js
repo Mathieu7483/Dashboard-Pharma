@@ -4,7 +4,9 @@
  */
 
 // --- CONFIGURATION ---
-const API_BASE_URL = 'http://127.0.0.1:5000/auth';
+// Same origin as the page when Flask serves the front (port 5000); otherwise fall back to localhost
+const API_ORIGIN = window.location.port === '5000' ? window.location.origin : 'http://127.0.0.1:5000';
+const API_BASE_URL = `${API_ORIGIN}/auth`;
 
 /**
  * Helper to manage JWT storage via cookies (SameSite=Lax for CSRF protection)
