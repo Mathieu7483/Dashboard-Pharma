@@ -1,427 +1,195 @@
 /**
- * inventory.js
- * Comprehensive Inventory & Sales Management Script
+ * inventory.js — Inventory Management (inventory.html)
+ * Backend contract (/inventory/): name, active_ingredient, dosage, stock, price,
+ * is_prescription_only, cis, cip13
+ * Depends on common.js
  */
 
-const CookieManager = {
-    get: (name) => {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
-    }
-};
+const LOW_STOCK_THRESHOLD = 10;
 
-let ansmSearchTimeout = null;
+let allProducts = [];
+let pendingDeepLinkId = new URLSearchParams(window.location.search).get('id');
 
 document.addEventListener('DOMContentLoaded', () => {
-    const token = CookieManager.get('access_token');
-    if (!token) {
-        window.location.href = 'auth.html';
-        return;
-    }
-
-    updateDynamicUserUI();
-    loadNavbar();
-    fetchInventory();
+    if (!initPage()) return;
     setupEventListeners();
-    setupSearch();
-    setupAnsmSearch();
+    fetchInventory();
 });
-
-function getAuthInfo() {
-    const token = CookieManager.get('access_token');
-    if (!token) return { isAdmin: false, token: null };
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const isAdmin = payload.is_admin === true || (payload.sub && payload.sub.role === 'admin');
-        return { isAdmin, token };
-    } catch (e) {
-        console.error("JWT Decoding Error:", e);
-        return { isAdmin: false, token: null };
-    }
-}
 
 // ==========================================
 // DATA FETCHING & RENDERING
 // ==========================================
 
 async function fetchInventory() {
-    const { token, isAdmin } = getAuthInfo();
     try {
-        const response = await fetch('http://127.0.0.1:5000/inventory/', {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Could not retrieve inventory data");
+        const res = await apiFetch('/inventory/');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        allProducts = await res.json();
+        applyFilter();
 
-        const products = await response.json();
-
-        renderTable(products, isAdmin);
-        updateStats(products);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-        if (productId) {
-            handleDeepLinking(productId);
+        // ?id=... deep link coming from the dashboard "Order" button
+        if (pendingDeepLinkId) {
+            handleDeepLinking(pendingDeepLinkId);
+            pendingDeepLinkId = null;
         }
-
-    } catch (error) {
-        console.error("Inventory Fetch Error:", error);
+    } catch (err) {
+        console.error('Inventory fetch error:', err);
     }
 }
 
-function renderTable(products, isAdmin) {
+function applyFilter() {
+    const q = (document.getElementById('inventory-search')?.value || '').trim().toLowerCase();
+    const list = q
+        ? allProducts.filter(p =>
+            [p.name, p.active_ingredient, p.dosage, p.cip13]
+                .some(v => String(v ?? '').toLowerCase().includes(q)))
+        : allProducts;
+    renderTable(list);
+}
+
+function renderTable(products) {
     const tbody = document.getElementById('inventory-body');
     if (!tbody) return;
-    tbody.innerHTML = '';
+    const { isAdmin } = getAuthInfo();
 
     if (!products || products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Inventory is empty.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Inventory is empty.</td></tr>';
         return;
     }
 
-    products.forEach(p => {
-        const row = document.createElement('tr');
-        row.setAttribute('data-id', p.id);
-
-        if (p.stock < 10) row.classList.add('low-stock-row');
-
-        row.innerHTML = `
-            <td>${p.name} ${p.cis ? '<span title="Lié au référentiel ANSM">🔗</span>' : ''}</td>
-            <td>${p.dosage || 'N/A'}</td>
-            <td>${p.active_ingredient || 'N/A'}</td>
-            <td class="${p.stock < 10 ? 'text-danger fw-bold' : ''}">${p.stock}</td>
-            <td>${parseFloat(p.price).toFixed(2)} €</td>
+    tbody.innerHTML = products.map(p => {
+        const low = Number(p.stock) < LOW_STOCK_THRESHOLD;
+        return `
+        <tr data-id="${esc(p.id)}" class="${low ? 'low-stock-row' : ''}">
+            <td title="${esc(p.id)}">${esc(shortId(p.id))}</td>
+            <td>${esc(p.name)} ${p.cis ? '<span title="Linked to the ANSM database">🔗</span>' : ''}</td>
+            <td>${esc(p.active_ingredient || 'N/A')}</td>
+            <td>${esc(p.dosage || 'N/A')}</td>
+            <td>${Number(p.price).toFixed(2)} €</td>
+            <td class="${low ? 'text-danger fw-bold' : ''}">${esc(p.stock)}</td>
             <td style="text-align:center;">${p.is_prescription_only ? '✅' : '❌'}</td>
-
-            <td style="text-align:center;">
-                <div style="display: flex; gap: 5px; justify-content: center;">
-                    <input type="number" id="qty-${p.id}" value="1" min="1" max="${p.stock}" class="qty-input">
-                    <button class="btn-sell" onclick="sellProduct('${p.id}')" title="Record sale">sold</button>
-                </div>
-            </td>
-
             <td>
                 ${isAdmin ? `
-                    <button class="btn-edit" onclick="editProduct('${p.id}')">✏️ Update</button>
-                    <button class="btn-delete" onclick="deleteProduct('${p.id}')">🗑️ Delete</button>
+                    <button class="btn-edit" data-action="edit" data-id="${esc(p.id)}">✏️ Update</button>
+                    <button class="btn-delete" data-action="delete" data-id="${esc(p.id)}">🗑️ Delete</button>
                 ` : '-'}
             </td>
-        `;
-        tbody.appendChild(row);
-    });
+        </tr>`;
+    }).join('');
 }
 
 function handleDeepLinking(productId) {
     setTimeout(() => {
-        const targetRow = document.querySelector(`tr[data-id="${productId}"]`);
-        if (targetRow) {
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            targetRow.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
-            targetRow.style.outline = "2px solid #ffc107";
-            setTimeout(() => {
-                targetRow.style.backgroundColor = "";
-                targetRow.style.outline = "";
-            }, 3000);
-        }
+        const row = document.querySelector(`tr[data-id="${CSS.escape(String(productId))}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+        row.style.outline = '2px solid #ffc107';
+        setTimeout(() => {
+            row.style.backgroundColor = '';
+            row.style.outline = '';
+        }, 3000);
     }, 150);
 }
 
 // ==========================================
-// SALES TRANSACTIONS
+// MODAL & CRUD
 // ==========================================
 
-window.sellProduct = async (productId) => {
-    const { token } = getAuthInfo();
-    const qtyInput = document.getElementById(`qty-${productId}`);
-    const quantity = parseInt(qtyInput.value);
+function openProductModal(product = null) {
+    const form = document.getElementById('product-form');
+    form.reset();
+    document.getElementById('product-id').value = product ? product.id : '';
+    document.getElementById('product-modal-title').textContent = product ? 'Edit Product' : 'Add New Product';
 
-    if (isNaN(quantity) || quantity <= 0) {
-        alert("Invalid quantity.");
-        return;
+    if (product) {
+        form.elements['name'].value = product.name || '';
+        form.elements['active_ingredient'].value = product.active_ingredient || '';
+        form.elements['dosage'].value = product.dosage || '';
+        form.elements['cip13'].value = product.cip13 || '';
+        form.elements['price'].value = product.price ?? '';
+        form.elements['stock'].value = product.stock ?? '';
+        form.elements['is_prescription_only'].checked = Boolean(product.is_prescription_only);
     }
+    document.getElementById('product-modal').style.display = 'block';
+}
+
+async function saveProduct(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const id = fd.get('id');
+    const isUpdate = Boolean(id);
+
+    const payload = {
+        name: fd.get('name').trim(),
+        active_ingredient: fd.get('active_ingredient').trim(),
+        dosage: fd.get('dosage').trim(),
+        stock: parseInt(fd.get('stock'), 10),
+        price: parseFloat(fd.get('price')),
+        is_prescription_only: fd.get('is_prescription_only') === 'on'
+    };
+    const cip13 = fd.get('cip13').trim();
+    if (cip13 || isUpdate) payload.cip13 = cip13;
 
     try {
-        const clientRes = await fetch('http://127.0.0.1:5000/clients/', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const clients = await clientRes.json();
-
-        if (!clients || clients.length === 0) {
-            alert("No clients found. Sales require a linked client record.");
-            return;
-        }
-
-        const salePayload = {
-            client_id: clients[0].id,
-            items: [{ product_id: productId, quantity: quantity }]
-        };
-
-        const response = await fetch('http://127.0.0.1:5000/sales/', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(salePayload)
-        });
-
-        if (response.ok) {
-            qtyInput.style.backgroundColor = "#d4edda";
-            setTimeout(() => { fetchInventory(); }, 300);
-        } else {
-            const err = await response.json();
-            alert(`Error: ${err.message}`);
-        }
-    } catch (err) {
-        console.error("Sale Processing Failure:", err);
-    }
-};
-
-// ==========================================
-// CRUD OPERATIONS
-// ==========================================
-
-function setupEventListeners() {
-    const modal = document.getElementById('product-modal');
-    const form = document.getElementById('product-form');
-
-    document.getElementById('add-product-btn').onclick = () => {
-    form.reset();
-    form.removeAttribute('data-product-id');
-    unlinkAnsm(); // Réinitialise le code CIS et masque le badge
-    modal.style.display = 'block';
-};
-
-    document.getElementById('close-modal').onclick = () => { modal.style.display = 'none'; };
-    document.querySelector('.btn-logout-top')?.addEventListener('click', logoutUser);
-
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        const { token } = getAuthInfo();
-        const productId = form.getAttribute('data-product-id');
-        const formData = new FormData(form);
-
-        const payload = {
-            name: formData.get('name').trim(),
-            dosage: formData.get('dosage').trim() || null,
-            active_ingredient: formData.get('active_ingredient').trim(),
-            stock: parseInt(formData.get('stock')),
-            price: parseFloat(formData.get('price')),
-            is_prescription_only: formData.get('is_prescription_only') === 'on',
-            cis: formData.get('cis') || null,
-            cip13: formData.get('cip13')?.trim() || null
-        };
-
-        const url = productId ? `http://127.0.0.1:5000/inventory/${productId}` : 'http://127.0.0.1:5000/inventory/';
-
-        const response = await fetch(url, {
-            method: productId ? 'PUT' : 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        const res = await apiFetch(isUpdate ? `/inventory/${id}` : '/inventory/', {
+            method: isUpdate ? 'PUT' : 'POST',
             body: JSON.stringify(payload)
         });
-
-        if (response.ok) {
-            modal.style.display = 'none';
-            fetchInventory();
-        }
-    };
-}
-
-window.editProduct = async (id) => {
-    const { token } = getAuthInfo();
-    const response = await fetch(`http://127.0.0.1:5000/inventory/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (response.ok) {
-        const p = await response.json();
-        const form = document.getElementById('product-form');
-        form.querySelector('[name="name"]').value = p.name;
-        form.querySelector('[name="active_ingredient"]').value = p.active_ingredient || '';
-        form.querySelector('[name="dosage"]').value = p.dosage || '';
-        form.querySelector('[name="stock"]').value = p.stock;
-        form.querySelector('[name="price"]').value = p.price;
-        form.querySelector('[name="cip13"]').value = p.cip13 || '';
-        form.querySelector('[name="is_prescription_only"]').checked = p.is_prescription_only;
-        form.setAttribute('data-product-id', id);
-
-        document.getElementById('product-cis').value = p.cis || '';
-        if (p.cis) {
-            document.getElementById('ansm-linked-text').textContent = `🔗 Lié (CIS: ${p.cis})`;
-            document.getElementById('ansm-linked-badge').style.display = 'block';
-        } else {
-            document.getElementById('ansm-linked-badge').style.display = 'none';
-        }
-
-        document.getElementById('product-modal').style.display = 'block';
-    }
-};
-
-window.deleteProduct = async (id) => {
-    if (!confirm("Confirm deletion?")) return;
-    const { token } = getAuthInfo();
-    await fetch(`http://127.0.0.1:5000/inventory/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    fetchInventory();
-};
-
-// ==========================================
-// ANSM SEARCH (link a stocked product to the referential)
-// ==========================================
-
-function setupAnsmSearch() {
-    const input = document.getElementById('ansm-search-input');
-    const results = document.getElementById('ansm-results');
-    if (!input) return;
-
-    input.addEventListener('input', (e) => {
-        clearTimeout(ansmSearchTimeout);
-        const term = e.target.value.trim();
-        if (term.length < 3) {
-            results.style.display = 'none';
-            return;
-        }
-        ansmSearchTimeout = setTimeout(() => searchAnsm(term), 300);
-    });
-
-    document.getElementById('ansm-unlink-btn').onclick = unlinkAnsm;
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.ansm-search-wrapper')) results.style.display = 'none';
-    });
-}
-
-async function searchAnsm(term) {
-    const { token } = getAuthInfo();
-    const results = document.getElementById('ansm-results');
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/specialites/search?q=${encodeURIComponent(term)}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) { results.style.display = 'none'; return; }
-        const specialites = await response.json();
-
-        if (!specialites.length) {
-            results.innerHTML = '<div class="ansm-result-item">Aucun résultat ANSM</div>';
-            results.style.display = 'block';
+        if (!res.ok) {
+            alert(await errorMessage(res, 'Save failed'));
             return;
         }
 
-        results.innerHTML = specialites.map(s => `
-            <div class="ansm-result-item" data-cis="${s.cis}">
-                ${s.denomination}
-                <small>${s.forme_pharmaceutique || ''} — ${(s.active_ingredients || []).join(', ')}</small>
-            </div>
-        `).join('');
-        results.style.display = 'block';
+        // POST /inventory/ ignores cip13 (the route does not forward it to the facade):
+        // set it with a follow-up update. PUT is admin-only, so skipped for other users.
+        if (!isUpdate && cip13 && getAuthInfo().isAdmin) {
+            const created = await res.json().catch(() => null);
+            if (created?.id) {
+                await apiFetch(`/inventory/${created.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ cip13 })
+                });
+            }
+        }
 
-        results.querySelectorAll('.ansm-result-item[data-cis]').forEach(el => {
-            el.onclick = () => selectAnsmSpecialite(specialites.find(s => s.cis === el.dataset.cis));
-        });
+        document.getElementById('product-modal').style.display = 'none';
+        fetchInventory();
     } catch (err) {
-        console.error("ANSM search failed:", err);
+        console.error('Product save error:', err);
     }
 }
 
-function selectAnsmSpecialite(spe) {
-    if (!spe) return;
-
-    // 1. Stocker le code CIS dans le champ caché
-    document.getElementById('product-cis').value = spe.cis;
-    document.getElementById('ansm-search-input').value = '';
-    document.getElementById('ansm-results').style.display = 'none';
-
-    // 2. Cibler le formulaire
-    const form = document.getElementById('product-form');
-
-    // 3. Pré-remplir la dénomination / Nom du produit
-    if (spe.denomination) {
-        form.querySelector('[name="name"]').value = spe.denomination;
+async function deleteProduct(id) {
+    if (!confirm('Confirm deletion?')) return;
+    try {
+        const res = await apiFetch(`/inventory/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            alert(await errorMessage(res, 'Delete failed'));
+            return;
+        }
+        fetchInventory();
+    } catch (err) {
+        console.error('Product delete error:', err);
     }
-
-    // 4. Pré-remplir la Substance Active (s'il y en a une dans l'objet)
-    const ingredientField = form.querySelector('[name="active_ingredient"]');
-    if (spe.active_ingredients && spe.active_ingredients.length > 0) {
-        ingredientField.value = Array.isArray(spe.active_ingredients) 
-            ? spe.active_ingredients.join(' / ') 
-            : spe.active_ingredients;
-    }
-
-    // 5. Pré-remplir la Forme / Dosage si disponible
-    if (spe.forme_pharmaceutique) {
-        const dosageField = form.querySelector('[name="dosage"]');
-        dosageField.value = spe.forme_pharmaceutique;
-    }
-
-    // 6. Afficher le badge de confirmation du lien ANSM
-    document.getElementById('ansm-linked-text').textContent = `🔗 Lié à : ${spe.denomination} (CIS: ${spe.cis})`;
-    document.getElementById('ansm-linked-badge').style.display = 'block';
 }
 
-function unlinkAnsm() {
-    document.getElementById('product-cis').value = '';
-    document.getElementById('ansm-linked-badge').style.display = 'none';
-}
+function setupEventListeners() {
+    document.getElementById('add-product-btn').addEventListener('click', () => openProductModal());
+    bindModalClose('product-modal', 'close-product-modal');
+    document.getElementById('product-form').addEventListener('submit', saveProduct);
+    document.getElementById('inventory-search')?.addEventListener('input', applyFilter);
 
-// ==========================================
-// UI UTILITIES & SESSION
-// ==========================================
-
-function updateStats(products) {
-    const totalCount = document.getElementById('total-count');
-    const lowStockCount = document.getElementById('low-stock-count');
-    if (totalCount) totalCount.textContent = products.length;
-    if (lowStockCount) lowStockCount.textContent = products.filter(p => p.stock < 10).length;
-}
-
-function setupSearch() {
-    const searchInput = document.getElementById('inventory-search');
-    if (!searchInput) return;
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#inventory-body tr').forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-        });
+    // Row actions (event delegation)
+    document.getElementById('inventory-body').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const { action, id } = btn.dataset;
+        if (action === 'edit') {
+            const product = allProducts.find(p => String(p.id) === id);
+            if (product) openProductModal(product);
+        } else if (action === 'delete') {
+            deleteProduct(id);
+        }
     });
-}
-
-function loadNavbar() {
-    const placeholder = document.getElementById('navbar-placeholder');
-    if (placeholder) {
-        fetch('navbar.html')
-            .then(res => res.text())
-            .then(html => {
-                placeholder.innerHTML = html;
-                updateDynamicUserUI();
-                document.getElementById('logout-btn')?.addEventListener('click', logoutUser);
-            })
-            .catch(err => console.error("Navbar loading failed:", err));
-    }
-}
-
-function updateDynamicUserUI() {
-    const user = localStorage.getItem('username') || "Operator";
-    const initial = user.charAt(0).toUpperCase();
-
-    const topAvatar = document.querySelector('.top-bar-right .avatar');
-    if (topAvatar) topAvatar.textContent = initial;
-
-    const sidebarName = document.querySelector('.sidebar-footer strong');
-    if (sidebarName) sidebarName.textContent = user;
-
-    const sidebarAvatar = document.querySelector('.user-profile .avatar');
-    if (sidebarAvatar) sidebarAvatar.textContent = initial;
-}
-
-function logoutUser() {
-    document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    localStorage.clear();
-    window.location.href = 'auth.html';
 }
