@@ -4,12 +4,12 @@
    ========================================================================== */
 
 /* ==========================================================================
-   INVENTORY & TABLES MANAGEMENT
+   1. CONTENEURS ET PAGES
    ========================================================================== */
 .inventory-page-content {
     overflow-y: auto !important;
     padding: 30px;
-    background: rgba(255, 255, 255, 0.3);
+    background: transparent;
 }
 
 .inventory-container {
@@ -18,113 +18,123 @@
     margin: 0 auto;
 }
 
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
+.client-container,
+.doctor-container,
+.clients-container,
+.doctors-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: var(--surface-card);
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-soft);
 }
 
-.page-header {
+.page-header,
+.clients-header,
+.doctors-header,
+.inventory-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
 }
 
-#products-table {
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* ==========================================================================
+   2. RECHERCHE SPÉCIFIQUE
+   ========================================================================== */
+.search-bar.widget input#inventory-search,
+.search-bar.widget input#clients-search,
+.search-bar.widget input#doctors-search {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    border: 3px solid rgba(2, 132, 199, 0.2);
+    border-radius: 15px;
+    background-color: var(--surface-card);
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-bar.widget input#inventory-search:focus,
+.search-bar.widget input#clients-search:focus,
+.search-bar.widget input#doctors-search:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+}
+
+.search-bar.widget input#inventory-search::placeholder,
+.search-bar.widget input#clients-search::placeholder,
+.search-bar.widget input#doctors-search::placeholder {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* ==========================================================================
+   3. TABLEAU STOCK (INVENTORY)
+   ========================================================================== */
+#inventory-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-#products-table th {
+#inventory-table th {
     text-align: left;
     padding: 12px 10px;
-    border-bottom: 2px solid var(--color-primary);
-    color: var(--color-primary);
+    border-bottom: 2px solid var(--primary-blue);
+    color: var(--primary-blue);
     font-weight: 700;
     white-space: nowrap;
 }
 
-#products-table td {
+#inventory-table td {
     padding: 12px 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
+    color: var(--text-primary);
 }
 
-#products-table tr:hover {
-    background-color: rgba(30, 144, 255, 0.02);
+#inventory-table tr:hover {
+    background-color: rgba(2, 132, 199, 0.04);
 }
 
-#products-table th:nth-child(4), #products-table td:nth-child(4),
-#products-table th:nth-child(5), #products-table td:nth-child(5),
-#products-table th:nth-child(6), #products-table td:nth-child(6) {
+#inventory-table th:nth-child(5), #inventory-table td:nth-child(5),
+#inventory-table th:nth-child(6), #inventory-table td:nth-child(6),
+#inventory-table th:nth-child(7), #inventory-table td:nth-child(7) {
     text-align: center;
 }
 
-#products-table td:last-child {
+#inventory-table td:last-child {
     display: flex;
     justify-content: center;
     gap: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap; 
 }
 
 .low-stock-row {
-    background-color: rgba(255, 69, 0, 0.05); 
+    background-color: rgba(220, 38, 38, 0.08) !important; 
 }
 
 .text-danger {
-    color: #ff4500;
+    color: var(--color-danger);
     font-weight: bold;
 }
 
-.btn-edit, .btn-delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    font-size: 0.85rem;
-    margin: 0;
-    min-width: 80px;
-}
-
-.btn-edit { background: var(--color-primary); color: white; }
-.btn-delete { background: #ff4757; color: white; }
-
-#product-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-#product-form input {
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-}
-
-#product-form input:focus {
-    border-color: var(--color-primary);
-    outline: none;
-    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
-}
-
 /* ==========================================================================
-   CLIENT MANAGEMENT
+   4. TABLEAU CLIENTS
    ========================================================================== */
-.client-container {
-    max-width: 1600px;
-    width: 95%;
-    margin: 0 auto;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-
 #clients-table {
     width: 100%;
     border-collapse: collapse;
@@ -134,8 +144,8 @@
 #clients-table th {
     text-align: left;
     padding: 20px 15px;
-    border-bottom: 3px solid var(--color-secondary);
-    color: var(--color-primary);
+    border-bottom: 3px solid var(--primary-green);
+    color: var(--primary-blue);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -144,51 +154,26 @@
 
 #clients-table td {
     padding: 18px 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.95rem;
-    color: #444;
+    color: var(--text-primary);
 }
 
 #clients-table tr:hover {
-    background-color: rgba(30, 144, 255, 0.04);
+    background-color: rgba(2, 132, 199, 0.04);
 }
 
 #clients-table td:last-child {
     display: flex;
     justify-content: center;
     gap: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
 }
 
-.btn-edit, .btn-delete {
-    padding: 7px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-    color: white;
-}
-
-.btn-edit { background: var(--color-primary); }
-.btn-delete { background: #ff4757; }
-
-.btn-edit:hover, .btn-delete:hover {
-    transform: scale(1.1);
-}
-
 /* ==========================================================================
-   DOCTOR MANAGEMENT
+   5. TABLEAU MÉDECINS (DOCTORS)
    ========================================================================== */
-.doctor-container {
-    max-width: 1600px;
-    width: 95%;
-    margin: 0 auto;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 20px;
-}
-
 #doctors-table {
     width: 100%;
     border-collapse: collapse;
@@ -198,8 +183,8 @@
 #doctors-table th {
     text-align: left;
     padding: 20px 15px;
-    border-bottom: 3px solid var(--color-primary);
-    color: var(--color-primary);
+    border-bottom: 3px solid var(--primary-blue);
+    color: var(--primary-blue);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -208,36 +193,36 @@
 
 #doctors-table td {
     padding: 18px 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.95rem;
-    color: #444;
+    color: var(--text-primary);
 }
 
 #doctors-table td:last-child {
     display: flex;
     justify-content: center;
     gap: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
 }
 
+#doctors-table tr:hover {
+    background-color: rgba(2, 132, 199, 0.04);
+}
+
 .badge-specialty {
-    background: #e8f4fd;
-    color: var(--color-primary);
+    background: rgba(2, 132, 199, 0.12);
+    color: var(--primary-blue);
     padding: 5px 12px;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 700;
     display: inline-block;
-    border: 1px solid rgba(30, 144, 255, 0.2);
-}
-
-#doctors-table tr:hover {
-    background-color: rgba(30, 144, 255, 0.04);
+    border: 1px solid rgba(2, 132, 199, 0.25);
 }
 
 /* ==========================================================================
-   UNIFIED FORM STYLING 
+   6. FORMULAIRES DE MODALES
    ========================================================================== */
 #product-form,
 #client-form,
@@ -257,10 +242,12 @@
 #client-form textarea,
 #doctor-form textarea {
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
-    font-family: 'Open Sans', sans-serif;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: inherit;
     transition: all 0.3s ease;
 }
 
@@ -273,13 +260,13 @@
 #product-form textarea:focus,
 #client-form textarea:focus,
 #doctor-form textarea:focus {
-    border-color: var(--color-primary);
+    border-color: var(--primary-blue);
     outline: none;
-    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.25);
 }
 
 .btn-sell {
-    background-color: #28a745;
+    background-color: var(--color-success);
     color: white;
     border: none;
     padding: 5px 10px;
@@ -289,70 +276,28 @@
 }
 
 .btn-sell:hover {
-    background-color: #218838;
+    filter: brightness(1.1);
 }
 
 .qty-input {
     width: 60px;
     padding: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     text-align: center;
+    background: var(--surface-card);
+    color: var(--text-primary);
 }
 
-.fw-bold { font-weight: bold; }
-
-
-.search-bar.widget input#inventory-search,
-.search-bar.widget input#clients-search,
-.search-bar.widget input#doctors-search {
-    width: 100%;
-    padding: 15px 20px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--color-primary);
-    border: 3px solid rgba(30, 144, 255, 0.2);
-    border-radius: 15px;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    outline: none;
-}
-
-.search-bar.widget input#inventory-search:focus,
-.search-bar.widget input#clients-search:focus,
-.search-bar.widget input#doctors-search:focus {
-    border-color: var(--color-secondary);
-    box-shadow: 0 10px 25px rgba(0, 255, 127, 0.2);
-    background-color: #fff;
-}
-
-.search-bar.widget input#inventory-search::placeholder,
-.search-bar.widget input#clients-search::placeholder,
-.search-bar.widget input#doctors-search::placeholder {
-    font-size: 1.1rem;
-    color: #bbb;
-    font-weight: 400;
+.fw-bold { 
+    font-weight: bold; 
 }
 
 /* ==========================================================================
-   ANSM REFERENTIAL SEARCH (inventory product form)
+   7. RECHERCHE RÉFÉRENTIEL ANSM
    ========================================================================== */
 .ansm-search-wrapper {
     position: relative;
-}
-
-.ansm-search-wrapper input#ansm-search-input {
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    width: 100%;
-}
-
-.ansm-search-wrapper input#ansm-search-input:focus {
-    border-color: var(--color-primary);
-    outline: none;
-    box-shadow: 0 0 8px rgba(30, 144, 255, 0.2);
 }
 
 .ansm-results-dropdown {
@@ -360,13 +305,13 @@
     top: 100%;
     left: 0;
     right: 0;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     max-height: 220px;
     overflow-y: auto;
     z-index: 50;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-soft);
     margin-top: 4px;
 }
 
@@ -374,8 +319,8 @@
     padding: 8px 12px;
     cursor: pointer;
     font-size: 0.85em;
-    border-bottom: 1px solid #f0f0f0;
-    color: #444;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .ansm-result-item:last-child {
@@ -383,12 +328,12 @@
 }
 
 .ansm-result-item:hover {
-    background: rgba(30, 144, 255, 0.05);
+    background: rgba(2, 132, 199, 0.08);
 }
 
 .ansm-result-item small {
     display: block;
-    color: #888;
+    color: var(--text-secondary);
     margin-top: 2px;
 }
 
@@ -398,7 +343,38 @@
     justify-content: space-between;
     margin-bottom: 10px;
     padding: 8px 12px;
-    background: #eef7ee;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--color-success);
     border-radius: 8px;
     font-size: 0.85em;
 }
+
+/* ==========================================================================
+   8. AJUSTEMENTS (nouveau HTML)
+   ========================================================================== */
+.search-bar.widget { margin-bottom: 20px; }
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.form-group.form-check label {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    display: flex;
+    cursor: pointer;
+}
+
+.form-group.form-check input { width: 18px; height: 18px; padding: 0; }
+
+.clients-container, .doctors-container, .inventory-container { margin-bottom: 30px; }
