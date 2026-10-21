@@ -2,7 +2,9 @@
  * settings.js - Admin Panel Management
  */
 
-const API_BASE = 'http://127.0.0.1:5000';
+// Same origin as the page when Flask serves the front (port 5000); otherwise fall back to localhost
+const API_ORIGIN = window.location.port === '5000' ? window.location.origin : 'http://127.0.0.1:5000';
+const API_BASE = API_ORIGIN;
 
 // ============================================
 // 1. COOKIE MANAGER
@@ -36,6 +38,17 @@ function getAuthInfo() {
         console.error('Token decode error:', e);
         return { token: null, isAdmin: false };
     }
+}
+
+// auth.js never stores user_id: read it from the JWT subject instead
+function getCurrentUserId() {
+    const token = CookieManager.get('access_token');
+    if (!token) return null;
+    try {
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const sub = JSON.parse(atob(b64)).sub;
+        return String(typeof sub === 'object' && sub !== null ? sub.id : sub);
+    } catch { return null; }
 }
 
 function authHeaders(token) {
@@ -137,7 +150,7 @@ async function fetchUsers() {
 function renderUserTable(users, isAdmin) {
     const tbody         = document.getElementById('user-table-body');
     const emptyState    = document.getElementById('empty-state');
-    const currentUserId = localStorage.getItem('user_id');
+    const currentUserId = getCurrentUserId();
     if (!tbody) return;
 
     const countBadge = document.getElementById('users-count');
