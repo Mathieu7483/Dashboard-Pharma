@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!initPage()) return;
     setupEventListeners();
     fetchClients();
+    // Coming from the dashboard quick actions banner
+    if (new URLSearchParams(window.location.search).get('new')) openClientModal();
 });
 
 // ==========================================
