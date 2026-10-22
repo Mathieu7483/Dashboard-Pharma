@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!initPage()) return;
     setupEventListeners();
     fetchInventory();
+    // Coming from the dashboard quick actions banner
+    if (new URLSearchParams(window.location.search).get('new')) openProductModal();
 });
 
 // ==========================================
