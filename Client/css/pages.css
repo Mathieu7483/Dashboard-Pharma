@@ -4,6 +4,24 @@
    ========================================================================== */
 
 /* ==========================================================================
+   0. VARIABLES UTILISÉES PAR CES PAGES
+   ========================================================================== */
+:root {
+    --primary-blue:   #0284C7;
+    --primary-green:  #10B981;
+    --color-success:  #10B981;
+    --color-danger:   #DC2626;
+
+    --text-primary:   var(--color-text-dark);
+    --text-secondary: #6B7280;
+
+    --surface-card:   #FFFFFF;
+    --bg-app:         #F8FAFC;
+    --border-color:   #E5E7EB;
+    --shadow-soft:    0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
    1. CONTENEURS ET PAGES
    ========================================================================== */
 .inventory-page-content {
@@ -12,16 +30,12 @@
     background: transparent;
 }
 
-.inventory-container {
-    max-width: 1200px;
-    width: 100%;
-    margin: 0 auto;
-}
-
+/* Même carte pour inventory, clients et doctors */
 .client-container,
 .doctor-container,
 .clients-container,
-.doctors-container {
+.doctors-container,
+.inventory-container {
     max-width: 1600px;
     width: 95%;
     margin: 0 auto;
@@ -82,49 +96,64 @@
 
 /* ==========================================================================
    3. TABLEAU STOCK (INVENTORY)
+   Colonnes : 1 ID | 2 Name | 3 Active Ingredient | 4 Dosage | 5 CIP13
+              6 Price | 7 Stock | 8 Rx only | 9 Actions
    ========================================================================== */
 #inventory-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 20px;
 }
 
 #inventory-table th {
     text-align: left;
-    padding: 12px 10px;
-    border-bottom: 2px solid var(--primary-blue);
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--primary-blue);
     color: var(--primary-blue);
-    font-weight: 700;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
     white-space: nowrap;
 }
 
 #inventory-table td {
-    padding: 12px 10px;
+    padding: 18px 15px;
     border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
     vertical-align: middle;
     color: var(--text-primary);
+}
+
+#inventory-table th:nth-child(2) {
+    min-width: 220px;
 }
 
 #inventory-table tr:hover {
     background-color: rgba(2, 132, 199, 0.04);
 }
 
+/* CIP13, Price, Stock, Rx only, Actions : centrés */
 #inventory-table th:nth-child(5), #inventory-table td:nth-child(5),
 #inventory-table th:nth-child(6), #inventory-table td:nth-child(6),
-#inventory-table th:nth-child(7), #inventory-table td:nth-child(7) {
+#inventory-table th:nth-child(7), #inventory-table td:nth-child(7),
+#inventory-table th:nth-child(8), #inventory-table td:nth-child(8),
+#inventory-table th:last-child,   #inventory-table td:last-child {
     text-align: center;
 }
 
+/* Cellule d'actions : reste une vraie cellule de tableau (pas de flex),
+   pour que la ligne et sa bordure restent alignées */
 #inventory-table td:last-child {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap; 
+    white-space: nowrap;
+}
+
+#inventory-table td:last-child button {
+    margin: 0 3px;
 }
 
 .low-stock-row {
-    background-color: rgba(220, 38, 38, 0.08) !important; 
+    background-color: rgba(220, 38, 38, 0.08) !important;
 }
 
 .text-danger {
@@ -289,8 +318,8 @@
     color: var(--text-primary);
 }
 
-.fw-bold { 
-    font-weight: bold; 
+.fw-bold {
+    font-weight: bold;
 }
 
 /* ==========================================================================
@@ -378,3 +407,17 @@
 .form-group.form-check input { width: 18px; height: 18px; padding: 0; }
 
 .clients-container, .doctors-container, .inventory-container { margin-bottom: 30px; }
+
+/* ==========================================================================
+   9. SCROLL ET MODALES
+   ========================================================================== */
+/* body / .content-area / .content-section sont en overflow:hidden (style.css) :
+   on rend scrollable la section qui contient une de ces trois pages */
+.content-section:has(.inventory-container, .clients-container, .doctors-container) {
+    overflow-y: auto;
+}
+
+/* Modale plus haute que l'écran : elle scrolle au lieu d'être coupée */
+.modal {
+    overflow-y: auto;
+}
