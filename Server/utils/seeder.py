@@ -2,7 +2,6 @@ import csv
 import json
 import os
 import random
-import unicodedata
 from datetime import datetime, timedelta, UTC
 from database.data_manager import db
 from models.user import UserModel
@@ -10,9 +9,12 @@ from models.product import ProductModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
 from models.interaction import InteractionModel
+from models.interaction_ansm import InteractionAnsmModel
+from models.specialite import SpecialiteModel
+from models.composition import CompositionModel
+from models.cip import CipModel
 from utils.seed_sales import seed_product_sales
 from utils.text_norm import normalize as _norm
-from models.interaction_ansm import InteractionAnsmModel
 
 
 def seed_all_initial_data():
@@ -29,6 +31,7 @@ def seed_all_initial_data():
 
     _seed_json_data(admin.id)
     _seed_csv_inventory(admin.id)
+    _seed_ansm_reference()
     _seed_medical_interactions()
     seed_product_sales()
 
@@ -142,7 +145,7 @@ def _seed_csv_inventory(admin_id):
             reader = csv.DictReader(f)
             product_count = 0
             skipped_count = 0
-            
+
             for row in reader:
                 if not ProductModel.query.filter_by(name=row['name']).first():
                     db.session.add(ProductModel(
@@ -159,7 +162,7 @@ def _seed_csv_inventory(admin_id):
                     skipped_count += 1
 
             db.session.commit()
-            
+
             if product_count > 0:
                 print(f"✅ Success: {product_count} new products imported from CSV.")
             else:
@@ -168,6 +171,35 @@ def _seed_csv_inventory(admin_id):
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error during CSV seeding: {e}")
+
+
+def _seed_ansm_reference():
+    """
+    Importe le référentiel ANSM (CIS.txt, COMPO.txt, CIS_CIP.txt) utilisé par
+    l'autocomplétion de l'inventaire (/inventory/search-ansm).
+
+    L'import est lancé si au moins une des trois tables est vide, afin de
+    pouvoir reprendre un import qui aurait échoué à mi-chemin. Les étapes
+    compositions et CIP vident leur table avant de réinsérer : relancer est
+    donc sans danger.
+    """
+    if (SpecialiteModel.query.first()
+            and CompositionModel.query.first()
+            and CipModel.query.first()):
+        print("ANSM reference data already exists. Skipping...")
+        return
+
+    # Import local pour éviter tout import circulaire au chargement du module
+    from utils.import_ansm import run_full_sync
+
+    try:
+        run_full_sync()
+    except FileNotFoundError as e:
+        db.session.rollback()
+        print(f"⚠️ Import ANSM ignoré (fichier manquant) : {e}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erreur lors de l'import ANSM : {e}")
 
 
 def _seed_medical_interactions():
@@ -197,6 +229,7 @@ def _seed_medical_interactions():
                         })
             except Exception as e:
                 print(f"⚠️ Erreur CSV prioritaire ({e}), bascule sur le jeu par défaut.")
+                conflicts = []
 
         if not conflicts:
             print("ℹ️ Utilisation du jeu d'interactions prioritaires par défaut.")
