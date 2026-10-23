@@ -31,7 +31,7 @@
                     </header>
 
                     <div class="search-bar widget">
-                        <input type="text" id="inventory-search" placeholder="Search by name, active ingredient or dosage..." class="search-box input">
+                        <input type="text" id="inventory-search" placeholder="Search by name, active ingredient, dosage or CIP code..." class="search-box input">
                     </div>
 
                     <div class="table-responsive widget">
@@ -42,6 +42,7 @@
                                     <th>Name</th>
                                     <th>Active Ingredient</th>
                                     <th>Dosage</th>
+                                    <th>CIP13</th>
                                     <th>Price (€)</th>
                                     <th>Stock</th>
                                     <th>Rx only</th>
@@ -69,9 +70,11 @@
             <form id="product-form">
                 <input type="hidden" id="product-id" name="id">
 
-                <div class="form-group">
-                    <label for="product-name">Product Name * <small>(min. 3 characters)</small></label>
-                    <input type="text" id="product-name" name="name" required minlength="3" maxlength="100" class="input">
+                <div class="form-group" style="position: relative;">
+                    <label for="product-name">Product Name * <small>(Recherche ANSM intelligente)</small></label>
+                    <input type="text" id="product-name" name="name" required minlength="3" maxlength="100" class="input" autocomplete="off">
+                    <!-- Conteneur des suggestions ANSM -->
+                    <div id="ansm-suggestions" class="autocomplete-dropdown" style="display: none; position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
                 </div>
                 <div class="form-group">
                     <label for="product-ingredient">Active Ingredient *</label>
