@@ -4,20 +4,20 @@ from datetime import datetime, UTC
 from database.data_manager import db
 from models.specialite import SpecialiteModel
 from models.composition import CompositionModel
+from models.cip import CipModel
 from utils.text_norm import normalize
 
-# Emplacement de tes fichiers locaux
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCES = {
     "CIS": os.path.join(BASE_DIR, "CIS.txt"),
     "COMPO": os.path.join(BASE_DIR, "COMPO.txt"),
+    "CIS_CIP": os.path.join(BASE_DIR, "CIS_CIP.txt"), # Fichier des présentations / CIP
 }
 
 
 def _read_local_file(filepath: str) -> list:
-    """Lit un fichier texte local encodé en ISO-8859-1 (spécifique aux fichiers ANSM)."""
+    """Lit un fichier texte local encodé en ISO-8859-1."""
     if not os.path.exists(filepath):
-        # Cherche également dans le dossier utils/ au cas où
         alt_path = os.path.join(BASE_DIR, "utils", os.path.basename(filepath))
         if os.path.exists(alt_path):
             filepath = alt_path
@@ -102,10 +102,49 @@ def sync_compositions():
     print(f"✅ Compositions : {inserted} lignes importées.")
 
 
+def sync_cip():
+    """Remplace intégralement la table des CIP à partir de CIS_CIP.txt."""
+    rows = _read_local_file(SOURCES["CIS_CIP"])
+    known_cis = {c[0] for c in db.session.query(SpecialiteModel.cis).all()}
+
+    CipModel.query.delete()
+    inserted = 0
+
+    for row in rows:
+        if len(row) < 7:
+            continue
+        cis = row[0].strip()
+        if cis not in known_cis:
+            continue
+
+        cip13 = row[6].strip()
+        if not cip13:
+            continue
+
+        db.session.add(
+            CipModel(
+                cis=cis,
+                cip7=row[1].strip(),
+                libelle_presentation=row[2].strip(),
+                statut_admin=row[3].strip(),
+                etat_commercialisation=row[4].strip(),
+                cip13=cip13
+            )
+        )
+        inserted += 1
+
+        if inserted % 5000 == 0:
+            db.session.flush()
+
+    db.session.commit()
+    print(f"✅ Codes CIP : {inserted} lignes importées.")
+
+
 def run_full_sync():
     print(f"\n--- 🔄 Importation ANSM démarrée ({datetime.now(UTC).isoformat()}) ---")
     sync_specialites()
     sync_compositions()
+    sync_cip()
 
 
 if __name__ == "__main__":
