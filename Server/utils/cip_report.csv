@@ -1,0 +1,201 @@
+name,statut,specialite,presentation,cip13
+Paracétamol,OK_NOM_DOSAGE,"PARACETAMOL EG 500 mg, gélule",plaquette(s) PVC-Aluminium de 16 gélule(s),3400933766689
+Ibuprofène,OK_NOM_DOSAGE,"IBUPROFENE EG 200 mg, comprimé pelliculé",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400936475939
+Amoxicilline,OK_NOM_DOSAGE,"AMOXICILLINE GSK 500 mg/10 ml, poudre et solvant pour solution injectable (I.M. I.V.)",1 flacon(s) en verre de 500  mg - 1 ampoule(s) en verre de 10  ml,3400933859633
+Doliprane Liquide,AUCUN,,,
+Hydrocortisone Crème,AUCUN,,,
+Vitamines C,NOM_SEUL,"VITAMINES C, B2, solution buvable",1 flacon(s) en verre brun de 125 ml,3400931137047
+Sérum Physiologique,AUCUN,,,
+Aspirine,NOM_SEUL,"ASPIRINE DU RHONE 500 mg, comprimé",plaquette(s) thermoformée(s) polypropylène aluminium de 30 comprimé(s),3400934156120
+Oméprazole,OK_NOM_DOSAGE,"OMEPRAZOLE ZENTIVA CONSEIL 20 mg, gélule",plaquette(s) PVC PVDC aluminium de 7 gélule(s),3400930320181
+Clarithromycine,OK_NOM_DOSAGE,"CLARITHROMYCINE EG 250 mg, comprimé pelliculé",plaquette(s) thermoformée(s) PVC PVDC aluminium de 10 comprimé(s),3400936780569
+Cétirizine,OK_NOM_DOSAGE,"CETIRIZINE EG 10 mg, comprimé pelliculé sécable",plaquette(s) thermoformée(s) aluminium PVC PVDC de 15  comprimé(s),3400936266162
+Bétaméthasone Crème,AUCUN,,,
+Complexe B,AUCUN,,,
+Spray Nasal Salin,AUCUN,,,
+Métronidazole,OK_NOM_DOSAGE,"METRONIDAZOLE BIOGARAN 500 mg, comprimé pelliculé",plaquette(s) PVC aluminium de 4 comprimés,3400930147665
+Loratadine,OK_NOM_DOSAGE,"LORATADINE EG 10 mg, comprimé",plaquette(s) PVC-Aluminium de 15 comprimé(s),3400936133648
+Furosémide,OK_NOM_DOSAGE,"FUROSEMIDE EG 40 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400936169548
+Pantoprazole,NOM_SEUL,"PANTOPRAZOLE EG 20 mg, comprimé gastro-résistant",plaquette(s) thermoformée(s) aluminium de 14 comprimé(s),3400939030104
+Fer,NOM_SEUL,"FER AP-HP 0,5 mg NOUVEAU-NE, gélule",plaquette(s) PVC-Aluminium PVDC de 100 gélule(s),3400936926653
+Gants Latex M,AUCUN,,,
+Tensiomètre Électronique,AUCUN,,,
+Shampoing Antichute,AUCUN,,,
+Sonde Urinaire,AUCUN,,,
+Insuline Rapide,AUCUN,,,
+Gaze Stérile,AUCUN,,,
+Bande Élastique,AUCUN,,,
+Brosse à Dents Souple,AUCUN,,,
+Plaquettes de Diabète,AUCUN,,,
+Amlodipine,NOM_SEUL,"AMLODIPINE EG 5 mg, gélule",plaquette(s) PVC-Aluminium de 30 gélule(s),3400937944892
+Simvastatine,OK_NOM_DOSAGE,"SIMVASTATINE VIATRIS 10 mg, comprimé pelliculé",plaquette(s) PVC PVDC aluminium de 28 comprimé(s),3400930226766
+Clopidogrel,OK_NOM_DOSAGE,"CLOPIDOGREL MIDAS 75 mg, comprimé pelliculé",plaquette(s) thermoformée(s) polyamide aluminium PVC-Aluminium de 14 comprimé(s),3400949285266
+Augmentin,NOM_SEUL,"AUGMENTIN 500 mg/62,5 mg, comprimé pelliculé (rapport amoxicilline/acide clavulanique : 8/1)",plaquette(s) thermoformée(s) aluminium de 16 comprimé(s),3400935337023
+Tramadol,OK_NOM_DOSAGE,"TRAMADOL HCS 50 mg, gélule",plaquette(s) PVC-Aluminium de 10 gélule(s),3400930151907
+Vitamine D3,NOM_SEUL,"VITAMINE D3 BON 200 000 U.I./1 ml, solution injectable IM en ampoule",1 ampoule(s) bouteille de 1 ml en verre,3400931132134
+Crème Solaire SPF 50,AUCUN,,,
+Test de Grossesse,AUCUN,,,
+Suppositoires Glycérine,AUCUN,,,
+MopralPro,NOM_SEUL,"MOPRALPRO 20 mg, comprimé gastro-résistant",film(s) thermosoudé(s) aluminium de 7 comprimé(s),3400937532433
+Spironolactone,OK_NOM_DOSAGE,"SPIRONOLACTONE PFIZER 25 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 20 comprimé(s),3400934850448
+Tamsulosine,OK_NOM_DOSAGE,"TAMSULOSINE EG LP 0,4 mg, comprimé à libération prolongée",plaquette(s) PVC PVDC aluminium de 10 comprimé(s),3400941769481
+Tylenol Extra,AUCUN,,,
+Zopiclone,OK_NOM_DOSAGE,"ZOPICLONE EG 7,5 mg, comprimé pelliculé sécable",plaquette(s) thermoformée(s) PVC PVDC aluminium de 10 comprimé(s),3400935247322
+Lexapro,OK_SUBSTANCE_DOSAGE,"SEROPLEXORO 10 mg, comprimé orodispersible",plaquette(s) thermoformée(s) aluminium de 30 comprimé(s),3400921985900
+Atorvastatine,NOM_SEUL,"ATORVASTATINE HCS 10 mg, comprimé pelliculé",plaquette(s) polyamide aluminium PVC-Aluminium de 10 comprimé(s),3400926632946
+Losartan,OK_NOM_DOSAGE,"LOSARTAN KRKA 50 mg, comprimé pelliculé",plaquette(s) thermoformée(s) PVC PVDC aluminium de 14 comprimé(s),3400939622026
+Hydrochlorothiazide,OK_NOM_DOSAGE,"HYDROCHLOROTHIAZIDE ARROW 25 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400930180044
+Metformine,OK_NOM_DOSAGE,"METFORMINE BGR 500 mg, comprimé pelliculé",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400939717210
+Glibenclamide,OK_NOM_DOSAGE,"GLIBENCLAMIDE TEVA 5 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 20 comprimé(s),3400936820982
+Ventoline Spray,AUCUN,,,
+Fluticasone Spray,AUCUN,,,
+Dexaméthasone,NOM_SEUL,"DEXAMETHASONE MEDISOL 4 mg/1 ml, solution injectable",5 ampoule(s) en verre de 1 ml,3400930217962
+Prednisone,OK_NOM_DOSAGE,"PREDNISONE EG 5 mg, comprimé sécable",plaquette(s) PVC PVDC aluminium de 28 comprimé(s),3400936487246
+Doxycycline,OK_NOM_DOSAGE,"DOXYCYCLINE PANPHARMA, solution injectable pour perfusion IV",25 ampoule(s) de 5 ml,3400955417170
+Minocycline,NOM_SEUL,"MINOCYCLINE EG 50 mg, gélule",plaquette(s) thermoformée(s) PVC-aluminium de 12 gélule(s),3400933873820
+Azithromycine,NOM_SEUL,"AZITHROMYCINE EG 250 mg, comprimé pelliculé",plaquette(s) PVC PVDC aluminium de 4 comprimé(s),3400937945325
+Ciprofloxacine,NOM_SEUL,"CIPROFLOXACINE EG 250 mg, comprimé pelliculé",plaquette(s) PVC-Aluminium de 12 comprimé(s),3400936128446
+Levofloxacine,OK_NOM_DOSAGE,"LEVOFLOXACINE PFIZER 500 mg, comprimé pelliculé sécable",plaquette(s) thermoformée(s) PVC (ACLAR RX) polytrifluorochloroéthylène aluminium de 1 comprimé(s),3400922182001
+Fluconazole,OK_NOM_DOSAGE,"FLUCONAZOLE PFIZER 150 mg, gélule",plaquette(s) PVC-Aluminium de 1 gélule(s),3400933055332
+Nystatine Crème,OK_SUBSTANCE_DOSAGE,"MYCOSTATINE 100 000 UI/ml, suspension buvable",1 flacon(s) polyéthylène haute densité (PEHD) de 24 ml avec pipette(s) graduée(s) polypropylène avec adaptateur polyéthylène basse densité (PEBD),3400935179043
+Lamisil Crème,AUCUN,,,
+Clotrimazole Crème,AUCUN,,,
+Vitamine B12,NOM_SEUL,"VITAMINE B12 GERDA 250 microgrammes, comprimé sécable",1 flacon(s) en verre brun de 24 comprimé(s),3400931136446
+Calcium/Vitamine D,AUCUN,,,
+Magnésium,NOM_SEUL,"MAGNESIUM OLIGOSOL, solution buvable en ampoule",28 ampoule(s) en verre de 2 ml,3400937546850
+Zinc,NOM_SEUL,"ZINC OLIGOSOL, solution buvable en ampoule",14 ampoule(s) en verre de 2 ml,3400930752401
+Huile de Poisson Omega-3,AUCUN,,,
+Complément Probiotique,AUCUN,,,
+Théophylline,OK_NOM_DOSAGE,"THEOPHYLLINE ETHYPHARM LP 200 mg, gélule à libération prolongée",plaquette(s) thermoformée(s) PVC-aluminium de 40 gélule(s),3400934668517
+Montelukast,NOM_SEUL,"MONTELUKAST TEVA 4 mg, granulés",7 sachet(s)-dose(s) kraft polyéthylène basse densité (PEBD) aluminium P-A-M-éthylène (SURLYN),3400921860849
+Singulair,NOM_SEUL,"SINGULAIR 4 mg, granulés",7 sachet(s) polyéthylène aluminium polyester,3400939312071
+Xyzal,OK_SUBSTANCE_DOSAGE,"XYZALL 5 mg, comprimé pelliculé",plaquette(s) polyamide aluminium PVC-Aluminium de 10 comprimé(s),3400935850188
+Benadryl Liquide,AUCUN,,,
+Mucosolvan,OK_SUBSTANCE_DOSAGE,"AMBROXOL EG LABO CONSEIL 30 mg, comprimé sécable",plaquette(s) thermoformée(s) PVC-aluminium PVDC de 30 comprimé(s),3400934886867
+Dextrométhorphane Sirop,AUCUN,,,
+Vicks VapoRub,NOM_SEUL,"VICKS VAPORUB, pommade",1 pot(s) polypropylène de 50 g avec fermeture de sécurité enfant,3400935281739
+Thermometre Numérique,AUCUN,,,
+Kit Premiers Secours,AUCUN,,,
+Chambre d'Inhalation,AUCUN,,,
+Compresse Alcoolisée,AUCUN,,,
+Vaseline Pure,AUCUN,,,
+Baume à Lèvres,AUCUN,,,
+Crème Hydratante Corps,AUCUN,,,
+Gel Hydroalcoolique,AUCUN,,,
+Masque Chirurgical,AUCUN,,,
+Seringue 5ml,AUCUN,,,
+Bouchons d'Oreille,AUCUN,,,
+Crème Anti-Démangeaison,AUCUN,,,
+Sérum Rétinol 0.5%,AUCUN,,,
+Acide Hyaluronique Sérum,AUCUN,,,
+Gel Douche pH Neutre,AUCUN,,,
+Savon Antibactérien,AUCUN,,,
+Laxatif Doux,AUCUN,,,
+Bismuth Subsalicylate,AUCUN,,,
+Lopéramide,OK_NOM_DOSAGE,"LOPERAMIDE EG 2 mg, gélule",plaquette(s) thermoformée(s) PVC-aluminium de 20 gélule(s),3400934568350
+Dimenhydrinate,OK_SUBSTANCE_DOSAGE,"NAUSICALM ADULTES 50 mg, gélule",plaquette(s) thermoformée(s) PVC-Aluminium de 14  gélule(s),3400933594923
+Captopril,OK_NOM_DOSAGE,"CAPTOPRIL EG 25 mg, comprimé quadrisécable",plaquette(s) PVC-Aluminium de 20 comprimé(s),3400934813887
+Enalapril,OK_NOM_DOSAGE,"ENALAPRIL MYLAN 10 mg, comprimé",plaquette(s) thermoformée(s) aluminium de 14 comprimé(s),3400935504685
+Warfarine,OK_SUBSTANCE_DOSAGE,"COUMADINE 5 mg, comprimé sécable",plaquette(s) thermoformée(s) PVC-aluminium de 30 comprimé(s),3400935693099
+Rivaroxaban,OK_NOM_DOSAGE,"RIVAROXABAN EG 20 mg, gélule",plaquette(s) PVC polychlortrifluoroéthylène PVC-Aluminium de 14 gélule(s),3400930265710
+Amiodarone,OK_NOM_DOSAGE,"AMIODARONE EG 200 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400935407191
+Valsartan,OK_NOM_DOSAGE,"VALSARTAN ZYDUS 80 mg, comprimé pelliculé",plaquette(s) aluminium de 30 comprimé(s),3400922095080
+Gaviscon Sirop,AUCUN,,,
+Maalox comprimés,AUCUN,,,
+Rennie sans sucre,NOM_SEUL,"RENNIE SANS SUCRE, poudre orale en sachet édulcorée au xylitol et à la saccharine sodique",10 sachet(s) polyéthylène aluminium,3400930135709
+Smecta Vanille,OK_SUBSTANCE_DOSAGE,"SMECTALIA 3 g, suspension buvable en sachet",12 sachet(s) polytéréphtalate (PET) aluminium polyéthylène de 10 g,3400930007877
+Spasfon Lyoc,OK_NOM_DOSAGE,"SPASFON LYOC 80 mg, lyophilisat oral",plaquette(s) thermoformée(s) PVC-aluminium de 20 lyophilisat(s),3400931862932
+Vogalib,OK_NOM_DOSAGE,"VOGALIB 7,5 mg SANS SUCRE, lyophilisat oral édulcoré à l'aspartam",plaquette(s) thermoformée(s) PVC-Aluminium de 8 lyophilisat(s),3400936348288
+Imodium Caps,OK_SUBSTANCE_DOSAGE,"DIARETYL 2 mg, gélule",plaquette(s) thermoformée(s) PVC-aluminium de 12 gélule(s),3400935842145
+Meteospasmyl,OK_NOM_DOSAGE,"METEOSPASMYL, capsule molle",plaquette(s) PVC-Aluminium de 20 capsule(s),3400933254063
+Buscopan,AUCUN,,,
+Bion 3 Senior,AUCUN,,,
+Supradyn Intensia,AUCUN,,,
+Berocca Sans Sucre,NOM_SEUL,"BEROCCA SANS SUCRE, comprimé effervescent édulcoré à l'aspartam et à l'acésulfame de potassium",tube(s) polypropylène de 10 comprimé(s),3400935278258
+Mag 2 Sans Sucre,NOM_SEUL,"MAG 2 SANS SUCRE 122 mg, solution buvable en ampoule édulcoré à la saccharine sodique",20 ampoule(s) en verre jaune(brun) de 10 ml,3400936382176
+Uvedose,AUCUN,,,
+ZymaD,OK_NOM_DOSAGE,"ZYMAD 10 000 UI/ml, solution buvable en gouttes",1 flacon(s) en verre brun avec compte-gouttes polyéthylène avec fermeture de sécurité enfant de 10 ml,3400935358363
+Tardyferon,NOM_SEUL,"TARDYFERON B9, comprimé pelliculé",plaquette(s) thermoformées PVC PVDC aluminium de 30 comprimé(s),3400932918195
+Speciafoldine,NOM_SEUL,"SPECIAFOLDINE 5 mg, comprimé",plaquette(s) PVC aluminium de 20 comprimé(s),3400930408919
+Euthyrox,AUCUN,,,
+Lévothyrox,NOM_SEUL,"LEVOTHYROX 25 microgrammes, comprimé sécable",plaquette(s) PVC aluminium de 28 comprimé(s),3400930065549
+Januvia,NOM_SEUL,"JANUVIA 50 mg, comprimé pelliculé",plaquette(s) thermoformée(s) PVC polyéthylène PVDC aluminium de 84 comprimé(s),3400957070984
+Victoza Stylo,AUCUN,,,
+Diamicron,OK_NOM_DOSAGE,"DIAMICRON 60 mg, comprimé sécable à libération modifiée",plaquette(s) PVC-Aluminium de 15 comprimé(s),3400933810726
+Stagid,NOM_SEUL,"STAGID 700 mg, comprimé sécable",plaquette(s) aluminium PVC PVDC de 30 comprimé(s),3400931927501
+Glucagen Kit,NOM_SEUL,"GLUCAGEN KIT 1 mg/ml, poudre et solvant pour solution injectable",1 flacon(s) en verre - 1 seringue(s) préremplie(s) en verre de 1  ml,3400933590499
+Humalog Mix 25,NOM_SEUL,"HUMALOG MIX 25 100 UI/ml HUMAJECT, suspension injectable",5 cartouche(s) en verre de 3 ml dans stylo pré-rempli,3400934947063
+Lantus SoloStar,NOM_SEUL,"LANTUS SOLOSTAR 100 unités/ ml, solution injectable en stylo prérempli",3 cartouche(s) en verre dans stylo pré-rempli de 3 ml,3400937722759
+Flector Tissu,AUCUN,,,
+VoltarenGel,AUCUN,,,
+Synthol Liquide,AUCUN,,,
+Ketum Gel,AUCUN,,,
+Nifluril Crème,AUCUN,,,
+Arnica Gel,AUCUN,,,
+Hextril Collutoire,AUCUN,,,
+Eludril Solution,AUCUN,,,
+Strepsils Miel Citron,NOM_SEUL,"STREPSILS MIEL CITRON, pastille à sucer",plaquette(s) thermoformée(s) PVC PVDC aluminium de 24  pastille(s),3400933226619
+Lysopaïne,OK_NOM_DOSAGE,"LYSOPAÏNE CETYLPYRIDINIUM LYSOZYME MIEL CITRON SANS SUCRE, comprimé à sucer édulcoré au sorbitol et à la saccharine",1 tube(s) polypropylène de 18 comprimé(s),3400928026668
+Drill Sans Sucre,NOM_SEUL,"DRILL SANS SUCRE, pastille édulcorée à l'aspartam et à l'isomalt",plaquette(s) thermoformée(s) PVC PVDC aluminium de 24 pastille(s),3400933378172
+Biafine Émulsion,AUCUN,,,
+Cicabiafine,AUCUN,,,
+Dexeryl Crème,AUCUN,,,
+Avène Eau Thermale,AUCUN,,,
+La Roche-Posay Cicaplast,AUCUN,,,
+Bioderma Atoderm,AUCUN,,,
+Eucerin pH5 Lotion,AUCUN,,,
+Neutrogena Crème Mains,AUCUN,,,
+Dermophil Indien,AUCUN,,,
+Homéoplasmine,NOM_SEUL,"HOMEOPLASMINE, pommade",1 tube(s) alumino-plastique de 18 g,3400930137413
+Mercurochrome,AUCUN,,,
+Biseptine Spray,AUCUN,,,
+Hansaplast Sparadrap,AUCUN,,,
+Compeed Ampoules,AUCUN,,,
+Urgostérile,AUCUN,,,
+Tegaderm Film,AUCUN,,,
+Bétadine Dermique,NOM_SEUL,"BETADINE DERMIQUE 10 POUR CENT, solution pour application locale",1 flacon(s) polyéthylène de 125 ml,3400931499787
+Dakins Cooper,AUCUN,,,
+Eau Oxygénée,NOM_SEUL,"EAU OXYGENEE GIFRER 10 VOLUMES, solution pour application cutanée",1 flacon(s) polyéthylène haute densité (PEHD) de 250  ml,3400933362843
+Alcool 70% Modifié,AUCUN,,,
+Vismed Collyre,AUCUN,,,
+HyloVis,AUCUN,,,
+Optone Yeux Secs,AUCUN,,,
+Désomedine,AUCUN,,,
+Naabak,NOM_SEUL,"NAABAK 4,9 POUR CENT, collyre en solution",1 flacon(s) polyéthylène de 10 ml,3400933563585
+Zovirax Crème,AUCUN,,,
+Activivir,AUCUN,,,
+Onyster Kit,AUCUN,,,
+Excilor Traitement,AUCUN,,,
+Urgo Verrues,AUCUN,,,
+Frontline Combo Chat,AUCUN,,,
+Advantix Chien Moyen,AUCUN,,,
+Milbemax Chat,AUCUN,,,
+Drontal Chien,AUCUN,,,
+Feliway Diffuseur,AUCUN,,,
+Nutribén 1er Âge,AUCUN,,,
+Gallia Calisma 2,AUCUN,,,
+Guigoz Pelargon 1,AUCUN,,,
+Physiomer Spray,AUCUN,,,
+Sterimar Hygiène Nez,AUCUN,,,
+Prorhinel Spray,AUCUN,,,
+Doliprane,NOM_SEUL,"DOLIPRANE 500 mg, gélule",plaquette(s) thermoformée(s) PVC aluminium de 6 gélule(s),3400934507496
+Efferalgan,OK_NOM_DOSAGE,"EFFERALGAN VITAMINE C 500 mg/200 mg , comprimé effervescent",1 tube(s) polypropylène de 8 comprimé(s),3400936373181
+Dafalgan Codeiné,NOM_SEUL,"DAFALGAN CODEINE, comprimé pelliculé",plaquette(s) thermoformée(s) PVC-aluminium de 16  comprimé(s),3400933275815
+Lamaline Gélules,AUCUN,,,
+Ixprim,NOM_SEUL,"IXPRIM 37,5 mg/325 mg, comprimé pelliculé",2 plaquette(s) thermoformée(s) papier polytéréphtalate (PET) aluminium PVC de 1 comprimé(s),3400935922830
+Kétoprofène,OK_NOM_DOSAGE,"KETOPROFENE CRISTERS 100 mg, comprimé pelliculé",plaquette(s) thermoformée(s) PVC-aluminium de 100  comprimé(s),3400955973331
+Naproxène,OK_NOM_DOSAGE,"NAPROXENE TEVA 250 mg, comprimé",1 flacon(s) polyéthylène de 12 comprimé(s),3400934671418
+Celebrex,OK_NOM_DOSAGE,"CELEBREX 200 mg, gélule",plaquette(s) PVC-Aluminium de 30 gélule(s),3400935437068
+Colchicine,OK_NOM_DOSAGE,"COLCHICINE OPOCALCIUM 1 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 20 comprimé(s),3400936275096
+Allopurinol,OK_NOM_DOSAGE,"ALLOPURINOL TEVA 300 mg, comprimé",plaquette(s) PVC PVDC aluminium de 20 comprimé(s),3400949623518
+Inexium,NOM_SEUL,"INEXIUM 20 mg, comprimé gastro-résistant",plaquette(s) aluminium de 7 comprimé(s) en pochette,3400935532831
+Lanzor,OK_NOM_DOSAGE,"LANZOR 30 mg, gélule gastro-résistante",1 flacon(s) polyéthylène de 15 gélule(s),3400933341152
+Xanax,OK_NOM_DOSAGE,"XANAX 0,25 mg, comprimé sécable",plaquette(s) PVC-Aluminium de 30 comprimé(s),3400932644490
+Lexomil Baguette,OK_SUBSTANCE_DOSAGE,"LEXOMIL 6 mg, comprimé quadrisécable",tube(s) polypropylène de 30  comprimé(s),3400931742845
+Seresta,OK_NOM_DOSAGE,"SERESTA 10 mg, comprimé",plaquette(s) thermoformée(s) PVC-Aluminium de 30 comprimé(s),3400935887559
+Valium,OK_NOM_DOSAGE,"VALIUM ROCHE 5 mg, comprimé sécable",plaquette(s) thermoformée(s) PVC polyéthylène PVDC aluminium de 40 comprimé(s),3400931112891
+Stilnox,OK_NOM_DOSAGE,"STILNOX 10 mg, comprimé pelliculé sécable",1 flacon(s) polypropylène de 20 comprimé(s),3400932961139
+Imovane,OK_NOM_DOSAGE,"IMOVANE 7,5 mg, comprimé pelliculé sécable",plaquette(s) PVC-Aluminium de 5 comprimé(s),3400932849895
+Tercian,NOM_SEUL,"TERCIAN 100 mg, comprimé pelliculé sécable",plaquette(s) PVC-Aluminium de 25 comprimé(s),3400931919926
+Miconazole Gel,AUCUN,,,
+Bisoprolol,OK_NOM_DOSAGE,"BISOPROLOL EG 5 mg, comprimé sécable",plaquette(s) PVC PVDC aluminium de 28 comprimé(s),3400930069103
