@@ -14,8 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!initPage()) return;
     setupEventListeners();
     fetchInventory();
-    // Coming from the dashboard quick actions banner
-    if (new URLSearchParams(window.location.search).get('new')) openProductModal();
+    setupANSMSuggestions();
+
+    if (new URLSearchParams(window.location.search).get('new')) {
+        openProductModal();
+    }
 });
 
 // ==========================================
@@ -29,7 +32,6 @@ async function fetchInventory() {
         allProducts = await res.json();
         applyFilter();
 
-        // ?id=... deep link coming from the dashboard "Order" button
         if (pendingDeepLinkId) {
             handleDeepLinking(pendingDeepLinkId);
             pendingDeepLinkId = null;
@@ -55,7 +57,7 @@ function renderTable(products) {
     const { isAdmin } = getAuthInfo();
 
     if (!products || products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Inventory is empty.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Inventory is empty.</td></tr>';
         return;
     }
 
@@ -67,6 +69,7 @@ function renderTable(products) {
             <td>${esc(p.name)} ${p.cis ? '<span title="Linked to the ANSM database">🔗</span>' : ''}</td>
             <td>${esc(p.active_ingredient || 'N/A')}</td>
             <td>${esc(p.dosage || 'N/A')}</td>
+            <td>${esc(p.cip13 || '-')}</td>
             <td>${Number(p.price).toFixed(2)} €</td>
             <td class="${low ? 'text-danger fw-bold' : ''}">${esc(p.stock)}</td>
             <td style="text-align:center;">${p.is_prescription_only ? '✅' : '❌'}</td>
@@ -99,10 +102,19 @@ function handleDeepLinking(productId) {
 // ==========================================
 
 function openProductModal(product = null) {
+    const modal = document.getElementById('product-modal');
     const form = document.getElementById('product-form');
+    if (!modal || !form) return;
+
     form.reset();
     document.getElementById('product-id').value = product ? product.id : '';
     document.getElementById('product-modal-title').textContent = product ? 'Edit Product' : 'Add New Product';
+
+    const suggestionsBox = document.getElementById('ansm-suggestions');
+    if (suggestionsBox) {
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    }
 
     if (product) {
         form.elements['name'].value = product.name || '';
@@ -113,7 +125,7 @@ function openProductModal(product = null) {
         form.elements['stock'].value = product.stock ?? '';
         form.elements['is_prescription_only'].checked = Boolean(product.is_prescription_only);
     }
-    document.getElementById('product-modal').style.display = 'block';
+    modal.style.display = 'block';
 }
 
 async function saveProduct(e) {
@@ -143,18 +155,6 @@ async function saveProduct(e) {
             return;
         }
 
-        // POST /inventory/ ignores cip13 (the route does not forward it to the facade):
-        // set it with a follow-up update. PUT is admin-only, so skipped for other users.
-        if (!isUpdate && cip13 && getAuthInfo().isAdmin) {
-            const created = await res.json().catch(() => null);
-            if (created?.id) {
-                await apiFetch(`/inventory/${created.id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ cip13 })
-                });
-            }
-        }
-
         document.getElementById('product-modal').style.display = 'none';
         fetchInventory();
     } catch (err) {
@@ -177,21 +177,116 @@ async function deleteProduct(id) {
 }
 
 function setupEventListeners() {
-    document.getElementById('add-product-btn').addEventListener('click', () => openProductModal());
-    bindModalClose('product-modal', 'close-product-modal');
-    document.getElementById('product-form').addEventListener('submit', saveProduct);
-    document.getElementById('inventory-search')?.addEventListener('input', applyFilter);
+    const addBtn = document.getElementById('add-product-btn');
+    if (addBtn) addBtn.addEventListener('click', () => openProductModal());
 
-    // Row actions (event delegation)
-    document.getElementById('inventory-body').addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const { action, id } = btn.dataset;
-        if (action === 'edit') {
-            const product = allProducts.find(p => String(p.id) === id);
-            if (product) openProductModal(product);
-        } else if (action === 'delete') {
-            deleteProduct(id);
+    bindModalClose('product-modal', 'close-product-modal');
+
+    const form = document.getElementById('product-form');
+    if (form) form.addEventListener('submit', saveProduct);
+
+    const searchInput = document.getElementById('inventory-search');
+    if (searchInput) searchInput.addEventListener('input', applyFilter);
+
+    const tbody = document.getElementById('inventory-body');
+    if (tbody) {
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const { action, id } = btn.dataset;
+            if (action === 'edit') {
+                const product = allProducts.find(p => String(p.id) === id);
+                if (product) openProductModal(product);
+            } else if (action === 'delete') {
+                deleteProduct(id);
+            }
+        });
+    }
+}
+
+// ==========================================
+// RECHERCHE INTELLIGENTE ANSM & AUTOCOMPLÉTION
+// ==========================================
+
+function setupANSMSuggestions() {
+    const nameInput = document.getElementById('product-name');
+    const suggestionsBox = document.getElementById('ansm-suggestions');
+
+    if (!nameInput || !suggestionsBox) {
+        setTimeout(setupANSMSuggestions, 500);
+        return;
+    }
+
+    let debounceTimer;
+
+    nameInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+        console.log("Saisie utilisateur :", query);
+
+        if (query.length < 2) {
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.innerHTML = '';
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const res = await apiFetch(`/inventory/search-ansm?q=${encodeURIComponent(query)}`);
+                console.log("Statut réponse API:", res.status);
+                if (!res.ok) return;
+
+                const items = await res.json();
+                console.log("Données JSON reçues de l'ANSM:", items);
+
+                if (!items || items.length === 0) {
+                    console.warn("Tableau items vide, aucun résultat à afficher.");
+                    suggestionsBox.style.display = 'none';
+                    suggestionsBox.innerHTML = '';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = items.map(item => `
+                    <div class="suggestion-item" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; background: #fff;"
+                         data-name="${esc(item.denomination)}"
+                         data-ingredient="${esc(item.active_ingredient)}"
+                         data-dosage="${esc(item.dosage)}"
+                         data-cip="${esc(item.cip13 || '')}"
+                         data-cis="${esc(item.cis)}">
+                        <strong>${esc(item.denomination)}</strong><br>
+                        <small style="color: #666;">Substance : ${esc(item.active_ingredient || 'N/A')} | CIP : ${esc(item.cip13 || 'N/A')}</small>
+                    </div>
+                `).join('');
+
+                suggestionsBox.style.display = 'block';
+                console.log("Boîte de suggestions affichée avec succès !");
+            } catch (err) {
+                console.error('Erreur attrapée dans l\'autocomplétion :', err);
+            }
+        }, 300);
+    });
+
+    suggestionsBox.addEventListener('click', (e) => {
+        const itemDiv = e.target.closest('.suggestion-item');
+        if (!itemDiv) return;
+
+        const form = document.getElementById('product-form');
+        if (!form) return;
+
+        form.elements['name'].value = itemDiv.dataset.name;
+        form.elements['active_ingredient'].value = itemDiv.dataset.ingredient;
+        form.elements['dosage'].value = itemDiv.dataset.dosage;
+
+        const cipField = form.elements['cip13'];
+        if (cipField) cipField.value = itemDiv.dataset.cip;
+
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    });
+
+    document.getElementById('product-modal').addEventListener('click', (e) => {
+        if (!nameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.style.display = 'none';
         }
     });
 }
