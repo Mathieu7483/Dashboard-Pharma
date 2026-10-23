@@ -74,6 +74,7 @@ Directory structure:
         ├── app.py
         ├── config.py
         ├── run.py
+        ├── setup_db.py
         ├── api/
         │   ├── __init__.py
         │   ├── analytics.py
@@ -86,7 +87,6 @@ Directory structure:
         │   ├── notes.py
         │   ├── products.py
         │   ├── sales.py
-        │   ├── specialites.py
         │   ├── tickets.py
         │   └── users.py
         ├── core/
@@ -101,14 +101,12 @@ Directory structure:
         │   ├── basemodel.py
         │   ├── calendar.py
         │   ├── client.py
-        │   ├── composition.py
         │   ├── doctor.py
         │   ├── interaction.py
         │   ├── note.py
         │   ├── product.py
         │   ├── product_alias.py
         │   ├── sale.py
-        │   ├── specialite.py
         │   ├── ticket.py
         │   └── user.py
         ├── services/
@@ -121,15 +119,10 @@ Directory structure:
             ├── __init__.py
             ├── data_seed.json
             ├── decorator.py
-            ├── import_ansm.py
             ├── initial_inventory.csv
-            ├── migrate_ansm_fields.py
-            ├── scheduler.py
             ├── seed_aliases.py
             ├── seed_sales.py
-            ├── seeder.py
-            └── text_norm.py
-
+            └── seeder.py
 
 
 
