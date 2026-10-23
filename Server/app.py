@@ -86,7 +86,7 @@ def create_app(config_class=DevelopmentConfig):
         from models import (
             user, product, sale, client, doctor,
             interaction, calendar, ticket,
-            specialite, composition, interaction_ansm,
+            specialite, composition, interaction_ansm, cip,
         )
 
     return app
