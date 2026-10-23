@@ -21,6 +21,8 @@ def seed_all_initial_data():
     """
     Main entry point for seeding the database.
     Execution order ensures foreign key constraints are respected.
+    The ANSM reference must be imported BEFORE the inventory, because the
+    inventory rows are linked to it through their CIP13 code.
     """
     print("\n--- 🚀 Starting Global Seeding Process ---")
 
@@ -30,8 +32,8 @@ def seed_all_initial_data():
         return
 
     _seed_json_data(admin.id)
-    _seed_csv_inventory(admin.id)
     _seed_ansm_reference()
+    _seed_csv_inventory(admin.id)
     _seed_medical_interactions()
     seed_product_sales()
 
@@ -131,52 +133,11 @@ def _seed_json_data(admin_id):
         print(f"❌ Error during JSON seeding: {e}")
 
 
-def _seed_csv_inventory(admin_id):
-    """Imports products from the CSV file into the database."""
-    current_dir = os.path.dirname(__file__)
-    csv_path = os.path.join(current_dir, 'initial_inventory.csv')
-
-    if not os.path.exists(csv_path):
-        print(f"❌ Warning: CSV not found at {csv_path}")
-        return
-
-    try:
-        with open(csv_path, mode='r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            product_count = 0
-            skipped_count = 0
-
-            for row in reader:
-                if not ProductModel.query.filter_by(name=row['name']).first():
-                    db.session.add(ProductModel(
-                        name=row['name'],
-                        active_ingredient=row['active_ingredient'],
-                        dosage=row['dosage'],
-                        stock=int(row['stock']),
-                        price=float(row['price']),
-                        is_prescription_only=row['is_prescription_only'].strip().lower() == 'true',
-                        user_id=admin_id
-                    ))
-                    product_count += 1
-                else:
-                    skipped_count += 1
-
-            db.session.commit()
-
-            if product_count > 0:
-                print(f"✅ Success: {product_count} new products imported from CSV.")
-            else:
-                print(f"ℹ️ Inventory already seeded ({skipped_count} products already present). Skipping...")
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Error during CSV seeding: {e}")
-
-
 def _seed_ansm_reference():
     """
     Importe le référentiel ANSM (CIS.txt, COMPO.txt, CIS_CIP.txt) utilisé par
-    l'autocomplétion de l'inventaire (/inventory/search-ansm).
+    l'autocomplétion de l'inventaire (/inventory/search-ansm) et pour lier
+    les produits du CSV à leur spécialité via le CIP13.
 
     L'import est lancé si au moins une des trois tables est vide, afin de
     pouvoir reprendre un import qui aurait échoué à mi-chemin. Les étapes
@@ -200,6 +161,71 @@ def _seed_ansm_reference():
     except Exception as e:
         db.session.rollback()
         print(f"❌ Erreur lors de l'import ANSM : {e}")
+
+
+def _seed_csv_inventory(admin_id):
+    """
+    Imports products from initial_inventory.csv.
+
+    La colonne 'cip13' est optionnelle : quand elle est renseignée, le produit
+    est lié à la spécialité ANSM correspondante (cis déduit du CIP13).
+    Les produits déjà en base sans CIP sont complétés au passage.
+    """
+    current_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(current_dir, 'initial_inventory.csv')
+
+    if not os.path.exists(csv_path):
+        print(f"❌ Warning: CSV not found at {csv_path}")
+        return
+
+    try:
+        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            product_count, updated_count, skipped_count, unknown_cip = 0, 0, 0, 0
+
+            for row in reader:
+                cip13 = (row.get('cip13') or '').strip() or None
+                cis = None
+
+                if cip13:
+                    cip = CipModel.query.filter_by(cip13=cip13).first()
+                    if cip and db.session.get(SpecialiteModel, cip.cis):
+                        cis = cip.cis
+                    else:
+                        unknown_cip += 1
+                        print(f"⚠️ CIP13 {cip13} introuvable dans l'ANSM ({row['name']}).")
+
+                existing = ProductModel.query.filter_by(name=row['name']).first()
+                if existing:
+                    # Rattrapage : on complète les produits déjà en base sans CIP
+                    if cip13 and not existing.cip13:
+                        existing.cip13 = cip13
+                        existing.cis = cis
+                        updated_count += 1
+                    else:
+                        skipped_count += 1
+                    continue
+
+                db.session.add(ProductModel(
+                    name=row['name'],
+                    active_ingredient=row['active_ingredient'],
+                    dosage=row['dosage'],
+                    stock=int(row['stock']),
+                    price=float(row['price']),
+                    is_prescription_only=row['is_prescription_only'].strip().lower() == 'true',
+                    user_id=admin_id,
+                    cis=cis,
+                    cip13=cip13
+                ))
+                product_count += 1
+
+            db.session.commit()
+            print(f"✅ Inventaire : {product_count} créés, {updated_count} complétés avec un CIP, "
+                  f"{skipped_count} inchangés, {unknown_cip} CIP13 inconnus.")
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error during CSV seeding: {e}")
 
 
 def _seed_medical_interactions():
