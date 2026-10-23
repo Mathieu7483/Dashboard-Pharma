@@ -1,13 +1,78 @@
-<<<<<<< HEAD
+import re
 from database.data_manager import db, bcrypt
-from sqlalchemy import func
+from sqlalchemy import func, or_, and_, desc
 from models.user import UserModel
 from models.product import ProductModel
 from models.sale import SaleModel, SaleItemModel
 from models.client import ClientModel
 from models.doctor import DoctorModel
+from models.calendar import CalendarEvent
+from models.interaction import InteractionModel
+from models.interaction_ansm import InteractionAnsmModel
+from models.note import Note
 from models.ticket import Ticket
+from models.specialite import SpecialiteModel
+from models.composition import CompositionModel
+from utils.text_norm import normalize
 from datetime import datetime, UTC
+
+
+# ==============================================================================
+# INTERACTION RESOLUTION — constantes et helpers (ex utils/checker.py)
+# ==============================================================================
+
+COMMON_SALTS = [
+    r'\bbromhydrate de\b', r'\bchlorhydrate de\b', r'\bsulfate de\b',
+    r'\bsodium\b', r'\bpotassium\b', r'\bmaleate de\b', r'\bdihydrate\b',
+    r'\bphosphate de\b', r'\bmesilate de\b', r'\btartrate de\b', r'\bacetate de\b'
+]
+
+# Dictionnaire de correspondance DCI -> Classe Thérapeutique ANSM
+# (évite de devoir toucher à la BDD pour les grandes familles du thésaurus)
+ANSM_CLASS_MAPPING = {
+    "citalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "escitalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "fluoxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "paroxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "sertraline": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
+    "tramadol": ["TRAMADOL", "OPIOÏDES"],
+    "ibuprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "ketoprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "aspirine": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
+    "krameria": ["HEMOSTATIQUES"],
+}
+
+
+def _clean_substance_name(substance: str) -> str:
+    text = substance.lower()
+    for salt in COMMON_SALTS:
+        text = re.sub(salt, '', text)
+    return text.strip()
+
+
+def _expand_substance_terms(substance: str) -> list:
+    """
+    Prend une molécule (ex: 'citalopram') et retourne :
+    1. La molécule elle-même
+    2. Les classes thérapeutiques ANSM associées, si connues
+    """
+    clean_sub = _clean_substance_name(substance)
+    terms = [clean_sub]
+    for dci, classes in ANSM_CLASS_MAPPING.items():
+        if dci in clean_sub:
+            terms.extend(classes)
+    return list(set(terms))
+
+
+def _split_ingredients(raw_str: str) -> list:
+    """Découpe les chaînes multi-composants (ex: 'paracétamol / codéine')."""
+    if not raw_str:
+        return []
+    temp_str = raw_str
+    for delim in [",", "/", "+", ";"]:
+        temp_str = temp_str.replace(delim, "|")
+    return [ing.strip().lower() for ing in temp_str.split("|") if ing.strip()]
+
 
 class FacadeService:
     """
@@ -16,7 +81,7 @@ class FacadeService:
     """
 
     # --- USER CRUD & AUTHENTICATION METHODS ---
-    
+
     def get_user_by_username(self, username):
         return db.session.execute(
             db.select(UserModel).filter_by(username=username)
@@ -45,7 +110,7 @@ class FacadeService:
             )
             return new_user if new_user.save_to_db() else "Integrity error."
         except Exception as e:
-            print(f"Error creating user: {e}") 
+            print(f"Error creating user: {e}")
             return None
 
     def authenticate_user(self, username, password):
@@ -56,7 +121,7 @@ class FacadeService:
 
     def get_all_users(self):
         return db.session.execute(db.select(UserModel)).scalars().all()
-        
+
     def get_user_by_id(self, user_id):
         return db.session.get(UserModel, user_id)
 
@@ -75,12 +140,12 @@ class FacadeService:
     def delete_user(self, user_id):
         user = self.get_user_by_id(user_id)
         return user.delete_from_db() if user else False
-        
+
     # --- PRODUCT CRUD METHODS ---
-    
+
     def get_all_products(self):
         return db.session.execute(db.select(ProductModel)).scalars().all()
-    
+
     def get_all_products_detailed(self, user_id=None):
         stmt = db.select(ProductModel).order_by(ProductModel.name)
         if user_id:
@@ -95,11 +160,13 @@ class FacadeService:
             db.select(ProductModel).filter_by(name=name)
         ).scalar_one_or_none()
 
-    def create_product(self, name, active_ingredient, dosage, stock, price, is_prescription_only, user_id):
+    def create_product(self, name, active_ingredient, dosage, stock, price, is_prescription_only, user_id,
+                        cis=None, cip13=None):
         try:
             new_product = ProductModel(
-                name=name, active_ingredient=active_ingredient, dosage=dosage, 
-                stock=stock, price=price, is_prescription_only=is_prescription_only, user_id=user_id
+                name=name, active_ingredient=active_ingredient, dosage=dosage,
+                stock=stock, price=price, is_prescription_only=is_prescription_only, user_id=user_id,
+                cis=cis, cip13=cip13
             )
             return new_product if new_product.save_to_db() else None
         except Exception as e:
@@ -118,48 +185,48 @@ class FacadeService:
     def delete_product(self, product_id):
         product = self.get_product_by_id(product_id)
         return product.delete_from_db() if product else False
-        
+
     # --- SALE METHODS ---
-    
+
     def get_all_sales(self, user_id=None):
-        stmt = db.select(SaleModel).order_by(SaleModel.sale_date.desc())
+        stmt = db.select(SaleModel).order_by(desc(SaleModel.sale_date))
         if user_id:
             stmt = stmt.filter(SaleModel.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
-        
+
     def get_sale_by_id(self, sale_id):
         return db.session.get(SaleModel, sale_id)
 
     def process_sale(self, client_id, doctor_id, items_data, user_id, created_at=None):
         if not items_data:
             raise ValueError("No items provided for sale.")
-        
+
         total_amount = 0
         validated_items = []
-    
+
         for item in items_data:
             product = self.get_product_by_id(item['product_id'])
             if not product:
                 raise ValueError(f"Product not found: {item['product_id']}")
             if product.stock < item['quantity']:
                 raise ValueError(f"Insufficient stock for {product.name}")
-            if product.is_prescription_only and not doctor_id: 
+            if product.is_prescription_only and not doctor_id:
                 raise ValueError(f"Prescription required for {product.name}")
-        
+
             total_amount += product.price * item['quantity']
             validated_items.append({'product': product, 'quantity': item['quantity'], 'price': product.price})
 
         try:
             new_sale = SaleModel(
-                user_id=user_id, 
-                client_id=client_id, 
+                user_id=user_id,
+                client_id=client_id,
                 doctor_id=doctor_id,
-                prescription_provided=bool(doctor_id), 
+                prescription_provided=bool(doctor_id),
                 total_amount=total_amount,
-                sale_date=created_at  # <--- Ajout crucial
+                sale_date=created_at
             )
             db.session.add(new_sale)
-            db.session.flush()  # Get new_sale.id before committing
+            db.session.flush()
 
             for item_data in validated_items:
                 item_data['product'].stock -= item_data['quantity']
@@ -167,21 +234,16 @@ class FacadeService:
                     sale_id=new_sale.id, product_id=item_data['product'].id,
                     quantity=item_data['quantity'], price_at_sale=item_data['price']
                 ))
-            
+
             db.session.commit()
             return new_sale
         except Exception as e:
             db.session.rollback()
             raise ValueError(f"Sale failed: {str(e)}")
 
-
-# --- ANALYTICS METHODS ---
+    # --- ANALYTICS METHODS ---
 
     def get_sales_revenue_stats(self):
-        """
-        Calculate total sales revenue grouped by date.
-        """
-
         stmt = (
             db.select(
                 func.date(SaleModel.sale_date).label('date'),
@@ -197,13 +259,11 @@ class FacadeService:
         }
 
     def get_stock_alerts(self):
-        """fetch products with low stock (<=10 units)."""
         stmt = db.select(ProductModel).filter(ProductModel.stock <= 10)
         return db.session.execute(stmt).scalars().all()
-    
+
     def get_daily_stats(self):
         today = datetime.now(UTC).strftime('%Y-%m-%d')
-        
         stmt = (
             db.select(
                 func.strftime('%H', SaleModel.sale_date).label('hour'),
@@ -218,43 +278,42 @@ class FacadeService:
 
     def get_monthly_stats(self):
         first_day = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0).strftime('%Y-%m-%d')
-    
         stmt = (
             db.select(
                 func.strftime('%Y-%m-%d', SaleModel.sale_date).label('day'),
                 func.sum(SaleModel.total_amount).label('revenue'),
-                func.count(SaleModel.id).label('sale_count') # <--- AJOUTE CETTE LIGNE
-         )
+                func.count(SaleModel.id).label('sale_count')
+            )
             .filter(SaleModel.sale_date >= first_day)
             .group_by('day')
             .order_by('day')
-     )
+        )
         return db.session.execute(stmt).all()
-    
 
     # --- CLIENT CRUD METHODS ---
-    
+
     def get_all_clients(self):
         return db.session.execute(db.select(ClientModel)).scalars().all()
-    
+
     def get_client_by_id(self, client_id):
         return db.session.get(ClientModel, client_id)
 
     def get_client_by_last_name(self, last_name):
         return db.session.execute(db.select(ClientModel).filter_by(last_name=last_name)).scalar_one_or_none()
-    
-    def create_client(self, first_name, last_name, email,phone, address, user_id):
-        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email,phone=phone, address=address, user_id=user_id)
+
+    def create_client(self, first_name, last_name, email, phone, address, user_id):
+        new_client = ClientModel(first_name=first_name, last_name=last_name, email=email, phone=phone,
+                                  address=address, user_id=user_id)
         return new_client if new_client.save_to_db() else None
 
     def search_clients(self, query):
         stmt = db.select(ClientModel).filter(
-            (ClientModel.first_name.ilike(f"%{query}%")) | 
+            (ClientModel.first_name.ilike(f"%{query}%")) |
             (ClientModel.last_name.ilike(f"%{query}%")) |
             (ClientModel.email.ilike(f"%{query}%"))
-     ).limit(20)
+        ).limit(20)
         return db.session.execute(stmt).scalars().all()
-    
+
     def update_client(self, client_id, data):
         client = self.get_client_by_id(client_id)
         if client:
@@ -263,23 +322,22 @@ class FacadeService:
                     setattr(client, key, value)
             return client if client.save_to_db() else None
         return None
-    
+
     def delete_client(self, client_id):
         client = self.get_client_by_id(client_id)
         return client.delete_from_db() if client else False
-    
-        
+
     # --- DOCTOR CRUD METHODS ---
-    
+
     def get_all_doctors(self):
         return db.session.execute(db.select(DoctorModel)).scalars().all()
-    
+
     def get_doctor_by_id(self, doctor_id):
         return db.session.get(DoctorModel, doctor_id)
 
     def search_doctors(self, query):
         stmt = db.select(DoctorModel).filter(
-            (DoctorModel.first_name.ilike(f"%{query}%")) | 
+            (DoctorModel.first_name.ilike(f"%{query}%")) |
             (DoctorModel.last_name.ilike(f"%{query}%")) |
             (DoctorModel.specialty.ilike(f"%{query}%")) |
             (DoctorModel.email.ilike(f"%{query}%"))
@@ -288,11 +346,11 @@ class FacadeService:
 
     def create_doctor(self, first_name, last_name, email, address, specialty, phone, user_id):
         new_doctor = DoctorModel(
-            first_name=first_name, last_name=last_name, email=email, 
+            first_name=first_name, last_name=last_name, email=email,
             address=address, specialty=specialty, phone=phone, user_id=user_id
         )
         return new_doctor if new_doctor.save_to_db() else None
-    
+
     def update_doctor(self, doctor_id, data):
         doctor = self.get_doctor_by_id(doctor_id)
         if doctor:
@@ -301,25 +359,255 @@ class FacadeService:
                     setattr(doctor, key, value)
             return doctor if doctor.save_to_db() else None
         return None
-    
+
     def delete_doctor(self, doctor_id):
         doctor = self.get_doctor_by_id(doctor_id)
         return doctor.delete_from_db() if doctor else False
-    
+
+    # ==========================================================================
+    # INTERACTION METHODS — point d'entrée unique pour le chatbot
+    # ==========================================================================
+
+    def resolve_substances(self, term: str) -> list:
+        """
+        Identifie toutes les substances actives associées à un terme libre
+        (nom de marque, DCI, produit du stock...).
+
+        Ordre de résolution :
+        1. Stock local (ProductModel) — priorité, c'est ce que la pharmacie vend réellement
+        2. Référentiel ANSM (SpecialiteModel + compositions)
+        3. Fallback : le terme nettoyé tel quel
+
+        Le terme nettoyé est TOUJOURS ajouté en plus, même si 1 ou 2 ont donné
+        un résultat : le Thésaurus ANSM utilise parfois un nom générique court
+        (ex: "millepertuis") alors que la composition BDPM utilise la
+        dénomination pharmaceutique complète (ex: "extrait sec de la sommité
+        fleurie de millepertuis"), qui ne matche jamais par ilike simple.
+        """
+        if not term:
+            return []
+
+        clean_term = normalize(term).lower().strip()
+        clean_base = re.sub(r'\b\d+\s*(mg|g|ml|mcg|ui|gtt)?\b', '', clean_term).strip()
+        if not clean_base:
+            return []
+
+        resolved = []
+
+        # 1. Stock local
+        prod = db.session.execute(
+            db.select(ProductModel).where(
+                or_(
+                    ProductModel.name.ilike(f"%{clean_base}%"),
+                    ProductModel.active_ingredient.ilike(f"%{clean_base}%")
+                )
+            )
+        ).scalars().first()
+
+        if prod and prod.active_ingredient and prod.active_ingredient.lower() != 'n/a':
+            resolved = _split_ingredients(prod.active_ingredient)
+
+        # 2. Référentiel ANSM
+        if not resolved:
+            spec = db.session.execute(
+                db.select(SpecialiteModel).where(SpecialiteModel.search_name.ilike(f"%{clean_base}%"))
+            ).scalars().first()
+
+            if spec:
+                subs = [
+                    c.denomination_substance.strip().lower()
+                    for c in spec.compositions
+                    if getattr(c, 'nature_composant', 'SA') == 'SA' and c.denomination_substance
+                ]
+                if subs:
+                    resolved = subs
+
+        # 3. Fallback si rien trouvé du tout
+        if not resolved:
+            resolved = [clean_base]
+
+        # Toujours garder le terme utilisateur en secours
+        if clean_base not in resolved:
+            resolved.append(clean_base)
+
+        return resolved
+
+    def get_interaction(self, ingredient_a: str, ingredient_b: str):
+        """
+        Cherche une interaction déjà connue entre DEUX SUBSTANCES (pas des
+        noms de marque — utiliser resolve_substances() en amont).
+        Priorité à InteractionModel (curatée), fallback InteractionAnsmModel
+        (thésaurus complet).
+        """
+        norm_a = normalize(ingredient_a).lower().strip()
+        norm_b = normalize(ingredient_b).lower().strip()
+        if not norm_a or not norm_b or norm_a == norm_b:
+            return None
+
+        stmt = db.select(InteractionModel).where(
+            or_(
+                and_(InteractionModel.ingredient_a.ilike(f"%{norm_a}%"), InteractionModel.ingredient_b.ilike(f"%{norm_b}%")),
+                and_(InteractionModel.ingredient_a.ilike(f"%{norm_b}%"), InteractionModel.ingredient_b.ilike(f"%{norm_a}%"))
+            )
+        )
+        result = db.session.execute(stmt).scalars().first()
+        if result:
+            return result
+
+        stmt_ansm = (
+            db.select(InteractionAnsmModel)
+            .where(
+                or_(
+                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_a}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_b}%")),
+                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_b}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_a}%"))
+                )
+            )
+            .order_by(func.length(InteractionAnsmModel.substance_a_norm) + func.length(InteractionAnsmModel.substance_b_norm))
+        )
+        return db.session.execute(stmt_ansm).scalars().first()
+
+    def check_drug_interaction(self, term_a: str, term_b: str) -> dict:
+        """
+        Point d'entrée UNIQUE pour le chatbot : prend deux noms libres
+        (marque, DCI, produit du stock...) et retourne un verdict complet.
+        """
+        subs_a = self.resolve_substances(term_a)
+        subs_b = self.resolve_substances(term_b)
+
+        if not subs_a or not subs_b:
+            return {
+                "has_interaction": False,
+                "term_a": term_a, "term_b": term_b,
+                "substances_a": subs_a, "substances_b": subs_b,
+                "message": "Impossible de déterminer les substances actives."
+            }
+
+        for sa in subs_a:
+            clean_sa = _clean_substance_name(sa)
+            terms_a = _expand_substance_terms(sa)
+
+            for sb in subs_b:
+                clean_sb = _clean_substance_name(sb)
+
+                # A. Alerte surdosage (même substance des deux côtés)
+                if normalize(clean_sa).lower() == normalize(clean_sb).lower() and clean_sa != "n/a":
+                    return {
+                        "has_interaction": True,
+                        "severity": "Critical",
+                        "description": f"Risque de surdosage : les deux traitements contiennent du {clean_sa.title()}.",
+                        "substance_a": clean_sa, "substance_b": clean_sb,
+                        "term_a": term_a, "term_b": term_b
+                    }
+
+                # B. Recherche croisée (curatée + thésaurus ANSM), avec expansion de classe
+                terms_b = _expand_substance_terms(sb)
+                for ta in terms_a:
+                    for tb in terms_b:
+                        interaction = self.get_interaction(ta, tb)
+                        if interaction:
+                            return {
+                                "has_interaction": True,
+                                "severity": interaction.severity,
+                                "description": interaction.description,
+                                "substance_a": clean_sa, "substance_b": clean_sb,
+                                "term_a": term_a, "term_b": term_b
+                            }
+
+        return {
+            "has_interaction": False,
+            "term_a": term_a, "term_b": term_b,
+            "substances_a": subs_a, "substances_b": subs_b,
+            "message": "Aucune interaction trouvée dans les bases disponibles."
+        }
+
+    # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
+
+    def get_substances_by_cis(self, cis: str) -> list:
+        """Substances actives pour un code CIS donné."""
+        stmt = db.select(CompositionModel.denomination_substance).where(CompositionModel.cis == cis)
+        results = db.session.execute(stmt).scalars().all()
+        return [r.strip() for r in results if r]
+
+    def find_specialite_by_name(self, term: str, limit: int = 5):
+        """Recherche une spécialité ANSM par nom ou par code CIS."""
+        clean_term = term.strip()
+        if not clean_term:
+            return []
+
+        norm_term = normalize(clean_term)
+
+        if clean_term.isdigit():
+            stmt = (
+                db.select(SpecialiteModel)
+                .where(or_(SpecialiteModel.cis.ilike(f"%{clean_term}%"), SpecialiteModel.search_name.ilike(f"%{norm_term}%")))
+                .order_by(func.length(SpecialiteModel.denomination))
+                .limit(limit)
+            )
+        else:
+            stmt = (
+                db.select(SpecialiteModel)
+                .where(SpecialiteModel.search_name.ilike(f"%{norm_term}%"))
+                .order_by(func.length(SpecialiteModel.denomination))
+                .limit(limit)
+            )
+        return db.session.execute(stmt).scalars().all()
+
+    def get_specialite_by_cis(self, cis: str):
+        return db.session.get(SpecialiteModel, cis)
+
+    # --- NOTES METHODS ---
+
+    def get_all_notes(self):
+        stmt = db.select(Note).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+
+    def get_notes_by_user(self, user_id):
+        stmt = db.select(Note).filter_by(user_id=user_id).order_by(desc(Note.created_at))
+        return db.session.execute(stmt).scalars().all()
+
+    def get_note_by_id(self, note_id):
+        return db.session.get(Note, note_id)
+
+    def create_note(self, user_id, text):
+        try:
+            new_note = Note(user_id=user_id, text=text)
+            return new_note if new_note.save_to_db() else None
+        except Exception as e:
+            print(f"Error creating note: {e}")
+            return None
+
+    def update_note_text(self, note_id, new_text):
+        note = self.get_note_by_id(note_id)
+        if note:
+            note.update_text(new_text)
+            return note
+        return None
+
+    def delete_note(self, note_id):
+        note = self.get_note_by_id(note_id)
+        if not note:
+            print(f"Delete failed: Note {note_id} not found.")
+            return False
+        try:
+            note.delete()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting note {note_id}: {e}")
+            return False
+
     # --- TICKET CRUD METHODS ---
+
     def get_all_tickets(self, user_id=None):
-        """
-        Fetch tickets. If user_id is provided, only fetch tickets for that user.
-        If None, fetch all (for Admin).
-        """
-        stmt = db.select(Ticket).order_by(Ticket.created_at.desc())
+        stmt = db.select(Ticket).order_by(desc(Ticket.created_at))
         if user_id:
             stmt = stmt.filter(Ticket.user_id == user_id)
         return db.session.execute(stmt).scalars().all()
 
     def get_ticket_by_id(self, ticket_id):
-        return db.session.get(Ticket, ticket_id)
-       
+        str_id = str(ticket_id)
+        return db.session.get(Ticket, str_id)
+
     def create_ticket(self, user_id, subject, description, priority='medium'):
         try:
             new_ticket = Ticket(
@@ -337,10 +625,6 @@ class FacadeService:
             return None
 
     def update_ticket(self, ticket_id, data):
-        """
-        Generic update for tickets. Handles both User updates (subject/desc)
-        and Admin updates (status/admin_note).
-        """
         ticket = self.get_ticket_by_id(ticket_id)
         if ticket:
             for key, value in data.items():
@@ -349,11 +633,11 @@ class FacadeService:
             try:
                 db.session.commit()
                 return ticket
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
                 return None
         return None
-    
+
     def delete_ticket(self, ticket_id):
         ticket = self.get_ticket_by_id(ticket_id)
         if ticket:
@@ -361,188 +645,18 @@ class FacadeService:
                 db.session.delete(ticket)
                 db.session.commit()
                 return True
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
                 return False
         return False
-=======
-from typing import Optional, List, Dict
-from models.user import UserModel
-from models.product import ProductModel
-from models.sale import SaleModel
-from database.data_manager import db
 
-class FacadeService:
-    """
-    Provides a simplified interface for business logic and basic CRUD access.
-    """
+    # --- CALENDAR METHOD ---
 
-    # --- Shared Read Methods (Internal use) ---
-
-    def _get_entity(self, model_class, entity_id: int):
-        """Generic method to retrieve an entity by ID."""
-        return model_class.query.get(entity_id)
-
-    def _get_all_entities(self, model_class):
-        """Generic method to retrieve all entities."""
-        return model_class.query.all()
-    
-    def _get_by_attribute(self, model_class, attribute_name: str, value: str):
-        """Generic method to retrieve an entity by an attribute (e.g., name, email)."""
-        return model_class.query.filter_by(**{attribute_name: value}).first()
-
-    # ======================================================================
-    # USER CRUD
-    # ======================================================================
-
-    def create_user(self, username: str, email: str, password: str, is_admin: bool = False) -> Optional[UserModel]:
-        """Creates a new user, hashes the password, and saves it."""
-        if UserModel.query.filter_by(username=username).first():
-            return None # User already exists
-        
-        new_user = UserModel(username=username, email=email, is_admin=is_admin)
-        new_user.set_password(password) # Uses UserModel's secured method
-        new_user.save_to_db() # Uses method inherited from BaseModel
-        return new_user
-
-    def get_user_by_id(self, user_id: int) -> Optional[UserModel]:
-        """Retrieves a user by their ID."""
-        return self._get_entity(UserModel, user_id)
-
-    def get_user_by_username(self, username: str) -> Optional[UserModel]:
-        """Retrieves a user by their username."""
-        return self._get_by_attribute(UserModel, 'username', username)
-
-    def get_all_users(self) -> List[UserModel]:
-        """Retrieves a list of all users."""
-        return self._get_all_entities(UserModel)
-
-    def update_user_profile(self, user_id: int, data: Dict) -> Optional[UserModel]:
-        """Updates authorized fields by a user or an administrator."""
-        user = self.get_user_by_id(user_id)
-        if not user:
-            return None
-
-        # Update logic (applies data to the model)
-        if 'email' in data:
-            user.email = data['email']
-        if 'is_admin' in data:
-            user.is_admin = data['is_admin'] # Requires administrator check in the API layer
-
-        user.save_to_db()
-        return user
-
-    def delete_user(self, user_id: int) -> bool:
-        """Deletes a user."""
-        user = self.get_user_by_id(user_id)
-        if not user:
-            return False
-        user.delete_from_db()
-        return True
-
-    # ======================================================================
-    # PRODUCT CRUD
-    # ======================================================================
-
-    def create_product(self, name: str, stock: int, price: float, user_id: int) -> ProductModel:
-        """Creates a new product."""
-        new_product = ProductModel(name=name, stock=stock, price=price, user_id=user_id)
-        new_product.save_to_db()
-        return new_product
-
-    def get_product_by_id(self, product_id: int) -> Optional[ProductModel]:
-        """Retrieves a product by its ID."""
-        return self._get_entity(ProductModel, product_id)
-
-    def get_all_products(self) -> List[ProductModel]:
-        """Retrieves all products."""
-        return self._get_all_entities(ProductModel)
-    
-    def get_product_by_name(self, product_name: str) -> Optional[ProductModel]:
-        """Retrieves a product by its exact name."""
-        return self._get_by_attribute(ProductModel, 'name', product_name)
-
-    def search_products_by_name(self, search_term: str) -> List[ProductModel]:
-        """Searches for products whose name contains the specified term."""
-        return ProductModel.query.filter(
-            ProductModel.name.ilike(f'%{search_term}%')
-        ).all()
-
-    def update_product(self, product_id: int, data: Dict) -> Optional[ProductModel]:
-        """Updates an existing product."""
-        product = self.get_product_by_id(product_id)
-        if not product:
-            return None
-        
-        # Simple attribute update
-        if 'name' in data: product.name = data['name']
-        if 'stock' in data: product.stock = data['stock']
-        if 'price' in data: product.price = data['price']
-        
-        product.save_to_db()
-        return product
-
-    def delete_product(self, product_id: int) -> bool:
-        """Deletes a product."""
-        product = self.get_product_by_id(product_id)
-        if not product:
-            return False
-        product.delete_from_db()
-        return True
-
-    # ======================================================================
-    # SALE CRUD
-    # ======================================================================
-
-    # Note: Sale CRUD methods are often more complex (purchase process)
-    
-    def create_sale(self, product_id: int, quantity: int, user_id: int) -> Optional[SaleModel]:
-        """
-        Records a sale (complex business logic: stock verification, recording, update).
-        """
-        product = self.get_product_by_id(product_id)
-        
-        # Business logic: Stock verification before sale
-        if not product or product.stock < quantity:
-            return None
-            
-        total_price = product.price * quantity
-        
-        # 1. Update product stock (Transaction)
-        product.stock -= quantity
-        product.save_to_db()
-        
-        # 2. Create sale record (Transaction)
-        new_sale = SaleModel(
-            product_id=product_id,
-            quantity=quantity,
-            total_price=total_price,
-            user_id=user_id
+    def get_events_by_date(self, date_str):
+        from models.calendar import CalendarEvent
+        stmt = (
+            db.select(CalendarEvent)
+            .filter(func.date(CalendarEvent.start_time) == date_str)
+            .order_by(CalendarEvent.start_time)
         )
-        new_sale.save_to_db()
-        
-        return new_sale
-
-    def get_sale_by_id(self, sale_id: int) -> Optional[SaleModel]:
-        """Retrieves a sale by its ID."""
-        return self._get_entity(SaleModel, sale_id)
-
-    def get_all_sales(self) -> List[SaleModel]:
-        """Retrieves all sales."""
-        return self._get_all_entities(SaleModel)
-        
-    def delete_sale(self, sale_id: int) -> bool:
-        """Deletes a sale record (often restricted to admins)."""
-        sale = self.get_sale_by_id(sale_id)
-        if not sale:
-            return False
-            
-        # Business logic: Restore stock upon sale cancellation
-        product = self.get_product_by_id(sale.product_id)
-        if product:
-             product.stock += sale.quantity
-             product.save_to_db()
-        
-        sale.delete_from_db()
-        return True
->>>>>>> main
+        return db.session.execute(stmt).scalars().all()

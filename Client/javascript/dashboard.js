@@ -20,7 +20,15 @@ const getCookie = (name) => {
 
 // Auth & API config
 const AUTH_TOKEN = getCookie('access_token');
-const API_BASE_URL = "http://127.0.0.1:5000";
+// Same origin as the page when Flask serves the front (port 5000); otherwise fall back to localhost
+const API_BASE_URL = window.location.port === '5000' ? window.location.origin : "http://127.0.0.1:5000";
+
+/**
+ * Escape text before injecting it in innerHTML (notes / product names come from the database)
+ */
+const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+));
 const HEADERS = { 
     'Authorization': `Bearer ${AUTH_TOKEN}`,
     'Content-Type': 'application/json'
@@ -134,6 +142,7 @@ class PharmaChat {
         this.window = document.getElementById('chat-window');
         this.input = document.getElementById('user-input');
         this.btn = document.getElementById('send-btn');
+        this.logo = document.getElementById('bot-logo'); // AJOUT ICI : Récupère l'image
         if (this.window) this.init();
     }
 
@@ -157,6 +166,9 @@ class PharmaChat {
         this.addMsg('user', msg);
         this.input.value = '';
 
+        // AJOUT ICI : On fait pulser le logo pendant la réflexion
+        if (this.logo) this.logo.classList.add('thinking');
+
         try {
             const res = await fetch(`${API_BASE_URL}/chatbot/`, {
                 method: 'POST',
@@ -167,18 +179,33 @@ class PharmaChat {
             this.addMsg('bot', data.reply);
         } catch (e) { 
             this.addMsg('bot', "Connection error."); 
+        } finally {
+            // AJOUT ICI : On arrête l'animation quoi qu'il arrive (succès ou erreur)
+            if (this.logo) this.logo.classList.remove('thinking');
         }
     }
 
     /**
      * Add message to chat window
-     * @param {string} role - Message role (user/bot)
-     * @param {string} text - Message text
      */
     addMsg(role, text) {
         const d = document.createElement('div');
         d.className = `message ${role}`;
-        d.innerText = text;
+        
+        // OPTIONNEL : Si tu veux l'image détourée aussi à côté de chaque message du bot
+        if (role === 'bot') {
+            const img = document.createElement('img');
+            img.src = "assets/img/Mockup_de_base.png"; // Mets le bon chemin ici
+            img.className = "mini-avatar";
+            d.appendChild(img);
+            
+            const span = document.createElement('span');
+            span.innerText = text;
+            d.appendChild(span);
+        } else {
+            d.innerText = text;
+        }
+
         this.window.appendChild(d);
         this.window.scrollTop = this.window.scrollHeight;
     }
@@ -241,108 +268,115 @@ class DashboardManager {
         }
     }
 
-    // ============================================
-    // NOTES SYSTEM
+   // ============================================
+    // NOTES SYSTEM (Version Corrigée)
     // ============================================
 
-    /**
-     * Initialize note system event listeners
-     */
     initNoteSystem() {
         const addBtn = document.getElementById('add-note-btn');
         const noteInput = document.getElementById('new-note-text');
 
-        if (!addBtn || !noteInput) {
-            console.error("Note system elements not found");
-            return;
-        }
+        if (!addBtn || !noteInput) return;
 
-        addBtn.onclick = () => {
+        addBtn.onclick = async () => {
             const text = noteInput.value.trim();
             if (!text) return;
 
-            this.saveNote({ text, timestamp: Date.now() });
-            noteInput.value = "";
-            this.loadPersistentNotes();
+            const success = await this.saveNote(text); 
+            if (success) {
+                noteInput.value = "";
+                // Le rechargement est géré par saveNote ou appelé ici
+                await this.loadPersistentNotes();
+            }
         };
 
-        noteInput.addEventListener('keypress', e => { 
-            if (e.key === 'Enter') addBtn.click(); 
-        });
+        noteInput.onkeypress = (e) => { if (e.key === 'Enter') addBtn.click(); };
     }
 
-    /**
-     * Save note to localStorage
-     * @param {Object} note - Note object with text and timestamp
-     */
-    saveNote(note) {
-        const notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
-        notes.push(note);
-        localStorage.setItem('pharma_notes', JSON.stringify(notes));
+    async saveNote(text) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/notes/`, { 
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) throw new Error("Erreur sauvegarde");
+            return true;
+        } catch (error) {
+            console.error("Erreur saveNote:", error);
+            return false;
+        }
     }
 
-    /**
-     * Delete note by timestamp
-     * @param {number} timestamp - Note timestamp
-     */
-    deleteNote(timestamp) {
+    async deleteNote(noteId) {
         if (!checkIsAdmin()) return alert("Admin privileges required");
-        
-        let notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
-        notes = notes.filter(n => n.timestamp !== timestamp);
-        localStorage.setItem('pharma_notes', JSON.stringify(notes));
-        this.loadPersistentNotes();
+        try {
+            const response = await fetch(`${API_BASE_URL}/notes/${noteId}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+            });
+
+            if (response.ok) await this.loadPersistentNotes();
+        } catch (error) {
+            console.error("Erreur suppression:", error);
+        }
     }
 
-    /**
-     * Load and display persistent notes
-     */
-    loadPersistentNotes() {
+    async loadPersistentNotes() {
         if (!this.lists.notifs) return;
 
-        const now = Date.now();
-        const isAdmin = checkIsAdmin();
-        let notes = JSON.parse(localStorage.getItem('pharma_notes') || '[]');
-
-        // Remove expired notes (older than 24h)
-        notes = notes.filter(n => (now - n.timestamp) < 86400000);
-        localStorage.setItem('pharma_notes', JSON.stringify(notes));
-
-        this.lists.notifs.innerHTML = "";
-        
-        if (notes.length === 0) {
-            this.lists.notifs.innerHTML = '<li class="item-entry">No notes available.</li>';
-            return;
-        }
-
-        notes.sort((a, b) => b.timestamp - a.timestamp);
-
-        notes.forEach(note => {
-            const timeStr = new Date(note.timestamp).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
+        try {
+            const response = await fetch(`${API_BASE_URL}/notes/`, {
+                headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
             });
-            const li = document.createElement('li');
-            li.className = "item-entry";
 
-            li.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <div>
-                        <strong>📌 Note:</strong> ${note.text}<br>
-                        <small>⌚ ${timeStr}</small>
-                    </div>
-                    ${isAdmin ? `<button class="del-note" data-ts="${note.timestamp}">🗑️</button>` : ''}
-                </div>`;
+            if (!response.ok) throw new Error("Fetch failed");
 
-            if (isAdmin) {
-                li.querySelector('.del-note').onclick = (e) => {
-                    const ts = parseInt(e.currentTarget.getAttribute('data-ts'));
-                    this.deleteNote(ts);
-                };
+            const notes = await response.json();
+            this.lists.notifs.innerHTML = "";
+
+            if (!notes || notes.length === 0) {
+                this.lists.notifs.innerHTML = '<li class="item-entry">No notes available.</li>';
+                return;
             }
 
-            this.lists.notifs.appendChild(li);
-        });
+            // Tri sécurisé : on vérifie que la date existe avant de trier
+            notes.sort((a, b) => {
+                const dateA = new Date(a.created_at || 0);
+                const dateB = new Date(b.created_at || 0);
+                return dateB - dateA;
+            });
+
+            const isAdmin = checkIsAdmin();
+
+            notes.forEach(note => {
+                const dateObj = new Date(note.created_at);
+                const timeStr = isNaN(dateObj) ? "N/A" : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const li = document.createElement('li');
+                li.className = "item-entry";
+                li.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                        <div>
+                            <strong>📌 Note:</strong> ${escapeHtml(note.text)}<br>
+                            <small>⌚ ${timeStr}</small>
+                        </div>
+                        ${isAdmin ? `<button class="del-note" data-id="${note.id}">🗑️</button>` : ''}
+                    </div>`;
+
+                if (isAdmin) {
+                    li.querySelector('.del-note').onclick = () => this.deleteNote(note.id);
+                }
+                this.lists.notifs.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Erreur rendu notes:", error);
+            this.lists.notifs.innerHTML = '<li class="item-entry" style="color:red;">Error loading notes.</li>';
+        }
     }
 
     // ============================================
@@ -362,7 +396,7 @@ class DashboardManager {
             ? critical.map(m => `
                 <li class="item-entry ${m.stock === 0 ? 'critical' : 'warning'}">
                     <div class="info">
-                        <strong>${m.name}</strong> <span>(${m.stock} left)</span>
+                        <strong>${escapeHtml(m.name)}</strong> <span>(${m.stock} left)</span>
                     </div>
                     <button class="order-btn ${m.stock === 0 ? 'urgent' : ''}" data-id="${m.id}">
                         Order

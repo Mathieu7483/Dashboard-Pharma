@@ -1,0 +1,423 @@
+/* ==========================================================================
+   pages.css — inventory.html, clients.html, doctors.html
+   Depend of : style.css
+   ========================================================================== */
+
+/* ==========================================================================
+   0. VARIABLES UTILISÉES PAR CES PAGES
+   ========================================================================== */
+:root {
+    --primary-blue:   #0284C7;
+    --primary-green:  #10B981;
+    --color-success:  #10B981;
+    --color-danger:   #DC2626;
+
+    --text-primary:   var(--color-text-dark);
+    --text-secondary: #6B7280;
+
+    --surface-card:   #FFFFFF;
+    --bg-app:         #F8FAFC;
+    --border-color:   #E5E7EB;
+    --shadow-soft:    0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   1. CONTENEURS ET PAGES
+   ========================================================================== */
+.inventory-page-content {
+    overflow-y: auto !important;
+    padding: 30px;
+    background: transparent;
+}
+
+/* Même carte pour inventory, clients et doctors */
+.client-container,
+.doctor-container,
+.clients-container,
+.doctors-container,
+.inventory-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 40px;
+    background: var(--surface-card);
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-soft);
+}
+
+.page-header,
+.clients-header,
+.doctors-header,
+.inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* ==========================================================================
+   2. RECHERCHE SPÉCIFIQUE
+   ========================================================================== */
+.search-bar.widget input#inventory-search,
+.search-bar.widget input#clients-search,
+.search-bar.widget input#doctors-search {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    border: 3px solid rgba(2, 132, 199, 0.2);
+    border-radius: 15px;
+    background-color: var(--surface-card);
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-bar.widget input#inventory-search:focus,
+.search-bar.widget input#clients-search:focus,
+.search-bar.widget input#doctors-search:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+}
+
+.search-bar.widget input#inventory-search::placeholder,
+.search-bar.widget input#clients-search::placeholder,
+.search-bar.widget input#doctors-search::placeholder {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* ==========================================================================
+   3. TABLEAU STOCK (INVENTORY)
+   Colonnes : 1 ID | 2 Name | 3 Active Ingredient | 4 Dosage | 5 CIP13
+              6 Price | 7 Stock | 8 Rx only | 9 Actions
+   ========================================================================== */
+#inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#inventory-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--primary-blue);
+    color: var(--primary-blue);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+#inventory-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+    vertical-align: middle;
+    color: var(--text-primary);
+}
+
+#inventory-table th:nth-child(2) {
+    min-width: 220px;
+}
+
+#inventory-table tr:hover {
+    background-color: rgba(2, 132, 199, 0.04);
+}
+
+/* CIP13, Price, Stock, Rx only, Actions : centrés */
+#inventory-table th:nth-child(5), #inventory-table td:nth-child(5),
+#inventory-table th:nth-child(6), #inventory-table td:nth-child(6),
+#inventory-table th:nth-child(7), #inventory-table td:nth-child(7),
+#inventory-table th:nth-child(8), #inventory-table td:nth-child(8),
+#inventory-table th:last-child,   #inventory-table td:last-child {
+    text-align: center;
+}
+
+/* Cellule d'actions : reste une vraie cellule de tableau (pas de flex),
+   pour que la ligne et sa bordure restent alignées */
+#inventory-table td:last-child {
+    white-space: nowrap;
+}
+
+#inventory-table td:last-child button {
+    margin: 0 3px;
+}
+
+.low-stock-row {
+    background-color: rgba(220, 38, 38, 0.08) !important;
+}
+
+.text-danger {
+    color: var(--color-danger);
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   4. TABLEAU CLIENTS
+   ========================================================================== */
+#clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#clients-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--primary-green);
+    color: var(--primary-blue);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+}
+
+#clients-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+#clients-table tr:hover {
+    background-color: rgba(2, 132, 199, 0.04);
+}
+
+#clients-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   5. TABLEAU MÉDECINS (DOCTORS)
+   ========================================================================== */
+#doctors-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#doctors-table th {
+    text-align: left;
+    padding: 20px 15px;
+    border-bottom: 3px solid var(--primary-blue);
+    color: var(--primary-blue);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+}
+
+#doctors-table td {
+    padding: 18px 15px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+#doctors-table td:last-child {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+#doctors-table tr:hover {
+    background-color: rgba(2, 132, 199, 0.04);
+}
+
+.badge-specialty {
+    background: rgba(2, 132, 199, 0.12);
+    color: var(--primary-blue);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+    border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+/* ==========================================================================
+   6. FORMULAIRES DE MODALES
+   ========================================================================== */
+#product-form,
+#client-form,
+#doctor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#product-form input,
+#client-form input,
+#doctor-form input,
+#product-form select,
+#client-form select,
+#doctor-form select,
+#product-form textarea,
+#client-form textarea,
+#doctor-form textarea {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+#product-form input:focus,
+#client-form input:focus,
+#doctor-form input:focus,
+#product-form select:focus,
+#client-form select:focus,
+#doctor-form select:focus,
+#product-form textarea:focus,
+#client-form textarea:focus,
+#doctor-form textarea:focus {
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.25);
+}
+
+.btn-sell {
+    background-color: var(--color-success);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-sell:hover {
+    filter: brightness(1.1);
+}
+
+.qty-input {
+    width: 60px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: center;
+    background: var(--surface-card);
+    color: var(--text-primary);
+}
+
+.fw-bold {
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   7. RECHERCHE RÉFÉRENTIEL ANSM
+   ========================================================================== */
+.ansm-search-wrapper {
+    position: relative;
+}
+
+.ansm-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 50;
+    box-shadow: var(--shadow-soft);
+    margin-top: 4px;
+}
+
+.ansm-result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85em;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.ansm-result-item:last-child {
+    border-bottom: none;
+}
+
+.ansm-result-item:hover {
+    background: rgba(2, 132, 199, 0.08);
+}
+
+.ansm-result-item small {
+    display: block;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.ansm-linked-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--color-success);
+    border-radius: 8px;
+    font-size: 0.85em;
+}
+
+/* ==========================================================================
+   8. AJUSTEMENTS (nouveau HTML)
+   ========================================================================== */
+.search-bar.widget { margin-bottom: 20px; }
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.form-group.form-check label {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    display: flex;
+    cursor: pointer;
+}
+
+.form-group.form-check input { width: 18px; height: 18px; padding: 0; }
+
+.clients-container, .doctors-container, .inventory-container { margin-bottom: 30px; }
+
+/* ==========================================================================
+   9. SCROLL ET MODALES
+   ========================================================================== */
+/* body / .content-area / .content-section sont en overflow:hidden (style.css) :
+   on rend scrollable la section qui contient une de ces trois pages */
+.content-section:has(.inventory-container, .clients-container, .doctors-container) {
+    overflow-y: auto;
+}
+
+/* Modale plus haute que l'écran : elle scrolle au lieu d'être coupée */
+.modal {
+    overflow-y: auto;
+}

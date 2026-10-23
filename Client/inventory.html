@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pharma Dashboard | Inventory Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
     <div class="app-wrapper">
@@ -18,44 +19,35 @@
                 </div>
                 <div class="top-bar-right">
                     <div class="avatar"></div>
-                    <button class="btn-logout-top">Logout</button>
+                    <button id="logout-btn" class="btn-logout-top">Logout</button>
                 </div>
             </header>
 
-            <section class="content-section inventory-page-content">
+            <section class="content-section">
                 <div class="inventory-container">
-                    <header class="page-header">
-                        <h1>📦 Inventory Management</h1>
+                    <header class="inventory-header">
+                        <h1>📦 Product Stock & Inventory</h1>
                         <button id="add-product-btn" class="btn-logout-top">➕ Add New Product</button>
                     </header>
 
-                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px;">
-                        <div class="widget">
-                            <span class="label">Total Products</span>
-                            <div id="total-count" class="kpi-value">0</div>
-                        </div>
-                        <div class="widget">
-                            <span class="label">Low Stock Alerts</span>
-                            <div id="low-stock-count" class="kpi-value" style="color: #ff4757;">0</div>
-                        </div>
-                    </div>
-
-                    <div class="search-bar widget" style="margin-bottom: 20px;">
-                        <input type="text" id="inventory-search" placeholder="Search product..." class="search-box input" style="width: 100%;">
+                    <div class="search-bar widget">
+                        <input type="text" id="inventory-search" placeholder="Search by name, active ingredient, dosage or CIP code..." class="search-box input">
                     </div>
 
                     <div class="table-responsive widget">
-                        <table id="products-table">
+                        <table id="inventory-table">
                             <thead>
                                 <tr>
-                                    <th>Product Name</th>
-                                    <th>Ingredient</th>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Active Ingredient</th>
+                                    <th>Dosage</th>
+                                    <th>CIP13</th>
+                                    <th>Price (€)</th>
                                     <th>Stock</th>
-                                    <th>Price</th>
-                                    <th>Prescription</th>
-                                    <th>💰Sell</th>
-                                    <th class="admin-only">Actions</th>
-                                </tr> 
+                                    <th>Rx only</th>
+                                    <th>Actions</th>
+                                </tr>
                             </thead>
                             <tbody id="inventory-body"></tbody>
                         </table>
@@ -69,31 +61,53 @@
         </main>
     </div>
 
+    <!-- Modal d'ajout / édition de produit -->
     <div id="product-modal" class="modal">
         <div class="modal-content">
             <header class="widget-header">
-                <h3>Add New Medication</h3>
+                <h3 id="product-modal-title">Add New Product</h3>
             </header>
             <form id="product-form">
-                <input type="text" name="name" placeholder="Name" required>
-                <input type="text" name="active_ingredient" placeholder="Active Ingredient">
-                <input type="text" name="dosage" placeholder="Dosage">
-                <input type="number" name="stock" placeholder="Initial Stock" required>
-                <input type="number" step="0.01" name="price" placeholder="Price (€)" required>
-                
-                <label class="item-entry" style="display: flex; align-items: center; gap: 10px; border: none;">
-                    <input type="checkbox" name="is_prescription_only"> 
-                    <span>Prescription required?</span>
-                </label>
+                <input type="hidden" id="product-id" name="id">
 
+                <div class="form-group" style="position: relative;">
+                    <label for="product-name">Product Name * <small>(Recherche ANSM intelligente)</small></label>
+                    <input type="text" id="product-name" name="name" required minlength="3" maxlength="100" class="input" autocomplete="off">
+                    <!-- Conteneur des suggestions ANSM -->
+                    <div id="ansm-suggestions" class="autocomplete-dropdown" style="display: none; position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="product-ingredient">Active Ingredient *</label>
+                    <input type="text" id="product-ingredient" name="active_ingredient" required class="input">
+                </div>
+                <div class="form-group">
+                    <label for="product-dosage">Dosage</label>
+                    <input type="text" id="product-dosage" name="dosage" placeholder="e.g. 500 mg, tablet" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="product-cip13">CIP13 code</label>
+                    <input type="text" id="product-cip13" name="cip13" class="input">
+                </div>
+                <div class="form-group">
+                    <label for="product-price">Price (€) *</label>
+                    <input type="number" step="0.01" min="0.01" id="product-price" name="price" required class="input">
+                </div>
+                <div class="form-group">
+                    <label for="product-stock">Stock Quantity *</label>
+                    <input type="number" min="0" id="product-stock" name="stock" required class="input">
+                </div>
+                <div class="form-group form-check">
+                    <label for="product-rx"><input type="checkbox" id="product-rx" name="is_prescription_only"> Prescription only</label>
+                </div>
                 <div class="form-actions">
-                    <button type="button" id="close-modal" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    <button type="button" id="close-product-modal" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-logout-top">Save Product</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <script src="javascript/common.js"></script>
     <script src="javascript/inventory.js"></script>
 </body>
 </html>

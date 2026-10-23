@@ -6,6 +6,7 @@
     <title>Dashboard Pharma - Overview</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
     <!-- Main Application Wrapper -->
@@ -26,9 +27,6 @@
                     <li><a href="clients.html" class="nav-link">👥 Clients</a></li>
                     <li><a href="doctors.html" class="nav-link">👨‍⚕️ Doctors</a></li>
                     <li><a href="settings.html" class="nav-link">⚙️ Settings</a></li>
-                    <button id="open-ticket-btn" class="btn-primary">
-                        <i class="fas fa-ticket-alt"></i> Report an Issue
-                    </button>
                 </ul>
             </nav>
             
@@ -59,6 +57,17 @@
 
             <!-- General View Section -->
             <section id="view-general" class="content-section">
+                <!-- Quick Actions Banner -->
+                <div class="quick-actions-bar">
+                    <span class="quick-actions-title">⚡ Quick Actions</span>
+                    <div class="quick-actions-buttons">
+                        <a href="clients.html?new=1" class="quick-action-btn">➕ New Client</a>
+                        <a href="doctors.html?new=1" class="quick-action-btn">🩺 Register Doctor</a>
+                        <a href="inventory.html?new=1" class="quick-action-btn">📥 Add Stock Item</a>
+                        <button type="button" id="open-ticket-btn" class="quick-action-btn">🎫 Report an Issue</button>
+                    </div>
+                </div>
+
                 <div class="dashboard-grid">
                     
                     <!-- Daily Sales Chart -->
@@ -118,31 +127,15 @@
                             </ul>
                         </div>
                         
-                        <hr class="widget-divider">
-
-                        <!-- Staff Section -->
-                        <div class="team-section">
-                            <h3>Staff On Duty</h3>
-                            <ul class="item-list" id="team-list">
-                                <li>Loading team...</li>
-                            </ul>
-                        </div>
                     </article>
 
-                    <!-- Client CRM Widget -->
-                    <article class="widget client-data">
-                        <div class="widget-header">
-                            <h3>Client CRM</h3>
-                            <input type="text" id="search-client" class="widget-search" 
-                                   placeholder="Filter patients...">
-                        </div>
-                        <div class="kpi-value" id="total-clients">0</div>
-                        <div class="scroll-wrapper" id="client-search-result">Registered Clients</div>
-                    </article>
 
                     <!-- AI Chatbot Widget -->
                     <article class="widget chatbot-widget">
-                        <h3>AI Caducée</h3>
+                        <div class="avatar-container">
+                            <img src="assets/img/Mockup_de_base.png" alt="Caducée"id="bot-logo" class="bot-avatar">
+                            <h3>AI Caducée</h3>
+                        </div>
                         <div id="chat-window">
                             <div class="message bot">Hello, I'm Caducée. How can I help you today?</div>
                         </div>
@@ -153,16 +146,6 @@
                         </div>
                     </article>
 
-                    <!-- Medical Network Widget -->
-                    <article class="widget doctor-data">
-                        <div class="widget-header">
-                            <h3>Medical Network</h3>
-                            <input type="text" id="search-doctor" class="widget-search" 
-                                   placeholder="Filter doctors...">
-                        </div>
-                        <div class="kpi-value" id="total-doctors">0</div>
-                        <div class="scroll-wrapper" id="doctor-search-result">Affiliated Doctors</div>
-                    </article>
                 </div>
             </section>
 

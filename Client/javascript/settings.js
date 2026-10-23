@@ -1,13 +1,10 @@
 /**
  * settings.js - Admin Panel Management
- * Calendar events stored in BACKEND API
- * 
- * CHANGELOG:
- * - RDV et Garde utilisent le même champ #event-assigned-user dans le formulaire
- * - populateUserSelects() simplifié : un seul select à remplir
  */
 
-const API_BASE = 'http://127.0.0.1:5000';
+// Same origin as the page when Flask serves the front (port 5000); otherwise fall back to localhost
+const API_ORIGIN = window.location.port === '5000' ? window.location.origin : 'http://127.0.0.1:5000';
+const API_BASE = API_ORIGIN;
 
 // ============================================
 // 1. COOKIE MANAGER
@@ -43,11 +40,32 @@ function getAuthInfo() {
     }
 }
 
+// auth.js never stores user_id: read it from the JWT subject instead
+function getCurrentUserId() {
+    const token = CookieManager.get('access_token');
+    if (!token) return null;
+    try {
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const sub = JSON.parse(atob(b64)).sub;
+        return String(typeof sub === 'object' && sub !== null ? sub.id : sub);
+    } catch { return null; }
+}
+
 function authHeaders(token) {
     return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     };
+}
+
+// ============================================
+// 2bis. VALIDATION MAIL HELPERS
+// ============================================
+function isValidEmail(email) {
+    // Format standard : quelque-chose@domaine.extension
+    // Validation de confort côté client — la validation de référence reste côté backend (email-validator)
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return re.test(email);
 }
 
 // ============================================
@@ -132,7 +150,7 @@ async function fetchUsers() {
 function renderUserTable(users, isAdmin) {
     const tbody         = document.getElementById('user-table-body');
     const emptyState    = document.getElementById('empty-state');
-    const currentUserId = localStorage.getItem('user_id');
+    const currentUserId = getCurrentUserId();
     if (!tbody) return;
 
     const countBadge = document.getElementById('users-count');
@@ -242,8 +260,14 @@ function setupEventListeners() {
             const { token } = getAuthInfo();
             const userId    = document.getElementById('edit-user-id').value;
             const password  = document.getElementById('edit-password').value.trim();
+            const email     = document.getElementById('edit-email').value.trim();
+
+            // Email obligatoire et doit être valide, même en édition
+            if (!email) return alert('⚠️ Email requis !');
+            if (!isValidEmail(email)) return alert('⚠️ Adresse email invalide !');
+
             const payload   = {
-                email:      document.getElementById('edit-email').value.trim() || null,
+                email,
                 first_name: document.getElementById('edit-first-name').value.trim() || null,
                 last_name:  document.getElementById('edit-last-name').value.trim() || null,
                 is_admin:   document.getElementById('edit-is-admin').checked
@@ -266,8 +290,11 @@ function setupEventListeners() {
             const username   = document.getElementById('create-username').value.trim();
             const email      = document.getElementById('create-email').value.trim();
             const password   = document.getElementById('create-password').value.trim();
+
             if (!username || !email || !password) return alert('⚠️ All fields required!');
+            if (!isValidEmail(email)) return alert('⚠️ Adresse email invalide !');
             if (password.length < 6) return alert('⚠️ Password min 6 chars!');
+
             const payload = {
                 username, email, password,
                 first_name: document.getElementById('create-first-name').value.trim() || null,
@@ -360,6 +387,7 @@ async function fetchTickets() {
             throw new Error(`Fetch failed: ${response.status}`);
         }
         const tickets     = await response.json();
+        console.log('🎫 Tickets reçus:', tickets);
         window.allTickets = tickets;
         renderTicketTable(tickets);
         updateStats(window.allUsers || [], tickets);

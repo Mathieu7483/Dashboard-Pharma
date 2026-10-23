@@ -2,7 +2,7 @@
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity
 from models.calendar import CalendarEvent
 from database.data_manager import db
 from utils.decorator import admin_required
@@ -35,7 +35,6 @@ update_events_model = calendar_ns.model('UpdateUserEvents', {
 @calendar_ns.route('/events/')
 class EventList(Resource):
 
-    @jwt_required()
     @admin_required()
     def get(self):
         """List all events (Admin Access)"""
@@ -50,14 +49,12 @@ class EventList(Resource):
         except Exception as e:
             return {'message': f'Server error: {str(e)}'}, 500
 
-    @jwt_required()
     @admin_required()
     @calendar_ns.expect(event_model)
     def post(self):
         """Create a Meeting or Shift (Admin Access)"""
         data = request.get_json()
         current_user_id = get_jwt_identity()
-
         assigned = data.get('assignedUser')
         print(f"📥 POST /calendar/events/ — type={data.get('type')!r} assignedUser={assigned!r}")
 
@@ -86,7 +83,6 @@ class EventList(Resource):
 @calendar_ns.route('/events/user/<string:user_id>')
 class UserEvents(Resource):
 
-    @jwt_required()
     @admin_required()
     def get(self, user_id):
         """Get events assigned to a specific user (Admin Access)"""
@@ -100,7 +96,6 @@ class UserEvents(Resource):
         except Exception as e:
             return {'message': str(e)}, 500
 
-    @jwt_required()
     @admin_required()
     @calendar_ns.expect(update_events_model)
     def put(self, user_id):
@@ -120,11 +115,33 @@ class UserEvents(Resource):
             return {'message': str(e)}, 500
 
 
-# ─── FIX: PUT ajouté — manquait complètement dans la version originale ───
+# ✅ Stats AVANT le paramètre dynamique <string:event_id>
+@calendar_ns.route('/events/stats/today')
+class EventTodayStats(Resource):
+
+    @admin_required()
+    def get(self):
+        """Quick stats for today (Admin Access)"""
+        today = datetime.now().strftime('%Y-%m-%d')
+        try:
+            rdv_count   = db.session.query(CalendarEvent).filter_by(type='rdv',   start_date=today).count()
+            garde_count = db.session.query(CalendarEvent).filter_by(type='garde', start_date=today).count()
+            total       = rdv_count + garde_count
+            return {
+                'today':       today,
+                'rdv_count':   rdv_count,
+                'garde_count': garde_count,
+                'total':       total,
+                'total_all':   total
+            }, 200
+        except Exception as e:
+            return {'message': str(e)}, 500
+
+
+# ✅ Paramètre dynamique EN DERNIER
 @calendar_ns.route('/events/<string:event_id>')
 class EventDetail(Resource):
 
-    @jwt_required()
     @admin_required()
     def get(self, event_id):
         """Get a single event by ID (Admin Access)"""
@@ -133,7 +150,6 @@ class EventDetail(Resource):
             return {'message': 'Event not found'}, 404
         return event.to_dict(), 200
 
-    @jwt_required()
     @admin_required()
     @calendar_ns.expect(event_model)
     def put(self, event_id):
@@ -164,7 +180,6 @@ class EventDetail(Resource):
             print(f"   ❌ {e}")
             return {'message': str(e)}, 500
 
-    @jwt_required()
     @admin_required()
     def delete(self, event_id):
         """Delete an event (Admin Access)"""
@@ -177,27 +192,4 @@ class EventDetail(Resource):
             return {'message': 'Deleted successfully'}, 200
         except Exception as e:
             db.session.rollback()
-            return {'message': str(e)}, 500
-
-
-@calendar_ns.route('/events/stats/today')
-class EventTodayStats(Resource):
-
-    @jwt_required()
-    @admin_required()
-    def get(self):
-        """Quick stats for today (Admin Access)"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        try:
-            rdv_count   = db.session.query(CalendarEvent).filter_by(type='rdv',   start_date=today).count()
-            garde_count = db.session.query(CalendarEvent).filter_by(type='garde', start_date=today).count()
-            total       = rdv_count + garde_count
-            return {
-                'today':       today,
-                'rdv_count':   rdv_count,
-                'garde_count': garde_count,
-                'total':       total,
-                'total_all':   total   # FIX: JS cherche 'total_all'
-            }, 200
-        except Exception as e:
             return {'message': str(e)}, 500
