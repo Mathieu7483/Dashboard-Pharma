@@ -420,13 +420,58 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    justify-content: space-between;
 }
 
 #chat-window {
     flex: 1;
     overflow-y: auto;
-    max-height: 140px;
+    max-height: none;
+    min-height: 100px;
     margin-bottom: 10px;
+    padding-right: 5px;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+}
+
+.chat-input-area button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 25px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
+}
+
+.chat-input-area button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(30, 144, 255, 0.4), 0 0 20px rgba(0, 255, 127, 0.3);
+    filter: brightness(1.1);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); /* Garde le dégradé propre */
 }
 
 .message {
@@ -444,35 +489,6 @@
     background: var(--color-primary);
     color: white;
     text-align: right;
-}
-
-.chat-input-area {
-    display: flex;
-    gap: 10px;
-    padding-top: 5px;
-    border-top: 1px solid #f0f0f0;
-}
-
-.chat-input-area input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    outline: none;
-}
-
-.chat-input-area button {
-    padding: 10px 20px;
-    background: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.chat-input-area button:hover {
-    background: var(--color-secondary);
 }
 
 /* ==========================================================================
