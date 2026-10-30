@@ -10,7 +10,7 @@
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: 220px 1fr; /* 2 lignes : hauteur fixe pour les graphiques, et le reste pour le bas */
     gap: 15px;
     padding: 15px;
     padding-bottom: 10px;
@@ -19,14 +19,16 @@
     min-height: 0;
 }
 
-/* Placements des widgets dans la grille */
+/* Placements explicites des widgets dans la grille */
 .graph-day        { grid-column: 1; grid-row: 1; }
 .graph-month      { grid-column: 2; grid-row: 1; }
-.inventory-stock  { grid-column: 3; grid-row: 1; }
-.meds-team        { grid-column: 1; grid-row: 2 / 4; }
-.client-data      { grid-column: 2; grid-row: 2; }
-.doctor-data      { grid-column: 2; grid-row: 3; }
-.chatbot-widget   { grid-column: 3; grid-row: 2 / 4; }
+.inventory-stock  { grid-column: 3; grid-row: 1 / 3; }
+.meds-team        { grid-column: 1; grid-row: 2; }
+.chatbot-widget   { grid-column: 2; grid-row: 2; }
+.client-data,
+.doctor-data {
+    display: none;
+}
 
 /* ==========================================================================
    2. WIDGET SEARCH (mini input dans les widget-header)
@@ -152,7 +154,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    gap: 15px;
+    gap: 10px;
 }
 
 .meds-section {
@@ -177,8 +179,7 @@
 #team-notif-list {
     flex: 1;
     overflow-y: auto;
-    max-height: 140px;
-    padding-right: 5px;
+    max-height: 120px;
 }
 
 .team-section {
@@ -237,6 +238,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    height: 100%;
 }
 
 .inventory-stock h3 {
@@ -271,7 +273,7 @@
 #meds-list {
     flex: 1;
     overflow-y: auto;
-    max-height: 180px;
+    max-height: none;
     padding-right: 5px;
     margin-top: 3px;
 }
@@ -417,20 +419,14 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 400px;
+    min-height: 0;
 }
 
 #chat-window {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    background: #f9f9f9;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    max-height: 140px;
+    margin-bottom: 10px;
 }
 
 .message {
@@ -689,13 +685,6 @@
     filter: brightness(1.1);
 }
 
-/* Client CRM / Medical Network retirés, Staff On Duty retiré :
-   les notes d'équipe occupent la place libérée (colonnes 1 à 2) */
-.meds-team { grid-column: 1 / 3; }
-
-.meds-section { flex: 1; }
-
-#team-notif-list { max-height: none; }
 
 /* ==========================================================================
    14. RESPONSIVE DASHBOARD
