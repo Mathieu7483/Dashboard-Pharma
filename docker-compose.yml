@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: pharma_dashboard_api
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./Server:/app/Server
+      # Si vous utilisez SQLite, cela permet de conserver la base de données hors du conteneur
+      - sqlite_data:/app/Server/database
+    environment:
+      - FLASK_APP=Server/run.py
+      - FLASK_ENV=production
+    # Si vous avez besoin d'un service de base de données dédié (ex: PostgreSQL), décommentez ci-dessous :
+    # depends_on:
+    #   - db
+
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: pharma_db
+  #   restart: always
+  #   environment:
+    #     POSTGRES_USER: user
+    #     POSTGRES_PASSWORD: password
+    #     POSTGRES_DB: pharma
+    #   volumes:
+    #     - pgdata:/var/lib/postgresql/data
+
+volumes:
+  sqlite_data:
+  # pgdata:
