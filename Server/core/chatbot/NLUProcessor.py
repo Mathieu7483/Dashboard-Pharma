@@ -1,4 +1,3 @@
-
 """
 Server/core/chatbot/NLUProcessor.py
 Bilingual NLU (FR/EN) for Pharmacy Management
@@ -9,6 +8,7 @@ import unicodedata
 from typing import Dict, List, Tuple
 import spacy
 from utils.text_norm import normalize as _shared_normalize
+from core.chatbot.drug_lexicon import DrugLexicon, build_lexicon_from_db
 
 
 class NLUProcessor:
@@ -90,6 +90,8 @@ class NLUProcessor:
         }
 
         self.known_products: set = set()
+        # Lexique médicaments/substances/classes (voir drug_lexicon.py), chargé depuis la DB
+        self.lexicon = None
 
         # -- Intent patterns with priorities -----------------------------------
         self.intent_patterns = {
@@ -221,6 +223,7 @@ class NLUProcessor:
 
             self.known_products = new_set
             print(f"✅ NLU: {len(new_set)} product entries loaded from DB")
+            self.load_lexicon_from_db()
 
         except Exception as e:
             print(f"⚠️  NLU: Could not load products from DB: {e}")
@@ -228,6 +231,36 @@ class NLUProcessor:
                 "doliprane", "aspirine", "ibuprofene",
                 "paracetamol", "amoxicilline", "omeprazole",
             }
+
+    _COMPETING_INTENTS = (
+        "get_stock_alerts", "get_sales_summary", "get_prescription_info",
+        "get_contact_info", "check_stock", "check_price",
+    )
+
+    def load_lexicon_from_db(self) -> None:
+        """Construit le lexique de reconnaissance des médicaments (stock + BDPM + classes ANSM)."""
+        try:
+            self.lexicon = build_lexicon_from_db()
+            print(f"✅ NLU: lexique médicaments chargé ({len(self.lexicon)} termes)")
+        except Exception as e:
+            self.lexicon = None
+            print(f"⚠️  NLU: lexique médicaments indisponible, mode mots-clés seul: {e}")
+
+    def _has_competing_intent(self, text_lower: str) -> bool:
+        """Vrai si la phrase porte un autre intent explicite (prix, stock, ordonnance...) :
+        dans ce cas, deux médicaments cités ne signifient pas 'interaction'."""
+        # Seuls les intents "métier" concurrents comptent. Les mots "patient", "client",
+        # "docteur" ou "ticket" sont fréquents dans une vraie question d'interaction
+        # ("mon patient prend X, peut-il prendre Y ?") et ne doivent pas la détourner.
+        for name in self._COMPETING_INTENTS:
+            config = self.intent_patterns[name]
+            for kw in config["keywords"]:
+                if len(kw) <= 3:
+                    if re.search(rf"\b{re.escape(kw)}\b", text_lower):
+                        return True
+                elif kw in text_lower:
+                    return True
+        return False
 
     # ==========================================================================
     # 🔍 MAIN ENTRY POINT
@@ -257,6 +290,20 @@ class NLUProcessor:
                 "entity_list": entities,
                 "confidence": 0.95,
                 "language": lang
+            }
+
+        # 💊 Reconnaissance par lexique : au moins 2 médicaments/substances/classes cités
+        # dans la phrase, sans autre intent explicite -> vérification d'interaction.
+        # Indépendant de la formulation ("Quelle est la dangerosité entre A et B", "A, B et C"...).
+        mentions = self.lexicon.find(text) if self.lexicon else []
+        if len(mentions) >= 2 and not self._has_competing_intent(text_lower):
+            return {
+                "intent": "check_interaction",
+                "entity": mentions[0].canonical.title(),
+                "entity_list": [m.canonical.title() for m in mentions][:5],
+                "confidence": 0.85 if any(m.fuzzy for m in mentions) else 0.95,
+                "language": lang,
+                "mentions": mentions,
             }
 
         # 💊 Extraction directe pour les requêtes d'interaction — contourne spaCy,
