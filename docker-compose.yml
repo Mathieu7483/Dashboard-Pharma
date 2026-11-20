@@ -3,7 +3,7 @@ version: '3.8'
 services:
   web:
     build: .
-    container_name: pharma_dashboard_api
+    container_name: dashboard_pharma_api
     restart: always
     ports:
       - "5000:5000"
