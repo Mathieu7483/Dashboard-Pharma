@@ -173,7 +173,7 @@
 #clients-table th {
     text-align: left;
     padding: 20px 15px;
-    border-bottom: 3px solid var(--primary-green);
+    border-bottom: 3px solid var(--primary-blue);
     color: var(--primary-blue);
     font-weight: 800;
     text-transform: uppercase;
