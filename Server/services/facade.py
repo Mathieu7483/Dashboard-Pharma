@@ -13,55 +13,53 @@ from models.note import Note
 from models.ticket import Ticket
 from models.specialite import SpecialiteModel
 from models.composition import CompositionModel
+from models.classe_ansm import ClasseMembreModel
 from utils.text_norm import normalize
 from datetime import datetime, UTC
 
 
 # ==============================================================================
-# INTERACTION RESOLUTION — constantes et helpers (ex utils/checker.py)
+# INTERACTION RESOLUTION — constantes et helpers
 # ==============================================================================
 
+# Sels / formes à retirer pour obtenir une variante "courte" du nom de substance.
+# NB: "sodium"/"potassium" ne sont volontairement PAS retirés seuls : ils font partie
+# de vraies substances du thésaurus (ex: "canrenoate de potassium", "sodium (bicarbonate de)").
 COMMON_SALTS = [
     r'\bbromhydrate de\b', r'\bchlorhydrate de\b', r'\bsulfate de\b',
-    r'\bsodium\b', r'\bpotassium\b', r'\bmaleate de\b', r'\bdihydrate\b',
-    r'\bphosphate de\b', r'\bmesilate de\b', r'\btartrate de\b', r'\bacetate de\b'
+    r'\bmaleate de\b', r'\bdihydrate\b', r'\bphosphate de\b',
+    r'\bmesilate de\b', r'\btartrate de\b', r'\bacetate de\b',
 ]
 
-# Dictionnaire de correspondance DCI -> Classe Thérapeutique ANSM
-# (évite de devoir toucher à la BDD pour les grandes familles du thésaurus)
-ANSM_CLASS_MAPPING = {
-    "citalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
-    "escitalopram": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
-    "fluoxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
-    "paroxetine": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
-    "sertraline": ["INHIBITEURS SÉLECTIFS DE LA RECAPTURE DE LA SÉROTONINE", "ISRS"],
-    "tramadol": ["TRAMADOL", "OPIOÏDES"],
-    "ibuprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
-    "ketoprofene": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
-    "aspirine": ["ANTI-INFLAMMATOIRES NON STÉROÏDIENS", "AINS"],
-    "krameria": ["HEMOSTATIQUES"],
+# Noms usuels -> libellé employé par le thésaurus ANSM
+SUBSTANCE_ALIASES = {
+    "aspirine": "acide acetylsalicylique",
+    "vitamine k": "phytomenadione",
 }
+
+# Niveaux de gravité (rang plus élevé = plus grave)
+SEVERITY_RANK = {"low": 1, "moderate": 2, "high": 3, "critical": 4}
+
+# Cache mémoire substance -> classes (rempli au premier appel, voir FacadeService)
+_CLASS_CACHE = {"by_member": None, "classes": None}
+
+
+def _severity_rank(value) -> int:
+    return SEVERITY_RANK.get(str(value or "").lower(), 0)
+
+
+def _norm(text: str) -> str:
+    return normalize(text or "").lower().strip()
 
 
 def _clean_substance_name(substance: str) -> str:
+    """Variante courte d'un nom de substance (sels retirés si le résultat reste non vide)."""
     text = substance.lower()
+    cleaned = text
     for salt in COMMON_SALTS:
-        text = re.sub(salt, '', text)
-    return text.strip()
-
-
-def _expand_substance_terms(substance: str) -> list:
-    """
-    Prend une molécule (ex: 'citalopram') et retourne :
-    1. La molécule elle-même
-    2. Les classes thérapeutiques ANSM associées, si connues
-    """
-    clean_sub = _clean_substance_name(substance)
-    terms = [clean_sub]
-    for dci, classes in ANSM_CLASS_MAPPING.items():
-        if dci in clean_sub:
-            terms.extend(classes)
-    return list(set(terms))
+        cleaned = re.sub(salt, '', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned or text.strip()
 
 
 def _split_ingredients(raw_str: str) -> list:
@@ -432,44 +430,108 @@ class FacadeService:
 
         return resolved
 
-    def get_interaction(self, ingredient_a: str, ingredient_b: str):
-        """
-        Cherche une interaction déjà connue entre DEUX SUBSTANCES (pas des
-        noms de marque — utiliser resolve_substances() en amont).
-        Priorité à InteractionModel (curatée), fallback InteractionAnsmModel
-        (thésaurus complet).
-        """
-        norm_a = normalize(ingredient_a).lower().strip()
-        norm_b = normalize(ingredient_b).lower().strip()
-        if not norm_a or not norm_b or norm_a == norm_b:
-            return None
+    # --- CLASSES ANSM (table générée depuis le thésaurus) ---
 
-        stmt = db.select(InteractionModel).where(
-            or_(
-                and_(InteractionModel.ingredient_a.ilike(f"%{norm_a}%"), InteractionModel.ingredient_b.ilike(f"%{norm_b}%")),
-                and_(InteractionModel.ingredient_a.ilike(f"%{norm_b}%"), InteractionModel.ingredient_b.ilike(f"%{norm_a}%"))
-            )
-        )
-        result = db.session.execute(stmt).scalars().first()
-        if result:
-            return result
+    def _load_class_cache(self):
+        """Charge classes_ansm en mémoire (≈1100 lignes) : membre_norm -> {classes}."""
+        if _CLASS_CACHE["by_member"] is None:
+            rows = db.session.execute(
+                db.select(ClasseMembreModel.classe_norm, ClasseMembreModel.membre_norm)
+            ).all()
+            by_member, classes = {}, set()
+            for classe, membre in rows:
+                by_member.setdefault(membre, set()).add(classe)
+                classes.add(classe)
+            _CLASS_CACHE["by_member"], _CLASS_CACHE["classes"] = by_member, classes
+        return _CLASS_CACHE["by_member"]
 
-        stmt_ansm = (
-            db.select(InteractionAnsmModel)
-            .where(
+    def reload_class_cache(self):
+        """À appeler après un ré-import de classes_ansm."""
+        _CLASS_CACHE["by_member"] = _CLASS_CACHE["classes"] = None
+
+    def get_classes_for_substance(self, substance: str) -> set:
+        """Classes ANSM d'une substance. Match exact, ou sur le 1er mot pour les membres
+        composés (ex: 'dexketoprofene' -> 'dexketoprofene trometamol')."""
+        sub = _norm(SUBSTANCE_ALIASES.get(_norm(substance), substance))
+        if not sub:
+            return set()
+        by_member = self._load_class_cache()
+        found = set(by_member.get(sub, ()))
+        for membre, classes in by_member.items():
+            if membre.startswith(sub + " "):
+                found |= classes
+        return found
+
+    def expand_substance_terms(self, substance: str) -> list:
+        """La substance elle-même (+ variante sans sel) + ses classes ANSM."""
+        sub = _norm(SUBSTANCE_ALIASES.get(_norm(substance), substance))
+        terms = {sub, _norm(_clean_substance_name(sub))}
+        terms |= self.get_classes_for_substance(sub)
+        terms.discard("")
+        return list(terms)
+
+    # --- INTERACTIONS ---
+
+    def get_interactions(self, ingredient_a: str, ingredient_b: str) -> list:
+        """
+        Toutes les interactions connues entre deux termes (substances OU classes),
+        en MATCH EXACT sur le nom normalisé (plus de ilike '%x%' : 'fer' ne matche
+        plus 'deferasirox'). Curated (InteractionModel) d'abord, puis thésaurus ANSM.
+        """
+        norm_a, norm_b = _norm(ingredient_a), _norm(ingredient_b)
+        if not norm_a or not norm_b:
+            return []
+        if norm_a == norm_b:
+            return []
+
+        results = list(db.session.execute(
+            db.select(InteractionModel).where(
                 or_(
-                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_a}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_b}%")),
-                    and_(InteractionAnsmModel.substance_a_norm.ilike(f"%{norm_b}%"), InteractionAnsmModel.substance_b_norm.ilike(f"%{norm_a}%"))
+                    and_(func.lower(InteractionModel.ingredient_a) == norm_a,
+                         func.lower(InteractionModel.ingredient_b) == norm_b),
+                    and_(func.lower(InteractionModel.ingredient_a) == norm_b,
+                         func.lower(InteractionModel.ingredient_b) == norm_a),
                 )
             )
-            .order_by(func.length(InteractionAnsmModel.substance_a_norm) + func.length(InteractionAnsmModel.substance_b_norm))
-        )
-        return db.session.execute(stmt_ansm).scalars().first()
+        ).scalars().all())
+
+        results += db.session.execute(
+            db.select(InteractionAnsmModel).where(
+                or_(
+                    and_(InteractionAnsmModel.substance_a_norm == norm_a,
+                         InteractionAnsmModel.substance_b_norm == norm_b),
+                    and_(InteractionAnsmModel.substance_a_norm == norm_b,
+                         InteractionAnsmModel.substance_b_norm == norm_a),
+                )
+            )
+        ).scalars().all()
+        return results
+
+    def get_interaction(self, ingredient_a: str, ingredient_b: str):
+        """Compat : la plus grave des interactions entre deux termes (ou None)."""
+        found = self.get_interactions(ingredient_a, ingredient_b)
+        return max(found, key=lambda i: _severity_rank(i.severity)) if found else None
+
+    @staticmethod
+    def _interaction_to_dict(interaction, sub_a, sub_b, via=None) -> dict:
+        return {
+            "severity": interaction.severity,
+            "description": interaction.description,
+            "mechanism": getattr(interaction, "mechanism", None),
+            "conduct": getattr(interaction, "conduct", None),
+            "ansm_codes": getattr(interaction, "ansm_codes", None),
+            "substance_a": sub_a, "substance_b": sub_b,
+            "via": via,  # ex: "classe : anti-inflammatoires non steroidiens"
+        }
 
     def check_drug_interaction(self, term_a: str, term_b: str) -> dict:
         """
-        Point d'entrée UNIQUE pour le chatbot : prend deux noms libres
-        (marque, DCI, produit du stock...) et retourne un verdict complet.
+        Point d'entrée UNIQUE pour le chatbot : deux noms libres (marque, DCI,
+        produit du stock...) -> verdict complet.
+
+        Retourne la plus grave des interactions trouvées (clés historiques
+        has_interaction / severity / description / substance_a / substance_b
+        conservées) + 'interactions' : la liste complète triée par gravité.
         """
         subs_a = self.resolve_substances(term_a)
         subs_b = self.resolve_substances(term_b)
@@ -482,43 +544,78 @@ class FacadeService:
                 "message": "Impossible de déterminer les substances actives."
             }
 
+        found, seen = [], set()
+
+        def add(interaction, sa, sb, via=None):
+            # Le thésaurus liste souvent A->B ET B->A : on dédoublonne les paires symétriques.
+            key = (frozenset((_norm(interaction.ingredient_a if hasattr(interaction, "ingredient_a") else interaction.substance_a_norm),
+                              _norm(interaction.ingredient_b if hasattr(interaction, "ingredient_b") else interaction.substance_b_norm))),
+                   str(interaction.severity).lower(), via)
+            if key in seen:
+                return
+            seen.add(key)
+            found.append(self._interaction_to_dict(interaction, sa, sb, via))
+
         for sa in subs_a:
-            clean_sa = _clean_substance_name(sa)
-            terms_a = _expand_substance_terms(sa)
-
+            clean_sa = _norm(SUBSTANCE_ALIASES.get(_norm(sa), sa))
             for sb in subs_b:
-                clean_sb = _clean_substance_name(sb)
+                clean_sb = _norm(SUBSTANCE_ALIASES.get(_norm(sb), sb))
 
-                # A. Alerte surdosage (même substance des deux côtés)
-                if normalize(clean_sa).lower() == normalize(clean_sb).lower() and clean_sa != "n/a":
-                    return {
-                        "has_interaction": True,
-                        "severity": "Critical",
-                        "description": f"Risque de surdosage : les deux traitements contiennent du {clean_sa.title()}.",
-                        "substance_a": clean_sa, "substance_b": clean_sb,
-                        "term_a": term_a, "term_b": term_b
-                    }
+                # A. Même substance des deux côtés -> risque de surdosage
+                if clean_sa == clean_sb and clean_sa != "n/a":
+                    key = ("overdose", clean_sa)
+                    if key not in seen:
+                        seen.add(key)
+                        found.append({
+                            "severity": "Critical",
+                            "description": f"Risque de surdosage : les deux traitements contiennent du {clean_sa.title()}.",
+                            "mechanism": None, "conduct": None, "ansm_codes": None,
+                            "substance_a": clean_sa, "substance_b": clean_sb, "via": "surdosage",
+                        })
+                    continue
 
-                # B. Recherche croisée (curatée + thésaurus ANSM), avec expansion de classe
-                terms_b = _expand_substance_terms(sb)
+                terms_a = self.expand_substance_terms(sa)
+                terms_b = self.expand_substance_terms(sb)
+
+                # B. Recherche croisée substance/classe (curatée + thésaurus ANSM)
                 for ta in terms_a:
                     for tb in terms_b:
-                        interaction = self.get_interaction(ta, tb)
-                        if interaction:
-                            return {
-                                "has_interaction": True,
-                                "severity": interaction.severity,
-                                "description": interaction.description,
-                                "substance_a": clean_sa, "substance_b": clean_sb,
-                                "term_a": term_a, "term_b": term_b
-                            }
+                        via = None
+                        if ta != clean_sa or tb != clean_sb:
+                            via = "classe : " + " / ".join(
+                                t for t, base in ((ta, clean_sa), (tb, clean_sb)) if t != base
+                            )
+                        for it in self.get_interactions(ta, tb):
+                            add(it, clean_sa, clean_sb, via)
 
+                # C. Interactions intra-classe ("AUTRES <classe>" dans le thésaurus)
+                for classe in self.get_classes_for_substance(sa) & self.get_classes_for_substance(sb):
+                    for it in self.get_interactions(classe, "autres " + classe):
+                        add(it, clean_sa, clean_sb, f"intra-classe : {classe}")
+
+        if not found:
+            return {
+                "has_interaction": False,
+                "term_a": term_a, "term_b": term_b,
+                "substances_a": subs_a, "substances_b": subs_b,
+                "message": "Aucune interaction trouvée dans les bases disponibles."
+            }
+
+        found.sort(key=lambda d: _severity_rank(d["severity"]), reverse=True)
+        top = found[0]
         return {
-            "has_interaction": False,
+            "has_interaction": True,
+            "severity": top["severity"],
+            "description": top["description"],
+            "mechanism": top["mechanism"],
+            "conduct": top["conduct"],
+            "ansm_codes": top["ansm_codes"],
+            "via": top["via"],
+            "substance_a": top["substance_a"], "substance_b": top["substance_b"],
             "term_a": term_a, "term_b": term_b,
-            "substances_a": subs_a, "substances_b": subs_b,
-            "message": "Aucune interaction trouvée dans les bases disponibles."
+            "interactions": found,
         }
+
 
     # --- RÉFÉRENTIEL ANSM (Spécialités / Compositions) ---
 
