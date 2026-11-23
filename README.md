@@ -46,7 +46,6 @@ docker compose exec web python run.py --create-admin   # first admin only, no de
   (random secrets, demo data seeded; set `SEED_DEMO_USERS=true` + `DEMO_USER_PASSWORD` for demo accounts).
 * Tests: `cd Server && APP_ENV=testing pytest tests`
 ---
-
 ## 🧱 **Technical Architecture**
 
 | Component | Technology | Role |
