@@ -1,4 +1,5 @@
 from flask_restx import Namespace, Resource, fields
+from flask import current_app
 from flask_jwt_extended import create_access_token
 from services.facade import FacadeService 
 from datetime import timedelta
@@ -57,7 +58,7 @@ class UserLogin(Resource):
             auth_ns.abort(401, message="Invalid Credentials: Username or password is wrong.")
 
         # 2. Create Token
-        access_expires = timedelta(minutes=15)
+        access_expires = current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
         additional_claims = {
             'is_admin': user.is_admin,
             'user_id': user.id
@@ -72,7 +73,7 @@ class UserLogin(Resource):
         return {
             'access_token': access_token,
             'token_type': 'Bearer',
-            'expires_in_seconds': access_expires.total_seconds(),
+            'expires_in_seconds': access_expires.total_seconds() if isinstance(access_expires, timedelta) else 0,
             'user_id': user.id,
             'is_admin': user.is_admin
         }, 200
@@ -86,9 +87,17 @@ class UserRegister(Resource):
     @auth_ns.expect(register_input_model)
     @auth_ns.response(201, 'User created successfully')
     @auth_ns.response(400, 'Invalid Input')
+    @auth_ns.response(403, 'Public registration is disabled')
     @auth_ns.response(409, 'Username or Email already exists')
     def post(self):
-        """Register a new user (Employee by default)."""
+        """Register a new user (Employee by default).
+
+        Disabled unless ALLOW_PUBLIC_REGISTRATION=true. In production, accounts
+        must be created by an administrator through POST /users/.
+        """
+        if not current_app.config.get('ALLOW_PUBLIC_REGISTRATION', False):
+            auth_ns.abort(403, message="Public registration is disabled. Ask an administrator to create your account.")
+
         data = auth_ns.payload
         username = data.get('username')
         email = data.get('email')

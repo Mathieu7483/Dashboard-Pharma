@@ -73,9 +73,6 @@ class UserList(Resource):
         """
         try:
             users = facade.get_all_users()
-            print(f"✅ DEBUG: Loaded {len(users)} users")
-            for u in users:
-                print(f"  - {u.username}: is_admin={u.is_admin}")
             return users, 200
         except Exception as e:
             print(f"❌ ERROR in get_all_users: {e}")
