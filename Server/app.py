@@ -1,15 +1,21 @@
 import os
-from datetime import timedelta
 from dotenv import load_dotenv
-from flask import Flask, redirect, send_from_directory
-from flask_restx import Api, Resource
-from flask_cors import CORS
-from config import DevelopmentConfig
-from database.data_manager import db, bcrypt, jwt
 
+# Must run BEFORE importing config: config.py reads the environment at import time.
 load_dotenv()
 
-def create_app(config_class=DevelopmentConfig):
+from flask import Flask, send_from_directory
+from flask_restx import Api, Resource
+from flask_cors import CORS
+from config import get_config
+from database.data_manager import db, bcrypt, jwt
+
+
+def create_app(config_class=None):
+    config_class = config_class or get_config()
+    if hasattr(config_class, 'validate'):
+        config_class.validate()
+
     app = Flask(__name__)
     app.config.from_object(config_class)
     basedir     = os.path.abspath(os.path.dirname(__file__))
@@ -19,15 +25,13 @@ def create_app(config_class=DevelopmentConfig):
     if not os.path.exists(database_dir):
         os.makedirs(database_dir)
         
-    app.config['JWT_SECRET_KEY']              = os.getenv('JWT_SECRET_KEY', 'dev-secret-key')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES']    = timedelta(minutes=30)
-    app.config['SQLALCHEMY_DATABASE_URI']     = os.getenv(
-        'DATABASE_URL',
-        'sqlite:///' + os.path.join(database_dir, 'database.sqlite')
-    )
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    CORS(app)
+    # Secrets, JWT lifetime and DB URI all come from config.py (environment variables).
+    # Only fall back to the local SQLite file when no DATABASE_URL is provided.
+    app.config.setdefault('SQLALCHEMY_DATABASE_URI', 'sqlite:///' + os.path.join(database_dir, 'database.sqlite'))
+
+    origins = app.config.get('CORS_ORIGINS')
+    if origins:
+        CORS(app, origins=origins)
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)

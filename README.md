@@ -28,6 +28,23 @@ The Pharmacy-Dashboard project is a responsive web application designed to optim
 * **Retention Period**: Defined and limited retention for personal data.
 
 > **🛑 Critical Point: A Data Protection Impact Assessment (DPIA) is mandatory before any production deployment.**
+
+---
+
+## 🚀 Deployment (production)
+
+```bash
+cp .env.example .env        # then fill in SECRET_KEY, JWT_SECRET_KEY, ADMIN_PASSWORD
+docker compose up -d --build
+docker compose exec web python run.py --create-admin   # first admin only, no demo data
+```
+
+* The container runs **gunicorn** with `APP_ENV=production`: it refuses to start without strong secrets.
+* The port is published on `127.0.0.1` only: put a reverse proxy with **HTTPS** (Caddy, nginx) in front.
+* Public registration is disabled (`ALLOW_PUBLIC_REGISTRATION=false`): admins create accounts via `POST /users/`.
+* Local development: `pip install -r requirements-dev.txt && cd Server && python run.py`
+  (random secrets, demo data seeded; set `SEED_DEMO_USERS=true` + `DEMO_USER_PASSWORD` for demo accounts).
+* Tests: `cd Server && APP_ENV=testing pytest tests`
 ---
 
 ## 🧱 **Technical Architecture**
