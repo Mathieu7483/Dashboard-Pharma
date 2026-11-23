@@ -1,0 +1,15 @@
+# Never bake secrets, history or local data into the image
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+**/__pycache__
+**/*.pyc
+.venv
+venv
+Server/database/*.sqlite
+Server/database/*.sqlite3
+Server/tests
+*.md
+Client/assets/img/Mockup_de_base.png
