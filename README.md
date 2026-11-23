@@ -2,7 +2,7 @@
 <img src="https://github.com/Mathieu7483/Dashboard-Pharma/blob/Mathieu/Client/assets/img/accueil%20Dasboard%20Pharma.png"\>
 </p>
 <p align="center">
-<img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python" alt="Python">
+<img src="https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python" alt="Python">
 <img src="https://img.shields.io/badge/Flask-2.0+-green?style=for-the-badge&logo=flask" alt="Flask">
 <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite" alt="SQLite">
 <img src="https://img.shields.io/badge/Pattern-Facade-orange?style=for-the-badge" alt="Facade Pattern">
