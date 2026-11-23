@@ -1,34 +1,20 @@
-version: '3.8'
-
 services:
   web:
     build: .
     container_name: dashboard_pharma_api
-    restart: always
+    restart: unless-stopped
+    # Published on localhost only: put a reverse proxy with HTTPS (Caddy, nginx...) in front.
     ports:
-      - "5000:5000"
-    volumes:
-      - ./Server:/app/Server
-      # Si vous utilisez SQLite, cela permet de conserver la base de données hors du conteneur
-      - sqlite_data:/app/Server/database
+      - "127.0.0.1:5000:5000"
+    # Secrets live in a .env file that is NOT committed (see .env.example).
+    # The build/run fails fast if it is missing.
+    env_file:
+      - .env
     environment:
-      - FLASK_APP=Server/run.py
-      - FLASK_ENV=production
-    # Si vous avez besoin d'un service de base de données dédié (ex: PostgreSQL), décommentez ci-dessous :
-    # depends_on:
-    #   - db
-
-  # db:
-  #   image: postgres:15-alpine
-  #   container_name: pharma_db
-  #   restart: always
-  #   environment:
-    #     POSTGRES_USER: user
-    #     POSTGRES_PASSWORD: password
-    #     POSTGRES_DB: pharma
-    #   volumes:
-    #     - pgdata:/var/lib/postgresql/data
+      - APP_ENV=production
+    volumes:
+      # Persist the SQLite database outside the container
+      - sqlite_data:/app/Server/database
 
 volumes:
   sqlite_data:
-  # pgdata:
