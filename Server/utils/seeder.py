@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import random
+import secrets
 from datetime import datetime, timedelta, UTC
 from database.data_manager import db
 from models.user import UserModel
@@ -40,33 +41,55 @@ def seed_all_initial_data():
     print("--- ✅ Seeding Process Completed ---\n")
 
 
-def _seed_admin():
-    """Initializes the primary admin account or ensures it has correct privileges."""
-    admin = UserModel.query.filter_by(username='Mathieu').first()
+def _is_production():
+    return os.environ.get('APP_ENV', 'development').lower() == 'production'
 
-    if not admin:
-        print("Creating primary admin account...")
-        admin = UserModel(
-            username='Mathieu',
-            email='mathieu.admin@pharma.com',
-            password='Admin@1234',
-            is_admin=True
-        )
-        admin.set_password('Admin@1234')
-        db.session.add(admin)
-    else:
-        print("Admin account exists. Updating credentials and privileges...")
-        admin.is_admin = True
-        admin.set_password('Admin@1234')
+
+def _env_true(name):
+    return os.environ.get(name, '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _seed_admin():
+    """
+    Ensures a primary admin account exists.
+
+    - Credentials come from ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD.
+    - An EXISTING account is never modified: its password is NOT reset at startup.
+    - In production ADMIN_PASSWORD is mandatory. In development, if it is missing,
+      a random password is generated and printed once.
+    """
+    username = os.environ.get('ADMIN_USERNAME', 'Mathieu')
+    email = os.environ.get('ADMIN_EMAIL', 'mathieu.admin@pharma.com')
+
+    admin = UserModel.query.filter_by(username=username).first()
+    if admin:
+        print(f"Admin account '{username}' already exists: left untouched.")
+        return admin
+
+    password = os.environ.get('ADMIN_PASSWORD')
+    generated = False
+    if not password:
+        if _is_production():
+            print("Abort: ADMIN_PASSWORD must be set to create the first admin in production.")
+            return None
+        password = secrets.token_urlsafe(16)
+        generated = True
+
+    print("Creating primary admin account...")
+    admin = UserModel(username=username, email=email, password=password, is_admin=True)
+    db.session.add(admin)
 
     try:
         db.session.commit()
-        print("Success: Admin 'Mathieu' is ready.")
-        return admin
     except Exception as e:
         db.session.rollback()
         print(f"Abort: Error during admin initialization: {e}")
         return None
+
+    print(f"Success: Admin '{username}' created.")
+    if generated:
+        print(f"   Generated one-time password (store it now, it is not saved anywhere): {password}")
+    return admin
 
 
 def _seed_json_data(admin_id):
@@ -82,16 +105,23 @@ def _seed_json_data(admin_id):
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        for u in data.get('users', []):
-            if not UserModel.query.filter_by(username=u['username']).first():
-                new_user = UserModel(
-                    username=u['username'],
-                    email=u['email'],
-                    password=u['password'],
-                    is_admin=u.get('is_admin', False)
-                )
-                new_user.set_password(u['password'])
-                db.session.add(new_user)
+        # Demo users are opt-in and never created in production: they all share one
+        # password taken from the environment (no password is stored in data_seed.json).
+        demo_password = os.environ.get('DEMO_USER_PASSWORD')
+        if data.get('users'):
+            if _env_true('SEED_DEMO_USERS') and demo_password and not _is_production():
+                for u in data['users']:
+                    if not UserModel.query.filter_by(username=u['username']).first():
+                        db.session.add(UserModel(
+                            username=u['username'],
+                            email=u['email'],
+                            password=demo_password,
+                            first_name=u.get('first_name'),
+                            last_name=u.get('last_name'),
+                            is_admin=u.get('is_admin', False)
+                        ))
+            else:
+                print("Info: demo users skipped (dev only: set SEED_DEMO_USERS=true and DEMO_USER_PASSWORD).")
 
         for c in data.get('clients', []):
             if not ClientModel.query.filter_by(email=c['email']).first():
